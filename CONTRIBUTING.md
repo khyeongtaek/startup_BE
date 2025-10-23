@@ -59,6 +59,7 @@
 ### 프로젝트 및 패키지 구조
 
 #### 프로젝트 구조
+
 ```
 project-root/
 ├── src/
@@ -77,9 +78,11 @@ project-root/
 ├── CONTRIBUTING.md
 └── build.gradle
 ```
+
 #### 패키지 구조
 
 패키지는 도메인 중심의 구조를 따름. 각 도메인은 하위에 `controller`, `service`, `repository`, `entity`, `dto`, `exception` 등의 계층별 패키지를 포함.
+
 ```
 src.main.java.org.goodee.startup/
 ├── user/
@@ -93,6 +96,7 @@ src.main.java.org.goodee.startup/
 ├── common/
 └── config/
 ```
+
 ---
 
 ### 코딩 컨벤션
@@ -115,7 +119,8 @@ src.main.java.org.goodee.startup/
 #### 의존성 규칙
 
 - 계층 간 의존성은 `Controller` -> `Service` -> `Repository` 방향으로 단방향을 유지하여 순환 참조를 방지.
-- 예를들어 `Service` 계층은 웹(Web) 계층에 대한 의존성을 갖지 않음. `HttpServletRequest`, `HttpSession` 등 웹 관련 객체의 직접적인 사용을 금지하여 계층 간 결합도를 낮춤.
+- 예를들어 `Service` 계층은 웹(Web) 계층에 대한 의존성을 갖지 않음. `HttpServletRequest`, `HttpSession` 등 웹 관련 객체의 직접적인 사용을 금지하여 계층 간 결합도를
+  낮춤.
 
 #### Bean 등록 및 주입
 
@@ -135,20 +140,24 @@ public class DevDataSourceConfig {
 ```
 
 #### Entity와 DTO 규칙
-- 역할 분리: Controller <-> Service 계층 간 데이터 교환에는 DTO(Data Transfer Object)를 사용하고, Service <-> Repository 계층 및 DB 연동에는 Entity를 사용.
+
+- 역할 분리: Controller <-> Service 계층 간 데이터 교환에는 DTO(Data Transfer Object)를 사용하고, Service <-> Repository 계층 및 DB 연동에는
+  Entity를 사용.
 
 - 변환 로직 위치: Entity와 DTO 간의 변환 로직은 DTO 클래스 내에 위치.
 
-  - toEntity(): DTO를 Entity로 변환
+    - toEntity(): DTO를 Entity로 변환
 
-  - toDTO(): Entity를 DTO로 변환
+    - toDTO(): Entity를 DTO로 변환
 
 - 변환 방식: 변환 메서드는 정적 팩토리 메소드를 활용하여 구현.
 
 - 데이터 변경 로직: 데이터 변경 로직(update)은 Service 계층이 아닌 Entity 자체에 위임. Service는 해당 Entity의 메소드를 호출하는 역할만 수행. (Tell, Don't Ask 원칙)
 
 ---
+
 ### 테스트 코드 작성 규칙
+
 테스트 코드는 Given-When-Then 패턴을 따라 작성하여 테스트의 의도를 명확하게 드러냄.
 
 - Given: 테스트에 필요한 환경과 데이터를 설정하는 단계.
@@ -158,6 +167,7 @@ public class DevDataSourceConfig {
 - Then: 테스트 결과를 검증하고 단언(Assertion)하는 단계.
 
 #### 예시 Template
+
 ```java
 @Test
     void 테스트() {
@@ -169,38 +179,47 @@ public class DevDataSourceConfig {
         
     }
 ```
+
 ---
 
 ### API 설계 및 예외 처리
+
 #### API 설계 원칙
+
 - URI: 리소스를 표현하며, 리소스 이름은 복수형 명사를 사용. (예: /users, /products)
 
 - 식별자: 특정 리소스를 식별할 때는 경로 변수(@PathVariable)를 사용. (예: /users/{userId})
 
 #### API 문서화
--   모든 API는 Swagger UI에서 명세를 쉽게 확인할 수 있도록, Swagger 문법에 따라 코드에 문서 주석을 작성함.
+
+- 모든 API는 Swagger UI에서 명세를 쉽게 확인할 수 있도록, Swagger 문법에 따라 코드에 문서 주석을 작성함.
 
 #### 예외 처리
+
 - 예외 처리는 @RestControllerAdvice와 @ExceptionHandler를 활용한 중앙 집중 방식으로 처리하여 코드 중복을 최소화하고 일관성을 유지.
+
 ---
 
 ### 데이터베이스 스키마 규칙
 
 #### 테이블 명명 규칙
+
 - 테이블명은 소문자와 스네이크 케이스(snake_case)를 사용하며, `tbl_` 접두사를 붙임.
-  - 예시: `tbl_member`, `tbl_product`
+    - 예시: `tbl_member`, `tbl_product`
 
 #### 컬럼 명명 규칙
+
 - **PK (Primary Key)**: `테이블명_id` 형식으로 작성.
-  - 예시: `member_id`, `product_id`
+    - 예시: `member_id`, `product_id`
 - **Boolean 타입**: 컬럼의 의미를 명확하게 파악할 수 있도록 질문 형식으로 작성.
-  - 예시: `is_deleted`, `is_active`
+    - 예시: `is_deleted`, `is_active`
 
 ---
 
-
 ##### 위 규칙을 준수하여 프로젝트의 일관성과 가독성을 유지해주세요.
+
 ##### 문의 사항 또는 수정요청은 아래의 연락처로 말씀해주세요.
+
 - tel) 010-2063-1003
 - kakao) kht8552
 
