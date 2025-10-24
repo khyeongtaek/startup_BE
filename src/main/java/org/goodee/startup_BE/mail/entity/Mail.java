@@ -48,4 +48,5 @@ public class Mail {
 	
 	@Column(name = "eml_path")
 	private String emlPath;
+	
 }
