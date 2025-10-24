@@ -1,8 +1,10 @@
 package org.goodee.startup_BE.notification.entity;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -11,29 +13,31 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "tbl_notification")
 
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-public class NotificationEntity {
+public class Notification {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "notification_id")
+    @Comment("알림 고유 ID")
     private Long notificationId;
 
     @Comment("수신자 ID")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "employee_id", foreignKey = @ForeignKey(name = "fk_notification_employee"))
-    private EmployeeEntity employeeId;
+    private Employee employeeId;
 
     @Comment("관련 리소스 PK")
     @Column(name = "ref_id", nullable = false)
     private Long refId;
 
     @Comment("알림 제목")
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "LONGTEXT")
     private String title;
 
     @Comment("알림 내용")
+    @Column(nullable = false, columnDefinition = "LONGTEXT")
     private String content;
 
     @Comment("생성 시각")
@@ -50,7 +54,7 @@ public class NotificationEntity {
     private Boolean isDeleted ;
 
 
-    public NotificationEntity(Long refId, String title, String content, LocalDateTime readAt, Boolean isDeleted) {
+    public Notification(Long refId, String title, String content, LocalDateTime readAt, Boolean isDeleted) {
         this.refId = refId;
         this.title = title;
         this.content = content;
@@ -58,12 +62,9 @@ public class NotificationEntity {
         this.isDeleted = isDeleted;
     }
 
-    public static NotificationEntity create(EmployeeEntity employeeId, Long refId, String title, String content ) {
+    public static Notification createNotification(Employee employeeId, Long refId, String title, String content ) {
 
-        if(employeeId == null) throw new IllegalArgumentException("수신자 ID는 필수 입니다");
-        if(title == null || title.isBlank()) throw new IllegalArgumentException("알림 제목은 필수 입니다");
-
-        NotificationEntity n = new NotificationEntity();
+        Notification n = new Notification();
 
         n.employeeId = employeeId;
         n.refId = refId;
@@ -77,7 +78,7 @@ public class NotificationEntity {
     public String toString() {
         return "NotiEntity{" +
                 "notificationId=" + notificationId +
-                ", employeeId=" + (employeeId != null ? employeeId.getId() : null) +
+                ", employeeId=" + (employeeId != null ? employeeId.getEmployeeId() : null) +
                 ", refId=" + refId +
                 ", title='" + title + '\'' +
                 ", content='" + content + '\'' +
