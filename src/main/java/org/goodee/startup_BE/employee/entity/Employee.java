@@ -9,17 +9,23 @@ import lombok.Setter;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Comment;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
 
 @Entity
 @Table(name = "tbl_employee")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Employee {
+public class Employee implements UserDetails{
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(nullable = false)
     @Comment("직원 고유 ID")
     private Long employeeId;
@@ -78,7 +84,8 @@ public class Employee {
     @Comment("직급")
     private CommonCode position;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    // security의 권한 조회 시점이 db연결이 끊긴 후라 Lazy 사용안함.
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(nullable = false)
     @Comment("권한")
     private CommonCode role;
@@ -165,15 +172,13 @@ public class Employee {
     }
 
     public void updatePassword(String password, Employee updater) {
-        // Spring Security 도입시 암호화해서 넣도록 함
         this.password = password;
         this.isInitialPassword = false;
         this.updater = updater;
     }
 
-    public void updateInitPassword(Employee updater) {
-        // Spring Security 도입시 userName을 암호화해서 넣도록 함
-        this.password = username;
+    public void updateInitPassword(String password, Employee updater) {
+        this.password = password;
         this.isInitialPassword = true;
         this.updater = updater;
     }
@@ -187,5 +192,25 @@ public class Employee {
     @PreUpdate
     protected void onPreUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of(new SimpleGrantedAuthority(role.getValue1()));
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return UserDetails.super.isAccountNonLocked();
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return UserDetails.super.isCredentialsNonExpired();
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return UserDetails.super.isEnabled();
     }
 }
