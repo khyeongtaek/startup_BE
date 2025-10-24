@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString
 public class PostCategory {
 
     @Id
@@ -27,13 +28,36 @@ public class PostCategory {
     @Column(name = "role_id", nullable = false)
     private int roleId;
 
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
+
     @Column(name = "is_deleted", nullable = false)
-    private String isDeleted;
+    private Boolean isDeleted = false;
+
+    public static PostCategory createPostCategory(String name, int orderNo, int roleId) {
+        return PostCategory
+                .builder()
+                .name(name)
+                .orderNo(orderNo)
+                .roleId(roleId)
+                .isDeleted(false)
+                .build();
+    }
+
+    // 게시판 수정
+    public void update(String name, int orderNo, int roleId) {
+        this.name = name;
+        this.orderNo = orderNo;
+        this.roleId = roleId;
+    }
+
+    // 게시판 삭제
+    public void delete() {
+        this.isDeleted = true;
+    }
 
 }

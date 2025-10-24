@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString
 public class PostComment {
 
     @Id
@@ -30,11 +31,36 @@ public class PostComment {
     private String content;
 
     @Column(name = "is_deleted", nullable = false)
-    private boolean isDeleted;
+    private boolean isDeleted = false;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    public static PostComment createPostComment (
+            Post post,
+            Employee employee,
+            String content,
+            boolean isDeleted
+    ) {
+        return PostComment.builder()
+                .post(post)
+                .employee(employee)
+                .content(content)
+                .isDeleted(false)
+                .build();
+    }
+
+    // 댓글 수정
+    public void update (String content) {
+        this.content = content;
+    }
+
+    // 댓글 삭제
+    public void  delete () {
+        this.isDeleted = true;
+    }
+
 }

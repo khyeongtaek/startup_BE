@@ -29,4 +29,11 @@ public class PostViewLog {
     @Column(name = "viewed_at", nullable = false)
     private LocalDateTime viewedAt;
 
+    public static PostViewLog createPostViewLog(Post post, Employee employee) {
+        return PostViewLog.builder()
+                .post(post)
+                .employee(employee)
+                .viewedAt(LocalDateTime.now())
+                .build();
+    }
 }

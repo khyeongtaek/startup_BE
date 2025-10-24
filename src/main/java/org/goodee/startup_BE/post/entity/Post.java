@@ -2,6 +2,9 @@ package org.goodee.startup_BE.post.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.DynamicUpdate;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 
 import java.time.LocalDateTime;
 
@@ -11,6 +14,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@DynamicUpdate
+@ToString
 public class Post {
 
     @Id
@@ -36,7 +41,7 @@ public class Post {
     private Boolean isNotification;
 
     @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted;
+    private Boolean isDeleted = false;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -44,5 +49,34 @@ public class Post {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    public static Post createPost (
+            PostCategory postCategory,
+            Employee employee,
+            String title,
+            String content,
+            boolean isNotification,
+            boolean isDeleted
+    ) {
+        return Post.builder()
+                .postCategory(postCategory)
+                .employee(employee)
+                .title(title)
+                .content(content)
+                .isNotification(isNotification)
+                .isDeleted(false)
+                .build();
+    }
+
+    // 게시글 수정
+    public void update (String title, String content, boolean isNotification) {
+        this.title = title;
+        this.content = content;
+        this.isNotification = isNotification;
+    }
+
+    // 게시글 삭제
+    public void delete() {
+        this.isDeleted = true;
+    }
 
 }
