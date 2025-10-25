@@ -49,7 +49,7 @@ public class Attendance {
 
     // template_id, status_code, update_employee
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "work_status", referencedColumnName = "code_id")
+    @JoinColumn(name = "work_status", referencedColumnName = "common_code_id")
     private CommonCode workStatus;
 
 
