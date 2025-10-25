@@ -2,6 +2,7 @@ package org.goodee.startup_BE.common.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SQLDelete;
@@ -46,11 +47,10 @@ public class CommonCode {
     @Comment("우선순위 (정렬용)")
     private Long sortOrder;
 
-    //추후 Employee entity 추가시 ManyToOne 연결 예정
-//    @Comment("작성자 (직원 ID)")
-//    @JoinColumn(name = "employee_id", nullable = true)
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    private Employee employee;
+    @Comment("작성자 (직원 ID)")
+    @JoinColumn(name = "employee_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Employee employee;
 
     @Column(nullable = false, updatable = false)
     @Comment("생성일")
@@ -71,7 +71,7 @@ public class CommonCode {
             , String value2
             , String value3
             , Long sortOrder
-//            , Employee employee
+            , Employee employee
     ) {
         CommonCode commonCode = new CommonCode();
         commonCode.code = code;
@@ -80,7 +80,7 @@ public class CommonCode {
         commonCode.value2 = value2;
         commonCode.value3 = value3;
         commonCode.sortOrder = sortOrder;
-//        commonCode.employee = employee;
+        commonCode.employee = employee;
         commonCode.createdAt = LocalDateTime.now();
         commonCode.updatedAt = LocalDateTime.now();
         return commonCode;
@@ -97,6 +97,7 @@ public class CommonCode {
             , String value2
             , String value3
             , Long sortOrder
+            , Employee employee
     ){
         this.code = code;
         this.codeDescription = codeDescription;
@@ -104,7 +105,7 @@ public class CommonCode {
         this.value2 = value2;
         this.value3 = value3;
         this.sortOrder = sortOrder;
-//        commonCode.employee = employee;
+        this.employee = employee;
         this.updatedAt = LocalDateTime.now();
 
     }
