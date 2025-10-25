@@ -23,8 +23,8 @@ public class ChatRoom {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = false)
-    @Comment("사원 고유 ID-FK")
-    private Employee employeeId;
+    @Comment("채팅방 생성자")
+    private Employee employee;
 
     @Comment("채팅방 이름")
     @Column(nullable = false, columnDefinition = "LONGTEXT")
