@@ -86,6 +86,17 @@ public class WorkLog {
         return workLog;
     }
 
+    public void updateWorkLog(
+            CommonCode workType, CommonCode option,
+            LocalDateTime workDate, String title, String content
+    ) {
+        this.workType = workType;
+        this.workOption = option;
+        this.workDate = workDate;
+        this.title = title;
+        this.content = content;
+    }
+
     public void deleteWorkLog() {
         this.isDeleted = true;
     }
