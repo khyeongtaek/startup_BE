@@ -16,10 +16,11 @@ import java.time.LocalDateTime;
 public class AttachmentFile {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	@Column(name = "file_id", nullable = false)
-	private Long fileId;                // 첨부파일 고유 ID
+	@Column(nullable = false)
+	@Comment("PK")
+	private Long fileId;
 	
-	@Column(name = "original_name", nullable = false)
+	@Column(nullable = false)
 	@Comment("업로드 원본 파일명")
 	private String originalName;
 	
@@ -31,21 +32,22 @@ public class AttachmentFile {
 	@Comment("파일 사이즈")
 	private Long size;
 
-	@Column(name = "storage_path", nullable = false, length = 500)
+	@Column(nullable = false, length = 500)
 	@Comment("파일 저장 경로")
 	private String storagePath;
 	
-	@Column(name = "created_at", nullable = false, updatable = false)
+	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 	
-	@Column(name = "owner_type", nullable = false)
+	@Column(nullable = false)
 	@Comment("업로드 모듈명")
 	private String ownerType;
 	
-	@Column(name = "owner_id")
+	@Column()
 	@Comment("모듈 내 고유 ID")
 	private Long ownerId;
-	
+
+
 	@PrePersist
 	protected void onPrePersist() {
 		if(createdAt == null) createdAt = LocalDateTime.now();

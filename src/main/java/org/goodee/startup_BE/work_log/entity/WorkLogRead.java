@@ -2,6 +2,8 @@ package org.goodee.startup_BE.work_log.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import org.goodee.startup_BE.employee.entity.Employee;
+import org.hibernate.annotations.Comment;
 
 @Entity
 @Table(name = "tbl_work_log_read", uniqueConstraints = {@UniqueConstraint(columnNames = {"work_log_id","employee_id"})})
@@ -9,15 +11,18 @@ import lombok.Getter;
 public class WorkLogRead {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "read_id", nullable = false)
+    @Column(nullable = false)
+    @Comment("PK")
     private Long readId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "work_log_id", nullable = false)
+    @JoinColumn(nullable = false)
+    @Comment("읽은 업무일지 ID")
     private WorkLog workLog;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
+    @JoinColumn(nullable = false)
+    @Comment("읽은 직원 ID")
     private Employee employee;
 
     protected WorkLogRead() {}
