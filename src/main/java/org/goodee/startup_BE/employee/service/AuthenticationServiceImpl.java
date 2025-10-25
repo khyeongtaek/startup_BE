@@ -53,7 +53,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         Employee creater = employeeRepository
                 .findByUsername(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException(authentication.getName() + "은(는) 존재하지 않습니다."));
+                .orElseThrow(() -> new BadCredentialsException("인증되지 않은 사용자입니다."));
 
 
         // 새 사용자 엔티티 생성
