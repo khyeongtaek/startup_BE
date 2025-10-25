@@ -31,20 +31,23 @@ public class ChatRoom {
     @Column(nullable = false, columnDefinition = "LONGTEXT")
     private String name;
 
+    @Comment("팀 채팅방 여부")
+    @Column(nullable = false)
+    private boolean isTeam;
+
     @CreationTimestamp
     @Comment("생성일")
     @Column(nullable = false, name = "create_at")
     private LocalDateTime createAt;
 
-    @Comment("삭제 여부")
-    @Column(nullable = false, name = "is_deleted")
-    private boolean isDeleted;
 
-    public static ChatRoom createChatRoom(Employee employeeId, String name) {
+    public static ChatRoom createChatRoom(Employee employee, String name,boolean isTeam, LocalDateTime createAt) {
         ChatRoom chatRoom = new ChatRoom();
 
-        chatRoom.employeeId = employeeId;
+        chatRoom.employee = employee;
         chatRoom.name = name;
+        chatRoom.isTeam = isTeam;
+        chatRoom.createAt = createAt;
 
         return chatRoom;
     }
