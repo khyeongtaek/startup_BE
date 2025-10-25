@@ -17,7 +17,6 @@ import java.time.LocalDateTime;
 public class ChatRoom {
 
     @Id
-    @Column(name = "chat_room_id")
     @Comment("채팅방 고유 ID")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long chatRoomId;
@@ -35,20 +34,23 @@ public class ChatRoom {
     @Column(nullable = false)
     private boolean isTeam;
 
-    @CreationTimestamp
     @Comment("생성일")
     @Column(nullable = false, name = "create_at")
     private LocalDateTime createAt;
 
 
-    public static ChatRoom createChatRoom(Employee employee, String name,boolean isTeam, LocalDateTime createAt) {
+    public static ChatRoom createChatRoom(Employee employee, String name,boolean isTeam) {
         ChatRoom chatRoom = new ChatRoom();
 
         chatRoom.employee = employee;
         chatRoom.name = name;
         chatRoom.isTeam = isTeam;
-        chatRoom.createAt = createAt;
 
         return chatRoom;
+    }
+
+    @PrePersist
+    protected void onPrePersist() {
+        createAt = LocalDateTime.now();
     }
 }
