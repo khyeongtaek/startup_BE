@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
-import org.goodee.startup_BE.mail.enums.MailboxType;
 import org.hibernate.annotations.Comment;
 
 @Entity
