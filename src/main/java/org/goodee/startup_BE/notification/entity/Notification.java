@@ -41,7 +41,7 @@ public class Notification {
 
     @Comment("생성 시각")
     @Column(updatable = false)
-    private LocalDateTime createAt;
+    private LocalDateTime createdAt;
 
     @Comment("읽은 시각")
     @Column(nullable = true)
@@ -49,14 +49,13 @@ public class Notification {
 
     @Comment("삭제 여부")
     @Column(nullable = false)
-    private boolean isDeleted = false;
+    private Boolean isDeleted = false;
 
     public static Notification createNotification(
             Employee employeeId,
             String url,
             String title,
-            String content,
-            boolean isDeleted) {
+            String content) {
 
         Notification n = new Notification();
 
@@ -64,28 +63,13 @@ public class Notification {
         n.url = url;
         n.title = title;
         n.content = content;
-        n.isDeleted = isDeleted;
 
         return n;
     }
 
-    @Override
-    public String toString() {
-        return "NotiEntity{" +
-                "notificationId=" + notificationId +
-                ", employeeId=" + (employee != null ? employee.getEmployeeId() : null) +
-                ", url=" + url +
-                ", title='" + title + '\'' +
-                ", content='" + content + '\'' +
-                ", createAt=" + createAt +
-                ", readAt=" + readAt +
-                ", isDeleted=" + isDeleted +
-                '}';
-    }
-
     @PrePersist
     protected void onPrePersist() {
-        createAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now();
     }
 
     // 알림을 읽었을 때 readAt update
@@ -94,7 +78,7 @@ public class Notification {
     }
 
     // 알림 삭제 (소프트 삭제)
-    public void isDeletedNotification() {
+    public void deleteNotification() {
         this.isDeleted = true;
     }
 }
