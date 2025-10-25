@@ -26,7 +26,7 @@ public class Notification {
     @Comment("수신자 ID")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "employee_id")
-    private Employee employeeId;
+    private Employee employee;
 
     @Comment("알림 링크")
     @Column(name = "url", columnDefinition = "LONGTEXT")
@@ -51,7 +51,7 @@ public class Notification {
 
     @Comment("삭제 여부")
     @Column(name = "is_deleted", nullable = false)
-    private boolean isDeleted;
+    private boolean isDeleted = false;
 
 
     public Notification(String url, String title, String content, LocalDateTime readAt, Boolean isDeleted) {
@@ -73,13 +73,13 @@ public class Notification {
 
         Notification n = new Notification();
 
-        n.employeeId = employeeId;
+        n.employee = employeeId;
         n.url = url;
         n.title = title;
         n.content = content;
-        n.createAt = LocalDateTime.now();
+        n.createAt = createAt;
         n.readAt = readAt;
-        n.isDeleted = false;
+        n.isDeleted = isDeleted;
 
         return n;
     }
@@ -88,7 +88,7 @@ public class Notification {
     public String toString() {
         return "NotiEntity{" +
                 "notificationId=" + notificationId +
-                ", employeeId=" + (employeeId != null ? employeeId.getEmployeeId() : null) +
+                ", employeeId=" + (employee != null ? employee.getEmployeeId() : null) +
                 ", url=" + url +
                 ", title='" + title + '\'' +
                 ", content='" + content + '\'' +
