@@ -6,6 +6,8 @@ import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.employee.dto.AuthenticationResponseDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeRequestDTO;
 import org.goodee.startup_BE.employee.entity.Employee;
+import org.goodee.startup_BE.employee.entity.LoginHistory;
+import org.goodee.startup_BE.employee.enums.LoginStatus;
 import org.goodee.startup_BE.employee.exception.DuplicateEmailException;
 import org.goodee.startup_BE.employee.exception.ResourceNotFoundException;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
@@ -24,6 +26,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final EmployeeRepository employeeRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final LoginHistoryService loginHistoryService;
 
     // 회원가입
     @Override
@@ -79,21 +82,41 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     // 로그인
     @Override
-    public AuthenticationResponseDTO login(EmployeeRequestDTO request) {
-        // 인증 시도
-        // 인증 시도시 기록 남겨야함
+    public AuthenticationResponseDTO login(EmployeeRequestDTO request, String ipAddress, String userAgent) {
+        // 인증 시도 기록 남김 - 기본값(실패)
+        LoginHistory loginHistory = loginHistoryService
+                .recodeLoginHistory(
+                        request.getUsername()
+                        , ipAddress
+                        , userAgent
+                        , commonCodeRepository
+                                .findByCodeStartsWithAndKeywordExactMatchInValues("LS", LoginStatus.FAIL.name())
+                                .get(0)
+                );
 
-        // 인증 성공 시 사용자 정보 조회
+        // 인증 정보로 사용자 정보 조회
         Employee employee = employeeRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new BadCredentialsException("아이디 또는 비밀번호가 올바르지 않습니다."));
+                .orElse(null);
 
-        boolean passwordMatches = passwordEncoder.matches(request.getPassword(), employee.getPassword());
-
-        if (!passwordMatches) {
+        // 사용자가 없거나 || 비밀번호가 일치하지 않으면 실패 처리
+        if (employee == null || !passwordEncoder.matches(request.getPassword(), employee.getPassword())) {
             throw new BadCredentialsException("아이디 또는 비밀번호가 올바르지 않습니다.");
         }
 
-        //인증 성공 시 사용자id 남겨야함.
+        //인증 성공 시 사용자id 남김.
+        loginHistory
+                .updateEmployee(
+                        commonCodeRepository
+                                .findByCodeStartsWithAndKeywordExactMatchInValues("LS", LoginStatus.SUCCESS.name())
+                                .get(0)
+                        , employee
+                );
+
+
+        // 만약 초기비밀번호 상태라면 초기비밀번호 알림을 보내줘야함.
+        if (employee.getIsInitialPassword()) {
+            //추후 추가
+        }
 
         // JWT 토큰 생성 (AccessToken, RefreshToken) RefreshToken은 추후 추가 예정
         String accessToken = jwtService.generateToken(null, employee);

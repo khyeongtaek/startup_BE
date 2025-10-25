@@ -7,5 +7,5 @@ import org.springframework.security.core.Authentication;
 
 public interface AuthenticationService {
   AuthenticationResponseDTO signup(Authentication authentication, EmployeeRequestDTO request);
-  AuthenticationResponseDTO login(EmployeeRequestDTO request);
+  AuthenticationResponseDTO login(EmployeeRequestDTO request, String ipAddress, String userAgent);
 }
