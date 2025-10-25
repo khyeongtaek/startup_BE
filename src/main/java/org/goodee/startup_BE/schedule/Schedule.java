@@ -32,7 +32,7 @@ public class Schedule {
     private String content;
 
     @ManyToOne(fetch=FetchType.LAZY)
-    @JoinColumn(name = "schedule_category_id", referencedColumnName = "code_id", nullable = false)
+    @JoinColumn(name = "schedule_category_id", referencedColumnName = "common_code_id", nullable = false)
     private CommonCode category;
 
     @Lob
@@ -41,7 +41,7 @@ public class Schedule {
 
     // CommonCode Table  M : 1
     @ManyToOne(fetch=FetchType.LAZY)
-    @JoinColumn(name = "color_code_id", referencedColumnName = "code_id", nullable = false)
+    @JoinColumn(name = "color_code_id", referencedColumnName = "common_code_id", nullable = false)
     private CommonCode color;
 
     @Column(name="start_time")

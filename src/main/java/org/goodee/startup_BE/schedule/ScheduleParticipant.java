@@ -33,7 +33,7 @@ public class ScheduleParticipant {
     private Employee participant;
 
     @ManyToOne(fetch=FetchType.LAZY)
-    @JoinColumn(name="participant_status_code_id", referencedColumnName = "code_id", nullable = false)
+    @JoinColumn(name="participant_status_code_id", referencedColumnName = "common_code_id", nullable = false)
     private CommonCode participantStatus;
 
     @Column(name="created_at")
