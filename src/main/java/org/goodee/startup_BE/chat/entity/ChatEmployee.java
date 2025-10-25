@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -29,50 +28,42 @@ public class ChatEmployee {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = false)
     @Comment("채팅방")
-    private ChatRoom chatRoomId;
+    private ChatRoom chatRoom;
 
     @Column(nullable = false, columnDefinition = "LONGTEXT")
-    @Comment("표시 이름")
+    @Comment("개인별 채팅방 제목")
     private String displayName;
 
-    @Column(nullable = false)
-    @Comment("이름 변경 여부")
-    private boolean changedDisplayName = false;
-
+    // 채팅방의 메세지들이 참여시간 이후인 것만 보여짐.(초대 되기 전 메세지를 못읽게 하기 위해)
     @Column(nullable = false)
     @Comment("참여 시각")
     private LocalDateTime joinedAt;
 
     @Column(nullable = false)
     @Comment("나가기 여부")
-    private boolean isLeft = false;
+    private Boolean isLeft = false;
 
     @Column(nullable = false)
-    @Comment("채팅방 알림 차단 여부")
-    private boolean isNotify = false;
+    @Comment("채팅방 알림 허용 여부")
+    private Boolean isNotify = true;
 
+    // 최초 참여시 '초대되었습니다.' 문구를 마지막으로 읽은 메세지로 등록
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = false)
     @Comment("마지막으로 읽은 메시지 ID")
-    private ChatMessage lastReadMessageId;
+    private ChatMessage lastReadMessage;
 
     public static ChatEmployee createChatEmployee(
             Employee employee,
-            ChatRoom chatRoomId,
+            ChatRoom chatRoom,
             String displayName,
-            boolean changedDisplayName,
-            boolean isLeft,
-            boolean isNotify,
-            ChatMessage lastReadMessageId) {
+            ChatMessage lastReadMessage) {
 
         ChatEmployee chatEmployee = new ChatEmployee();
         chatEmployee.employee = employee;
-        chatEmployee.chatRoomId = chatRoomId;
+        chatEmployee.chatRoom = chatRoom;
         chatEmployee.displayName = displayName;
-        chatEmployee.changedDisplayName = changedDisplayName;
-        chatEmployee.isLeft = isLeft;
-        chatEmployee.isNotify = isNotify;
-        chatEmployee.lastReadMessageId = lastReadMessageId;
+        chatEmployee.lastReadMessage = lastReadMessage;
 
         return chatEmployee;
     }
@@ -83,18 +74,17 @@ public class ChatEmployee {
     }
 
     // 채팅방 이름 변경 (단일 적용)
-    public void chagedDisplayName(String displayName) {
+    public void changedDisplayName(String displayName) {
         this.displayName = displayName;
-        this.changedDisplayName = true;
     }
 
-    // 채팅방 알림 차단 여부
-    public void isNotify() {
-        this.isNotify = true;
+    // 채팅방 알림 차단
+    public void disableNotify() {
+        this.isNotify = false;
     }
 
-    // 채팅방 나가기 여부
-    public void isLeft() {
+    // 채팅방 나가기
+    public void leftChatRoom() {
         this.isLeft = true;
     }
 }

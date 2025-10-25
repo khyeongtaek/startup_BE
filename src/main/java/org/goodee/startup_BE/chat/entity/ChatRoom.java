@@ -32,14 +32,14 @@ public class ChatRoom {
 
     @Comment("팀 채팅방 여부")
     @Column(nullable = false)
-    private boolean isTeam;
+    private Boolean isTeam;
 
     @Comment("생성일")
-    @Column(nullable = false, name = "create_at")
-    private LocalDateTime createAt;
+    @Column(nullable = false, name = "created_at")
+    private LocalDateTime createdAt;
 
 
-    public static ChatRoom createChatRoom(Employee employee, String name,boolean isTeam) {
+    public static ChatRoom createChatRoom(Employee employee, String name,Boolean isTeam) {
         ChatRoom chatRoom = new ChatRoom();
 
         chatRoom.employee = employee;
@@ -51,6 +51,6 @@ public class ChatRoom {
 
     @PrePersist
     protected void onPrePersist() {
-        createAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now();
     }
 }

@@ -21,14 +21,14 @@ public class ChatMessage {
     @Comment("채팅 메시지 고유 ID")
     private Long chatMessageId;
 
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = false)
     @Comment("채팅방 ID")
-    private ChatRoom chatRoomId;
+    private ChatRoom chatRoom;
 
+    // null 이면 시스템 메세지
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(nullable = false)
+    @JoinColumn(nullable = true)
     @Comment("직원 ID")
     private Employee employee;
 
@@ -42,25 +42,17 @@ public class ChatMessage {
 
     @Comment("삭제 여부")
     @Column(nullable = false)
-    private boolean isDeleted = false;
-
-    @Comment("첨부파일 여부")
-    @Column(nullable = false)
-    private boolean isHasAttachment = false;
+    private Boolean isDeleted = false;
 
     public static ChatMessage createChatMessage(
-            ChatRoom chatRoomId,
+            ChatRoom chatRoom,
             Employee employee,
-            String content,
-            boolean isDeleted,
-            boolean isHasAttachment) {
+            String content) {
         ChatMessage chatMessage = new ChatMessage();
 
-        chatMessage.chatRoomId = chatRoomId;
+        chatMessage.chatRoom = chatRoom;
         chatMessage.employee = employee;
         chatMessage.content = content;
-        chatMessage.isDeleted = isDeleted;
-        chatMessage.isHasAttachment = isHasAttachment;
 
         return chatMessage;
     }
@@ -73,10 +65,5 @@ public class ChatMessage {
     // 채팅 메시지 삭제 (소프트 삭제)
     public void deleteChatMessage() {
         this.isDeleted = true;
-    }
-
-    // 첨부 파일 여부
-    public void updateHasAttachment() {
-        this.isHasAttachment = true;
     }
 }
