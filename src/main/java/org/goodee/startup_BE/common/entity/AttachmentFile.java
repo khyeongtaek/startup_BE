@@ -2,6 +2,7 @@ package org.goodee.startup_BE.common.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import org.goodee.startup_BE.common.enums.OwnerType;
 import org.hibernate.annotations.Comment;
 
 import java.time.LocalDateTime;
@@ -38,10 +39,11 @@ public class AttachmentFile {
 	
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;
-	
-	@Column(nullable = false)
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(nullable = false)
 	@Comment("업로드 모듈명")
-	private String ownerType;
+	private CommonCode ownerType;		// 공용 테이블에 모듈 추가 필요, OwnerType enum값 추가 필요
 	
 	@Column()
 	@Comment("모듈 내 고유 ID")
@@ -55,7 +57,7 @@ public class AttachmentFile {
 
 	protected AttachmentFile () {};
 
-	public static AttachmentFile createAttachmentFile(String originalName, String ext, Long size, String storagePath, String ownerType, Long ownerId) {
+	public static AttachmentFile createAttachmentFile(String originalName, String ext, Long size, String storagePath, CommonCode ownerType, Long ownerId) {
 		AttachmentFile attachmentFile = new AttachmentFile();
 		attachmentFile.originalName = originalName;
 		attachmentFile.ext = ext;
