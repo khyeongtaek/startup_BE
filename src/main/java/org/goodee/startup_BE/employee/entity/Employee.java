@@ -27,7 +27,7 @@ public class Employee implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(nullable = false)
+    @Column(name = "employee_id", nullable = false)
     @Comment("직원 고유 ID")
     @Schema(description = "직원 고유 ID", example = "1", accessMode = Schema.AccessMode.READ_ONLY)
     private Long employeeId;
