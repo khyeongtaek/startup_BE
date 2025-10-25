@@ -25,12 +25,12 @@ public class Notification {
 
     @Comment("수신자 ID")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "employee_id", foreignKey = @ForeignKey(name = "fk_notification_employee"))
+    @JoinColumn(name = "employee_id")
     private Employee employeeId;
 
-    @Comment("관련 리소스 PK")
-    @Column(name = "ref_id", nullable = false)
-    private Long refId;
+    @Comment("알림 링크")
+    @Column(name = "url", columnDefinition = "LONGTEXT")
+    private String url;
 
     @Comment("알림 제목")
     @Column(nullable = false, columnDefinition = "LONGTEXT")
@@ -51,25 +51,35 @@ public class Notification {
 
     @Comment("삭제 여부")
     @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted ;
+    private boolean isDeleted;
 
 
-    public Notification(Long refId, String title, String content, LocalDateTime readAt, Boolean isDeleted) {
-        this.refId = refId;
+    public Notification(String url, String title, String content, LocalDateTime readAt, Boolean isDeleted) {
+        this.url = url;
         this.title = title;
         this.content = content;
         this.readAt = readAt;
         this.isDeleted = isDeleted;
     }
 
-    public static Notification createNotification(Employee employeeId, Long refId, String title, String content ) {
+    public static Notification createNotification(
+            Employee employeeId,
+            String url,
+            String title,
+            String content,
+            LocalDateTime createAt,
+            LocalDateTime readAt,
+            boolean isDeleted) {
 
         Notification n = new Notification();
 
         n.employeeId = employeeId;
-        n.refId = refId;
+        n.url = url;
         n.title = title;
         n.content = content;
+        n.createAt = LocalDateTime.now();
+        n.readAt = readAt;
+        n.isDeleted = false;
 
         return n;
     }
@@ -79,13 +89,22 @@ public class Notification {
         return "NotiEntity{" +
                 "notificationId=" + notificationId +
                 ", employeeId=" + (employeeId != null ? employeeId.getEmployeeId() : null) +
-                ", refId=" + refId +
+                ", url=" + url +
                 ", title='" + title + '\'' +
                 ", content='" + content + '\'' +
                 ", createAt=" + createAt +
                 ", readAt=" + readAt +
                 ", isDeleted=" + isDeleted +
                 '}';
+    }
 
+    // 알림을 읽었을 때 readAt update
+    public void readNotification() {
+        this.readAt = LocalDateTime.now();
+    }
+
+    // 알림 삭제 (소프트 삭제)
+    public void deleteNotification() {
+        this.isDeleted = true;
     }
 }
