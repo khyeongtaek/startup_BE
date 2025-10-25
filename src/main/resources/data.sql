@@ -268,3 +268,18 @@ VALUES
     ('WO15', '옵션 더미 데이터', 'MINUTES', '회의록 작성', 'WT03', 0, NULL, NOW(), NOW(), false),
     ('WO16', '옵션 더미 데이터', 'REPORT', '보고서 작성', 'WT04', 0, NULL, NOW(), NOW(), false),
     ('WO17', '옵션 더미 데이터', 'SUPPORT', '업무 지원', 'WT04', 0, NULL, NOW(), NOW(), false);
+
+
+/*
+* =============================================
+* Owner Type (출처 모듈 타입)
+* code: OT + 번호 (Owner Type)
+* value1: 모듈 값 (OwnerType 값)
+* =============================================
+*/
+
+INSERT INTO tbl_common_code
+(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+VALUES
+    ('OT01', '출처 모듈 : 메일', 'MAIL', '', '', 0, NULL, NOW(), NOW(), false),
+    ('OT02', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false);
