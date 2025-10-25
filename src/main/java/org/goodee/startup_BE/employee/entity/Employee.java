@@ -150,18 +150,21 @@ public class Employee implements UserDetails {
         return employee;
     }
 
-    public void update(String username
-            , String phoneNumber, CommonCode status, String profileImg, CommonCode role, CommonCode department, CommonCode position
+    public void update(
+            String phoneNumber, CommonCode status, String profileImg, CommonCode role, CommonCode department, CommonCode position
             , Employee updater
     ) {
-        this.username = username;
-        this.phoneNumber = phoneNumber;
+        updatePhoneNumber(phoneNumber, updater);
         updateStatus(status, updater);
         updateProfileImg(profileImg, updater);
         updateRole(role, updater);
         updateDepartment(department, updater);
         updatePosition(position, updater);
         this.updater = updater;
+    }
+
+    public void updatePhoneNumber(String phoneNumber, Employee updater) {
+        this.phoneNumber = phoneNumber;
     }
 
     public void updateStatus(CommonCode status, Employee updater) {
