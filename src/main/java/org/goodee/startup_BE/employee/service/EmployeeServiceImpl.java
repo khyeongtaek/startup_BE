@@ -10,15 +10,19 @@ import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.exception.ResourceNotFoundException;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class EmployeeServiceImpl implements EmployeeService{
     private final EmployeeRepository employeeRepository;
     private final CommonCodeRepository commonCodeRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public EmployeeResponseDTO updateEmployeeByUser(String username, EmployeeRequestDTO request) {
@@ -78,15 +82,15 @@ public class EmployeeServiceImpl implements EmployeeService{
         Employee employee = employeeRepository.findByUsername(request.getUsername())
                 .orElseThrow(()-> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
 
-        employee.updateInitPassword(request.getUsername(), admin);
+        employee.updateInitPassword(passwordEncoder.encode(employee.getUsername()), admin);
 
         return EmployeeResponseDTO.toDTO(employee);
     }
 
     @Override
-    public EmployeeResponseDTO getEmployee(String username) {
+    public EmployeeResponseDTO getEmployee(Long employeeId) {
         return EmployeeResponseDTO.toDTO(
-                employeeRepository.findByUsername(username)
+                employeeRepository.findById(employeeId)
                         .orElseThrow(()-> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."))
         );
     }
