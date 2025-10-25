@@ -53,18 +53,15 @@ public class LoginHistory {
     // --- 생성 팩토리 메서드 ---
     public static LoginHistory createLoginHistory(
             String username, String ipAddress,
-            String userAgent
+            String userAgent, CommonCode status
     ) {
         LoginHistory history = new LoginHistory();
         history.username = username;
         history.ipAddress = ipAddress;
         history.userAgent = userAgent;
+        history.loginStatus = status;
         history.loginTimestamp = LocalDateTime.now();
         return history;
-    }
-
-    public void updateLoginStatus(CommonCode loginStatus) {
-        this.loginStatus = loginStatus;
     }
 
     public void updateEmployee(CommonCode loginStatus, Employee employee) {
