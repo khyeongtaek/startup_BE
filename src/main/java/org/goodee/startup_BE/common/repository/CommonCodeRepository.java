@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CommonCodeRepository extends JpaRepository<CommonCode, Long> {
@@ -21,4 +22,6 @@ public interface CommonCodeRepository extends JpaRepository<CommonCode, Long> {
             @Param("keyword") String keyword
     );
 
+    // code 로 데이터 조회 (jkw 추가)
+    Optional<CommonCode> findByCode(String code);
 }
