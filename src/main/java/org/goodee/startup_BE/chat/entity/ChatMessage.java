@@ -38,7 +38,6 @@ public class ChatMessage {
 
     @Comment("생성 시각")
     @Column(nullable = false)
-    @CreationTimestamp
     private LocalDateTime createdAt;
 
     @Comment("삭제 여부")
@@ -53,7 +52,6 @@ public class ChatMessage {
             ChatRoom chatRoomId,
             Employee employee,
             String content,
-            LocalDateTime createdAt,
             boolean isDeleted,
             boolean isHasAttachment) {
         ChatMessage chatMessage = new ChatMessage();
@@ -61,11 +59,15 @@ public class ChatMessage {
         chatMessage.chatRoomId = chatRoomId;
         chatMessage.employee = employee;
         chatMessage.content = content;
-        chatMessage.createdAt = createdAt;
         chatMessage.isDeleted = isDeleted;
         chatMessage.isHasAttachment = isHasAttachment;
 
         return chatMessage;
+    }
+
+    @PrePersist
+    protected void onPrePersist() {
+        createdAt = LocalDateTime.now();
     }
 
     // 채팅 메시지 삭제 (소프트 삭제)

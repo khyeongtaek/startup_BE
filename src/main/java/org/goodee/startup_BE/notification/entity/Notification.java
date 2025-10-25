@@ -19,17 +19,16 @@ public class Notification {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "notification_id")
     @Comment("알림 고유 ID")
     private Long notificationId;
 
     @Comment("수신자 ID")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "employee_id")
+    @JoinColumn(nullable = false)
     private Employee employee;
 
     @Comment("알림 링크")
-    @Column(name = "url", columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "LONGTEXT")
     private String url;
 
     @Comment("알림 제목")
@@ -41,34 +40,22 @@ public class Notification {
     private String content;
 
     @Comment("생성 시각")
-    @Column(name = "create_at", updatable = false)
-    @CreationTimestamp
+    @Column(updatable = false)
     private LocalDateTime createAt;
 
     @Comment("읽은 시각")
-    @Column(name = "read_at", nullable = true)
+    @Column(nullable = true)
     private LocalDateTime readAt;
 
     @Comment("삭제 여부")
-    @Column(name = "is_deleted", nullable = false)
+    @Column(nullable = false)
     private boolean isDeleted = false;
-
-
-    public Notification(String url, String title, String content, LocalDateTime readAt, Boolean isDeleted) {
-        this.url = url;
-        this.title = title;
-        this.content = content;
-        this.readAt = readAt;
-        this.isDeleted = isDeleted;
-    }
 
     public static Notification createNotification(
             Employee employeeId,
             String url,
             String title,
             String content,
-            LocalDateTime createAt,
-            LocalDateTime readAt,
             boolean isDeleted) {
 
         Notification n = new Notification();
@@ -77,8 +64,6 @@ public class Notification {
         n.url = url;
         n.title = title;
         n.content = content;
-        n.createAt = createAt;
-        n.readAt = readAt;
         n.isDeleted = isDeleted;
 
         return n;
@@ -98,13 +83,18 @@ public class Notification {
                 '}';
     }
 
+    @PrePersist
+    protected void onPrePersist() {
+        createAt = LocalDateTime.now();
+    }
+
     // 알림을 읽었을 때 readAt update
     public void readNotification() {
         this.readAt = LocalDateTime.now();
     }
 
     // 알림 삭제 (소프트 삭제)
-    public void deleteNotification() {
+    public void isDeletedNotification() {
         this.isDeleted = true;
     }
 }

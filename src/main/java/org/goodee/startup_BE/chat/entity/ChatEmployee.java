@@ -40,7 +40,6 @@ public class ChatEmployee {
     private boolean changedDisplayName = false;
 
     @Column(nullable = false)
-    @CreationTimestamp
     @Comment("참여 시각")
     private LocalDateTime joinedAt;
 
@@ -62,7 +61,6 @@ public class ChatEmployee {
             ChatRoom chatRoomId,
             String displayName,
             boolean changedDisplayName,
-            LocalDateTime joinedAt,
             boolean isLeft,
             boolean isNotify,
             ChatMessage lastReadMessageId) {
@@ -72,12 +70,16 @@ public class ChatEmployee {
         chatEmployee.chatRoomId = chatRoomId;
         chatEmployee.displayName = displayName;
         chatEmployee.changedDisplayName = changedDisplayName;
-        chatEmployee.joinedAt = joinedAt;
         chatEmployee.isLeft = isLeft;
         chatEmployee.isNotify = isNotify;
         chatEmployee.lastReadMessageId = lastReadMessageId;
 
         return chatEmployee;
+    }
+
+    @PrePersist
+    protected void onPrePersist() {
+        joinedAt = LocalDateTime.now();
     }
 
     // 채팅방 이름 변경 (단일 적용)
