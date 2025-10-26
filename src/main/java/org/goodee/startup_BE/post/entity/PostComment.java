@@ -49,7 +49,7 @@ public class PostComment {
                 .post(post)
                 .employee(employee)
                 .content(content)
-                .isDeleted(false)
+                .isDeleted()
                 .build();
     }
 

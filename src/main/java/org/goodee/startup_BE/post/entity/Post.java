@@ -54,8 +54,7 @@ public class Post {
             Employee employee,
             String title,
             String content,
-            boolean isNotification,
-            boolean isDeleted
+            boolean isNotification
     ) {
         return Post.builder()
                 .postCategory(postCategory)
@@ -63,7 +62,6 @@ public class Post {
                 .title(title)
                 .content(content)
                 .isNotification(isNotification)
-                .isDeleted(false)
                 .build();
     }
 
