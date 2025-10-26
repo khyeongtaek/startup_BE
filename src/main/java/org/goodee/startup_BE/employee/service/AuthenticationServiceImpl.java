@@ -1,10 +1,12 @@
 package org.goodee.startup_BE.employee.service;
 
 import lombok.RequiredArgsConstructor;
+import org.goodee.startup_BE.common.dto.APIResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.employee.dto.AuthenticationResponseDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeRequestDTO;
+import org.goodee.startup_BE.employee.dto.EmployeeResponseDTO;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.entity.LoginHistory;
 import org.goodee.startup_BE.employee.enums.LoginStatus;
@@ -30,7 +32,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     // 회원가입
     @Override
-    public AuthenticationResponseDTO signup(Authentication authentication, EmployeeRequestDTO request) {
+    public APIResponseDTO<EmployeeResponseDTO> signup(Authentication authentication, EmployeeRequestDTO request) {
         // 이메일 중복 체크
         if (employeeRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateEmailException(request.getEmail() + "은(는) 이미 존재하는 이메일입니다.");
@@ -68,16 +70,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         // 사용자 등록
         employee = employeeRepository.save(employee);
 
-        // JWT 토큰 생성 (AccessToken, RefreshToken) RefreshToken은 추후 추가 예정
-        String accessToken = jwtService.generateToken(null, employee);
-
-        // 인증 응답 DTO 반환
-        return AuthenticationResponseDTO.builder()
-                .accessToken(accessToken)
-                .refreshToken(null)
-                .username(employee.getUsername())
-                .name(employee.getName())
+        return APIResponseDTO.<EmployeeResponseDTO>builder()
+                .message("회원가입 성공")
+                .data(EmployeeResponseDTO.toDTO(employee))
                 .build();
+
     }
 
     // 로그인
@@ -125,8 +122,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return AuthenticationResponseDTO.builder()
                 .accessToken(accessToken)
                 .refreshToken(null)
-                .username(employee.getUsername())
-                .name(employee.getName())
+                .user(EmployeeResponseDTO.toDTO(employee))
                 .build();
     }
 

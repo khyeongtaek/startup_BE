@@ -9,8 +9,10 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.goodee.startup_BE.common.dto.APIResponseDTO;
 import org.goodee.startup_BE.employee.dto.AuthenticationResponseDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeRequestDTO;
+import org.goodee.startup_BE.employee.dto.EmployeeResponseDTO;
 import org.goodee.startup_BE.employee.service.AuthenticationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -39,7 +41,7 @@ public class AuthenticationController {
     })
     // 'bearerAuth'는 SpringDoc OpenAPI 설정에 정의된 SecurityScheme 이름이어야 함.
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<AuthenticationResponseDTO> register(
+    public ResponseEntity<APIResponseDTO<EmployeeResponseDTO>> register(
             Authentication authentication // Spring Security가 주입하는 인증된 사용자 정보
             , @RequestBody EmployeeRequestDTO employeeRequestDTO // 등록할 직원 정보
     ) {

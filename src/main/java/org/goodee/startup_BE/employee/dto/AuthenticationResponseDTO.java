@@ -19,9 +19,6 @@ public class AuthenticationResponseDTO {
     @Schema(description = "JWT Refresh Token (추후 구현 예정)", example = "null")
     private String refreshToken;
 
-    @Schema(description = "로그인 아이디", example = "user123")
-    private String username;
-
-    @Schema(description = "사용자 이름", example = "홍길동")
-    private String name;
+    @Schema(description = "인증된 사용자(직원) 상세 정보")
+    private EmployeeResponseDTO user;
 }
