@@ -41,14 +41,14 @@ public class EmployeeResponseDTO {
     @Schema(description = "프로필 이미지 URL", example = "default_profile.png")
     private String profileImg;
 
-    @Schema(description = "소속 부서 (CommonCode ID)", example = "201")
-    private Long department;
+    @Schema(description = "소속 부서", example = "웹개발팀")
+    private String department;
 
-    @Schema(description = "직급 (CommonCode ID)", example = "301")
-    private Long position;
+    @Schema(description = "직급", example = "사원")
+    private String position;
 
-    @Schema(description = "권한 (CommonCode ID)", example = "901")
-    private Long role;
+    @Schema(description = "권한", example = "ROLE_ADMIN")
+    private String role;
 
     public Employee toEntity(
             CommonCode statusCode,
@@ -83,9 +83,9 @@ public class EmployeeResponseDTO {
                 .hireDate(employee.getHireDate())
                 .status(employee.getStatus().getCommonCodeId())
                 .profileImg(employee.getProfileImg())
-                .department(employee.getDepartment().getCommonCodeId())
-                .position(employee.getPosition().getCommonCodeId())
-                .role(employee.getRole().getCommonCodeId())
+                .department(employee.getDepartment().getValue1())
+                .position(employee.getPosition().getValue1())
+                .role(employee.getRole().getValue1())
                 .build();
     }
 
