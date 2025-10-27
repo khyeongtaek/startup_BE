@@ -109,7 +109,7 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         // React App 허용
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3002"));
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
         // HTTP 메소드 허용
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         // 모든 헤더 허용
