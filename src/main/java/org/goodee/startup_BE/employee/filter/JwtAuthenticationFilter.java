@@ -34,10 +34,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
+        final String servletPath = request.getServletPath();
 
-
-        if (request.getServletPath().equals("/api/auth/login")) {
-            // 로그인 요청일 경우, 토큰 검증 로직을 건너뛰고 다음 필터로 진행
+        // 로그인 및 토큰 갱신 요청일 경우, 토큰 검증 로직을 건너뛰고 다음 필터로 진행
+        if (servletPath.equals("/api/auth/login") || servletPath.equals("/api/auth/refresh")) {
             filterChain.doFilter(request, response);
             return;
         }
