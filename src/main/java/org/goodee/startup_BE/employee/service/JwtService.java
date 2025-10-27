@@ -26,6 +26,11 @@ public class JwtService {
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
+    // Refresh Token 만료 시간
+    @Value("${jwt.refresh-expiration}")
+    private long jwtRefreshExpiration;
+
+
     //----- 서명키 생성 (JWT 토큰 생성 시 필요한 정보. application.properties에 등록한 jwt.secret-key를 이용해 생성한 SecretKey 객체를 의미)
     private SecretKey getSignInKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
@@ -33,18 +38,36 @@ public class JwtService {
     }
 
 
-    //----- JWT 토큰 생성
-    public String generateToken(
-            Map<String, Object> claims,  // 클레임
-            UserDetails userDetails      // 사용자
+    //----- JWT 토큰 생성 (공통 로직)
+    private String buildToken(
+            Map<String, Object> claims,
+            UserDetails userDetails,
+            long expiration
     ) {
         return Jwts.builder()
                 .claims(claims)  // JWT 토큰의 Payload 구성
                 .subject(userDetails.getUsername())  // 토큰제목(발행한 사람으로 처리)
                 .issuedAt(Date.from(Instant.now()))  // 발행일시
-                .expiration(Date.from(Instant.now().plus(jwtExpiration, ChronoUnit.MILLIS)))  // 만료일시
+                .expiration(Date.from(Instant.now().plus(expiration, ChronoUnit.MILLIS)))  // 만료일시
                 .signWith(getSignInKey())  // 서명키
                 .compact();
+    }
+
+    //----- Access Token 생성
+    public String generateToken(
+            Map<String, Object> claims,  // 클레임
+            UserDetails userDetails      // 사용자
+    ) {
+        // buildToken 메서드를 호출하여 Access Token 생성 (만료시간: jwtExpiration)
+        return buildToken(claims, userDetails, jwtExpiration);
+    }
+
+    //----- Refresh Token 생성
+    public String generateRefreshToken(
+            UserDetails userDetails
+    ) {
+        // Refresh Token은 별도 클레임 없이 생성 (만료시간: jwtRefreshExpiration)
+        return buildToken(Map.of(), userDetails, jwtRefreshExpiration);
     }
 
 
@@ -81,7 +104,7 @@ public class JwtService {
             final Date expiration = this.extractExpiration(jwtToken);
             return (username.equals(userDetails.getUsername()) && expiration.after(Date.from(Instant.now())));
         } catch (Exception e) {
-            return false;  // JWT 토큰에서 특정 클레임을 가져오기 실패
+            return false;  // JWT 토큰에서 특정 클레임을 가져오기 실패 (만료 포함)
         }
     }
 
