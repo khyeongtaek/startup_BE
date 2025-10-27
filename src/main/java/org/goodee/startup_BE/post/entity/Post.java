@@ -2,6 +2,7 @@ package org.goodee.startup_BE.post.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.DynamicUpdate;
 
@@ -24,7 +25,7 @@ public class Post {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "post_category_id", nullable = false)
-    private PostCategory postCategory;
+    private CommonCode commonCode;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
@@ -49,14 +50,14 @@ public class Post {
     private LocalDateTime updatedAt;
 
     public static Post createPost (
-            PostCategory postCategory,
+            CommonCode commonCode,
             Employee employee,
             String title,
             String content,
             boolean isNotification
     ) {
         return Post.builder()
-                .postCategory(postCategory)
+                .commonCode(commonCode)
                 .employee(employee)
                 .title(title)
                 .content(content)
