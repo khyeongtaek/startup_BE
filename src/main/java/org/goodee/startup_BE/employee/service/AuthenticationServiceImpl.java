@@ -1,5 +1,6 @@
 package org.goodee.startup_BE.employee.service;
 
+import jakarta.servlet.http.HttpServletRequest; // HttpServletRequest 임포트 추가
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.common.dto.APIResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
@@ -18,6 +19,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -115,15 +118,61 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             //추후 추가
         }
 
-        // JWT 토큰 생성 (AccessToken, RefreshToken) RefreshToken은 추후 추가 예정
-        String accessToken = jwtService.generateToken(null, employee);
+        // JWT 토큰 생성 (AccessToken, RefreshToken)
+        // Access Token 생성
+        String accessToken = jwtService.generateToken(Map.of(), employee);
+        // Refresh Token 생성
+        String refreshToken = jwtService.generateRefreshToken(employee);
+
 
         // 인증 응답 DTO 반환
         return AuthenticationResponseDTO.builder()
                 .accessToken(accessToken)
-                .refreshToken(null)
+                .refreshToken(refreshToken)
                 .user(EmployeeResponseDTO.toDTO(employee))
                 .build();
     }
 
+    @Override
+    public AuthenticationResponseDTO refreshToken(String refreshToken) {
+
+        final String username;
+
+        // 전달받은 토큰이 비어있는지 확인
+        if (refreshToken == null || refreshToken.isEmpty()) {
+            throw new BadCredentialsException("Refresh Token이 필요합니다.");
+        }
+
+        // 토큰에서 사용자 이름 추출
+        try {
+            username = jwtService.extractUsername(refreshToken);
+        } catch (Exception e) {
+            throw new BadCredentialsException("유효하지 않은 Refresh Token입니다.", e);
+        }
+
+        // 사용자 이름이 존재하면
+        if (username != null) {
+            // DB에서 사용자 정보 조회
+            Employee employee = this.employeeRepository.findByUsername(username)
+                    .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다: " + username));
+
+            // Refresh Token 유효성 검증
+            if (jwtService.isValidToken(refreshToken, employee)) {
+                // 새로운 Access Token 생성
+                String newAccessToken = jwtService.generateToken(Map.of(), employee);
+
+                String newRefreshToken = jwtService.generateRefreshToken(employee);
+
+                // 인증 응답 DTO 반환 (기존 Refresh Token 재사용)
+                return AuthenticationResponseDTO.builder()
+                        .accessToken(newAccessToken)
+                        .refreshToken(newRefreshToken)
+                        .user(EmployeeResponseDTO.toDTO(employee))
+                        .build();
+            }
+        }
+
+        // 유효성 검증 실패 또는 사용자 이름이 없는 경우
+        throw new BadCredentialsException("Refresh Token이 만료되었거나 유효하지 않습니다.");
+    }
 }
