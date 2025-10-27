@@ -322,7 +322,8 @@ VALUES
     ('WS03', '근무 상태 - 조퇴', 'EARLY_LEAVE', '조퇴', NULL, 3, NULL, NOW(), NOW(), false),
     ('WS04', '근무 상태 - 결근', 'ABSENT', '결근', NULL, 4, NULL, NOW(), NOW(), false),
     ('WS05', '근무 상태 - 휴가', 'VACATION', '휴가', NULL, 5, NULL, NOW(), NOW(), false),
-    ('WS06','근무 상태 - 외근', 'OUT_ON_BUSINESS', '외근', NULL , 6 , NULL, NOW(), NOW(), false );
+    ('WS06','근무 상태 - 외근', 'OUT_ON_BUSINESS', '외근', NULL , 6 , NULL, NOW(), NOW(), false ),
+    ('WS07','근무 상태 - 퇴근', 'CLOCK_OUT', '퇴근', NULL , 6 , NULL, NOW(), NOW(), false );
 
 
 /*
@@ -342,7 +343,6 @@ VALUES
     ('SC03', '일정 카테고리 - 휴가', 'VACATION', '휴가', NULL, 3, NULL, NOW(), NOW(), false),
     ('SC04', '일정 카테고리 - 프로젝트', 'PROJECT', '프로젝트', NULL, 4, NULL, NOW(), NOW(), false),
     ('SC05', '일정 카테고리 - 기타', 'ETC', '기타 일정', NULL, 5, NULL, NOW(), NOW(), false);
-
 /*
 * =============================================
 * Participant Status (참여 상태)
