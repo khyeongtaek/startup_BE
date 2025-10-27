@@ -35,6 +35,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
+
+        if (request.getServletPath().equals("/api/auth/login")) {
+            // 로그인 요청일 경우, 토큰 검증 로직을 건너뛰고 다음 필터로 진행
+            filterChain.doFilter(request, response);
+            return;
+        }
         //----- Authorization 헤더에서 JWT 토큰 추출
 
         // 1. Authorization 헤더 추출
