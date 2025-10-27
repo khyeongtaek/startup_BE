@@ -1,11 +1,9 @@
 package org.goodee.startup_BE.employee.service;
 
-import jakarta.servlet.http.HttpServletRequest; // HttpServletRequest 임포트 추가
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.common.dto.APIResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
-import org.goodee.startup_BE.employee.dto.AuthenticationResponseDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeRequestDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeResponseDTO;
 import org.goodee.startup_BE.employee.entity.Employee;
@@ -82,7 +80,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     // 로그인
     @Override
-    public AuthenticationResponseDTO login(EmployeeRequestDTO request, String ipAddress, String userAgent) {
+    public Map<String, Object> login(EmployeeRequestDTO request, String ipAddress, String userAgent) {
         // 인증 시도 기록 남김 - 기본값(실패)
         LoginHistory loginHistory = loginHistoryService
                 .recodeLoginHistory(
@@ -124,17 +122,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         // Refresh Token 생성
         String refreshToken = jwtService.generateRefreshToken(employee);
 
-
-        // 인증 응답 DTO 반환
-        return AuthenticationResponseDTO.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .user(EmployeeResponseDTO.toDTO(employee))
-                .build();
+        return Map.of(
+                "accessToken", accessToken,
+                "refreshToken", refreshToken,
+                "employee", EmployeeResponseDTO.toDTO(employee)
+        );
     }
 
     @Override
-    public AuthenticationResponseDTO refreshToken(String refreshToken) {
+    public Map<String, Object> refreshToken(String refreshToken) {
 
         final String username;
 
@@ -163,12 +159,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
                 String newRefreshToken = jwtService.generateRefreshToken(employee);
 
-                // 인증 응답 DTO 반환 (기존 Refresh Token 재사용)
-                return AuthenticationResponseDTO.builder()
-                        .accessToken(newAccessToken)
-                        .refreshToken(newRefreshToken)
-                        .user(EmployeeResponseDTO.toDTO(employee))
-                        .build();
+
+                return Map.of(
+                        "accessToken", newAccessToken,
+                        "refreshToken", newRefreshToken,
+                        "employee", EmployeeResponseDTO.toDTO(employee)
+                );
             }
         }
 
