@@ -40,7 +40,7 @@ public class AttendanceResponseDTO {
     @Schema(description = "퇴근 시간", example = "2025-10-27T17:00:00")
     private LocalDateTime endTime;
 
-    @Schema(description = "근무 상태명 (CommonCode ID)", example = "근무")
+    @Schema(description = "근무 상태명 (CommonCode )", example = "근무")
     private String workStatus;
 
     @Schema(description = "생성 일시", example = "2025-10-27T17:00:00")

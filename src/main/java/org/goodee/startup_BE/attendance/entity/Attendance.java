@@ -60,10 +60,11 @@ public class Attendance {
     private CommonCode workStatus;
 
 
-    public static Attendance createAttendance(Employee employee, LocalDate attendanceDate) {
+    public static Attendance createAttendance(Employee employee, LocalDate attendanceDate, CommonCode workStatus) {
         Attendance attendance = new Attendance();
         attendance.employee = employee;
         attendance.attendanceDate = attendanceDate;
+        attendance.workStatus = workStatus;
         attendance.workDate = 1;
         attendance.isDeleted = false;
         attendance.createdAt = LocalDateTime.now();
@@ -79,6 +80,11 @@ public class Attendance {
     public void update(LocalDateTime startTime, LocalDateTime endTime) {
         this.startTime = startTime;
         this.endTime = endTime;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void changeWorkStatus(CommonCode workStatus) {
+        this.workStatus = workStatus;
         this.updatedAt = LocalDateTime.now();
     }
 }
