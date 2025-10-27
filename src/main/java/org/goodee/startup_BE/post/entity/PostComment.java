@@ -2,6 +2,7 @@ package org.goodee.startup_BE.post.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.goodee.startup_BE.employee.entity.Employee;
 
 import java.time.LocalDateTime;
 
@@ -42,14 +43,12 @@ public class PostComment {
     public static PostComment createPostComment (
             Post post,
             Employee employee,
-            String content,
-            boolean isDeleted
+            String content
     ) {
         return PostComment.builder()
                 .post(post)
                 .employee(employee)
                 .content(content)
-                .isDeleted()
                 .build();
     }
 

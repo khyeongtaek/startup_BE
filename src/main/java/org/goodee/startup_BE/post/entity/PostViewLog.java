@@ -2,6 +2,7 @@ package org.goodee.startup_BE.post.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.goodee.startup_BE.employee.entity.Employee;
 
 import java.time.LocalDateTime;
 

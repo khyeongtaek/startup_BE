@@ -2,9 +2,8 @@ package org.goodee.startup_BE.post.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.DynamicUpdate;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 
 import java.time.LocalDateTime;
 

@@ -44,7 +44,6 @@ public class PostCategory {
                 .name(name)
                 .orderNo(orderNo)
                 .roleId(roleId)
-                .isDeleted()
                 .build();
     }
 
