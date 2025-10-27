@@ -283,3 +283,27 @@ INSERT INTO tbl_common_code
 VALUES
     ('OT01', '출처 모듈 : 메일', 'MAIL', '', '', 0, NULL, NOW(), NOW(), false),
     ('OT02', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false);
+
+/*
+ * =============================================
+ * Post (게시글)
+ * code: PO + 번호
+ * code_description : 게시글 상태 구분
+ * value1 : 상태 코드 (영문)
+ * value2 : 상태 코드 (한글)
+ * =============================================
+*/
+
+INSERT INTO tbl_common_code
+(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+VALUES
+    ('PO01', '게시글 상태 : 임시 저장', 'DRAFT', '임시 저장', '', 0, NULL, NOW(), NOW(), false),
+    ('PO02', '게시글 상태 : 게시됨', 'PUBLISHED', '게시 완료', '', 0, NULL, NOW(), NOW(), false),
+    ('PO01', '게시글 상태 : 삭제됨', 'DELETED', '게시글 삭제', '', 0, NULL, NOW(), NOW(), false);
+
+
+
+insert into start_up.tbl_employee (employee_id, created_at, email, hire_date, is_initial_password, name, password, phone_number, profile_img, updated_at, username, creator_id, department_common_code_id, position_common_code_id, role_common_code_id, status, updater_id) values (1, '2025-10-24 21:51:37.000000', 'admin@company.com', '2025-10-24', true, '관리자', '$2a$10$CWXLQjioKUYjU2o5VcqdAusdmt6zEEWKK4p0AX7pPc2xtbOLAT8Na', '010-0000-0000', 'default_profile.png', '2025-10-24 21:51:37.000000', 'admin', null, 26, 34, 35, 8, null);
+
+
+insert into start_up.tbl_employee (employee_id, created_at, email, hire_date, is_initial_password, name, password, phone_number, profile_img, updated_at, username, creator_id, department_common_code_id, position_common_code_id, role_common_code_id, status, updater_id) values (4, '2025-10-24 22:03:08.655366', 'gildong@example.com', '2024-10-24', true, '홍길동', '$2a$10$c1LX0MPvp8JyEIwYN/YI3uP62xOlCDkZdwvjPjdddQYWo/G77icS.', '010-1234-56782', 'default_profile.png', '2025-10-25 22:50:55.972246', 'newuser', null, 7, 27, 2, 2, 1);

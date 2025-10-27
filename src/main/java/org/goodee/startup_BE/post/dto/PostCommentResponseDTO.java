@@ -1,6 +1,9 @@
 package org.goodee.startup_BE.post.dto;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
@@ -8,14 +11,12 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class PostResponseDTO {
+public class PostCommentResponseDTO {
 
-    private Long postId;
+    private Long commentId;
     private Long employeeId;
-    private String title;
     private String content;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private boolean isNotification;
 
 }
