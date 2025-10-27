@@ -29,11 +29,17 @@ public class Attendance {
     private Employee employee;
 
 
+    // 누적 근무 일수
     @Column(name="work_date", nullable = false)
     private Integer workDate;
 
+    // 근무한 날짜
+    @Column(name = "attendance_date", nullable = false)
+    private LocalDate attendanceDate;
+
+
     @Column(name = "is_deleted")
-    private Boolean is_deleted;
+    private Boolean isDeleted;
 
     @Column(name="start_time")
     private LocalDateTime startTime;
@@ -54,18 +60,19 @@ public class Attendance {
     private CommonCode workStatus;
 
 
-    public static Attendance createAttendance(Employee employee, Integer workDate) {
+    public static Attendance createAttendance(Employee employee, LocalDate attendanceDate) {
         Attendance attendance = new Attendance();
         attendance.employee = employee;
-        attendance.workDate = workDate;
-        attendance.is_deleted = false;
+        attendance.attendanceDate = attendanceDate;
+        attendance.workDate = 1;
+        attendance.isDeleted = false;
         attendance.createdAt = LocalDateTime.now();
         attendance.updatedAt = LocalDateTime.now();
         return attendance;
     }
 
     public void delete() {
-        this.is_deleted = true;
+        this.isDeleted = true;
         this.updatedAt = LocalDateTime.now();
     }
 

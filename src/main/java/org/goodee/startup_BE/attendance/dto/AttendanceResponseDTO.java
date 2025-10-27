@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import org.goodee.startup_BE.attendance.entity.Attendance;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @NoArgsConstructor
@@ -23,6 +24,9 @@ public class AttendanceResponseDTO {
 
     @Schema(description = "직원 이름", example = "홍길동")
     private String employeeName;
+
+    @Schema(description = "근무한 날짜", example = "2025-10-27")
+    private LocalDate attendanceDate;
 
     @Schema(description = "직원 연차 개수", example = "15")
     private Integer annualLeaveCount;
@@ -51,6 +55,7 @@ public class AttendanceResponseDTO {
                 .attendanceId(attendance.getAttendanceId())
                 .employeeId(attendance.getEmployee().getEmployeeId())
                 .employeeName(attendance.getEmployee().getName())
+                .attendanceDate(attendance.getAttendanceDate())
                 //.annualLeaveCount(attendance.)
                 .workDate(attendance.getWorkDate())
                 .startTime(attendance.getStartTime())
