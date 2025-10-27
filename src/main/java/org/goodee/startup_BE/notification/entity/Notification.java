@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
 import org.hibernate.annotations.CreationTimestamp;
@@ -26,6 +27,9 @@ public class Notification {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(nullable = false)
     private Employee employee;
+
+    @Comment("알림 종류")
+    private OwnerType ownerType;
 
     @Comment("알림 링크")
     @Column(columnDefinition = "LONGTEXT")
@@ -52,14 +56,14 @@ public class Notification {
     private Boolean isDeleted = false;
 
     public static Notification createNotification(
-            Employee employeeId,
+            Employee employee,
             String url,
             String title,
             String content) {
 
         Notification n = new Notification();
 
-        n.employee = employeeId;
+        n.employee = employee;
         n.url = url;
         n.title = title;
         n.content = content;
