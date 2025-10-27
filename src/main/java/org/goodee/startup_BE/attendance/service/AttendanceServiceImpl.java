@@ -46,10 +46,12 @@ public class AttendanceServiceImpl implements AttendanceService{
         // 직원 정보 조회
         Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new IllegalArgumentException("직원 정보를 찾을 수 없습니다."));
 
-        List<CommonCode> codes = commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "ABSENT");
+        // CommonCode에서 코드 가져오기
+        List<CommonCode> codes = commonCodeRepository
+                .findByCodeStartsWithAndKeywordExactMatchInValues("WS", "NORMAL");
 
         if (codes.isEmpty()) {
-            throw new IllegalArgumentException("근무 상태 코드 'ABSENT'를 찾을 수 없습니다.");
+            throw new IllegalArgumentException("근무 상태 코드 'NORMAL'을 찾을 수 없습니다.");
         }
 
         CommonCode workStatus = codes.get(0);
@@ -67,13 +69,18 @@ public class AttendanceServiceImpl implements AttendanceService{
     public AttendanceResponseDTO clockOut(Long employeeId) {
         Attendance attendance = attendanceRepository.findCurrentWorkingRecord(employeeId).orElseThrow(() -> new IllegalStateException("출근 기록이 없습니다."));
 
-        List<CommonCode> codes = commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "ABSENT");
+        // CommonCode에서 코드 가져오기
+        List<CommonCode> codes = commonCodeRepository
+                .findByCodeStartsWithAndKeywordExactMatchInValues("WS", "LEAVE");
 
         if (codes.isEmpty()) {
-            throw new IllegalArgumentException("근무 상태 코드 'ABSENT'를 찾을 수 없습니다.");
+            throw new IllegalArgumentException("근무 상태 코드 'LEAVE'를 찾을 수 없습니다.");
         }
 
+
+
         CommonCode workStatus = codes.get(0);
+
         attendance.changeWorkStatus(workStatus);
         attendance.update(attendance.getStartTime(), LocalDateTime.now());
         Attendance saved = attendanceRepository.save(attendance);
