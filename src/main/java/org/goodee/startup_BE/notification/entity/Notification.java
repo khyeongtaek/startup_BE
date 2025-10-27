@@ -78,7 +78,9 @@ public class Notification {
 
     // 알림을 읽었을 때 readAt update
     public void readNotification() {
-        this.readAt = LocalDateTime.now();
+        if( readAt == null) {
+            this.readAt = LocalDateTime.now();
+        }
     }
 
     // 알림 삭제 (소프트 삭제)
