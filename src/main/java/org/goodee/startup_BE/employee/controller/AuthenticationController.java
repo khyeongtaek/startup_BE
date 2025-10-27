@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -31,7 +33,7 @@ public class AuthenticationController {
 
     // 회원가입
     @PostMapping("/signup")
-    @Operation(summary = "직원 등록 (회원가입)", description = "관리자가 새로운 직원을 등록합니다. (관리자 권한 필요)")
+    @Operation(summary = "직원 등록 (회원가입)", description = "관리자가 새로운 직원을 등록")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "직원 등록 성공",
                     content = @Content(schema = @Schema(implementation = AuthenticationResponseDTO.class))),
@@ -51,7 +53,7 @@ public class AuthenticationController {
 
     // 로그인
     @PostMapping("/login")
-    @Operation(summary = "로그인", description = "아이디(username)와 비밀번호로 로그인하여 JWT 토큰을 발급받습니다. 로그인 시 클라이언트의 IP 주소와 User-Agent 정보가 기록됩니다.")
+    @Operation(summary = "로그인", description = "아이디(username)와 비밀번호로 로그인하여 JWT 토큰을 발급. (로그인 시 클라이언트의 IP 주소와 User-Agent 정보가 기록)")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "로그인 성공",
                     content = @Content(schema = @Schema(implementation = AuthenticationResponseDTO.class))),
@@ -73,6 +75,22 @@ public class AuthenticationController {
                                 , ipAddress
                                 , userAgent
                         ));
+    }
+
+    // 토큰 갱신
+    @PostMapping("/refresh")
+    @Operation(summary = "Access Token 갱신", description = "유효한 Refresh Token을 'Authorization: Bearer <token>' 헤더에 담아 전송하면 새로운 Access Token과 기존 Refresh Token을 반환")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "토큰 갱신 성공",
+                    content = @Content(schema = @Schema(implementation = AuthenticationResponseDTO.class))),
+            @ApiResponse(responseCode = "401", description = "인증 실패 (유효하지 않거나 만료된 Refresh Token)")
+    })
+    public ResponseEntity<AuthenticationResponseDTO> refresh(
+            @RequestBody Map<String, String> map
+    ) {
+        String refreshToken = map.get("refreshToken");
+        // 서비스의 refreshToken 메서드 호출
+        return ResponseEntity.ok(authenticationService.refreshToken(refreshToken));
     }
 
 
