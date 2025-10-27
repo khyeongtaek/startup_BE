@@ -1,4 +1,4 @@
-package org.goodee.startup_BE.attendance;
+package org.goodee.startup_BE.attendance.entity;
 
 
 import jakarta.persistence.*;

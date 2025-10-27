@@ -1,4 +1,4 @@
-package org.goodee.startup_BE.schedule;
+package org.goodee.startup_BE.schedule.entity;
 
 
 import jakarta.persistence.*;

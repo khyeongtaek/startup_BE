@@ -1,4 +1,4 @@
-package org.goodee.startup_BE.attendance;
+package org.goodee.startup_BE.attendance.entity;
 
 
 import jakarta.persistence.*;
@@ -7,6 +7,7 @@ import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
 
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 
@@ -29,7 +30,7 @@ public class Attendance {
 
 
     @Column(name="work_date", nullable = false)
-    private LocalDateTime workDate;
+    private Integer workDate;
 
     @Column(name = "is_deleted")
     private Boolean is_deleted;
@@ -53,7 +54,7 @@ public class Attendance {
     private CommonCode workStatus;
 
 
-    public static Attendance createAttendance(Employee employee, LocalDateTime workDate) {
+    public static Attendance createAttendance(Employee employee, Integer workDate) {
         Attendance attendance = new Attendance();
         attendance.employee = employee;
         attendance.workDate = workDate;
