@@ -31,7 +31,7 @@ public class AttendanceRequestDTO {
     private LocalDateTime endTime;
 
     @Schema(description = "근무 상태 코드 ", example = "WORK")
-    private String workStatusCode;
+    private String workStatus;
 
     @Schema(description = "삭제 여부", example = "false")
     private boolean isDeleted;

@@ -60,7 +60,7 @@ public class AttendanceResponseDTO {
                 .workDate(attendance.getWorkDate())
                 .startTime(attendance.getStartTime())
                 .endTime(attendance.getEndTime())
-                .workStatus(attendance.getWorkStatus().getCodeDescription())
+                .workStatus(attendance.getWorkStatus().getValue1())
                 .createdAt(attendance.getCreatedAt())
                 .updatedAt(attendance.getUpdatedAt())
                 .build();
