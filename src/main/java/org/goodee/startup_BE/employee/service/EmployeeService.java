@@ -18,6 +18,7 @@ public interface EmployeeService {
     EmployeeResponseDTO initPassword(String username, EmployeeRequestDTO request);
 
     EmployeeResponseDTO getEmployee(Long employeeId);
+    EmployeeResponseDTO getEmployee(String username);
 
     // 특정 부서의 소속원들 조회
     List<EmployeeResponseDTO> getDepartmentMembers(Long departmentId);
