@@ -28,6 +28,23 @@ import java.util.List;
 public class EmployeeController {
     private final EmployeeService employeeService;
 
+
+    @Operation(summary = "로그인한 본인 정보 조회", description = "username 을 기준으로 로그인한  사원의 상세 정보를 조회.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "사원 정보 조회 성공"),
+            @ApiResponse(responseCode = "400", description = "해당 사원을 찾을 수 없음", content = @Content),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자", content = @Content)
+    })
+    @GetMapping("/myInfo")
+    public ResponseEntity<APIResponseDTO<EmployeeResponseDTO>> getMyInfo(
+            Authentication authentication // Spring Security가 주입하는 인증된 사용자 정보
+    ) {
+        return ResponseEntity.ok(APIResponseDTO.<EmployeeResponseDTO>builder()
+                .message("사원 정보 조회 성공")
+                .data(employeeService.getEmployee(authentication.getName()))
+                .build());
+    }
+
     @Operation(summary = "특정 사원 정보 조회", description = "사원 ID를 기준으로 특정 사원의 상세 정보를 조회.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "사원 정보 조회 성공"),

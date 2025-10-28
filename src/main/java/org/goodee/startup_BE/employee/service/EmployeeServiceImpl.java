@@ -95,6 +95,14 @@ public class EmployeeServiceImpl implements EmployeeService{
         );
     }
 
+    @Override
+    public EmployeeResponseDTO getEmployee(String username) {
+        return EmployeeResponseDTO.toDTO(
+                employeeRepository.findByUsername(username)
+                        .orElseThrow(()-> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."))
+        );
+    }
+
 
     @Override
     public List<EmployeeResponseDTO> getDepartmentMembers(Long departmentId) {
