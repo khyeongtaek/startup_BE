@@ -21,7 +21,4 @@ public interface CommonCodeRepository extends JpaRepository<CommonCode, Long> {
             @Param("codePrefix") String codePrefix,
             @Param("keyword") String keyword
     );
-
-    // code 로 데이터 조회 (jkw 추가)
-    Optional<CommonCode> findByCode(String code);
 }
