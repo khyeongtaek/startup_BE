@@ -71,10 +71,10 @@ public class AttendanceServiceImpl implements AttendanceService{
 
         // CommonCode에서 코드 가져오기
         List<CommonCode> codes = commonCodeRepository
-                .findByCodeStartsWithAndKeywordExactMatchInValues("WS", "LEAVE");
+                .findByCodeStartsWithAndKeywordExactMatchInValues("WS", "CLOCK_OUT");
 
         if (codes.isEmpty()) {
-            throw new IllegalArgumentException("근무 상태 코드 'LEAVE'를 찾을 수 없습니다.");
+            throw new IllegalArgumentException("근무 상태 코드 'CLOCK_OUT'를 찾을 수 없습니다.");
         }
 
 
