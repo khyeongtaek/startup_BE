@@ -35,10 +35,9 @@ public class ApprovalReference {
 
     // --- 생성 팩토리 메서드 ---
     public static ApprovalReference createApprovalReference(
-            Long referenceId, ApprovalDoc doc, Employee employee
+            ApprovalDoc doc, Employee employee
     ) {
         ApprovalReference reference = new ApprovalReference();
-        reference.referenceId = referenceId;
         reference.doc = doc;
         reference.employee = employee;
         return reference;

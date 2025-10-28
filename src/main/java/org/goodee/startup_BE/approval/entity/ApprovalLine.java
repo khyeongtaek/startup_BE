@@ -49,10 +49,9 @@ public class ApprovalLine {
     private Employee employee;
 
     public static ApprovalLine createApprovalLine(
-            Long lineId, Long approvalOrder, ApprovalDoc doc, Employee employee, CommonCode approvalStatus, LocalDateTime approvalDate, String comment
+            Long approvalOrder, ApprovalDoc doc, Employee employee, CommonCode approvalStatus, LocalDateTime approvalDate, String comment
     ) {
         ApprovalLine line = new ApprovalLine();
-        line.lineId = lineId;
         line.approvalOrder = approvalOrder;
         line.doc = doc;
         line.employee = employee;

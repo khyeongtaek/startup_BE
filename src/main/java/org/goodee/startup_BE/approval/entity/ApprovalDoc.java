@@ -68,8 +68,7 @@ public class ApprovalDoc {
 
     // --- 생성 팩토리 메서드 ---
     public static ApprovalDoc createApprovalDoc(
-            Long docId
-            , String title
+            String title
             , String content
             , Employee creater
 //            , Long templateId
@@ -78,7 +77,6 @@ public class ApprovalDoc {
             , CommonCode docStatus
     ) {
         ApprovalDoc doc = new ApprovalDoc();
-        doc.docId = docId;
         doc.updateTitle(title);
         doc.updateContent(content);
         doc.creater = creater;
