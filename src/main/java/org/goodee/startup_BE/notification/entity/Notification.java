@@ -57,6 +57,7 @@ public class Notification {
 
     public static Notification createNotification(
             Employee employee,
+            OwnerType ownerType,
             String url,
             String title,
             String content) {
@@ -64,6 +65,7 @@ public class Notification {
         Notification n = new Notification();
 
         n.employee = employee;
+        n.ownerType = ownerType;
         n.url = url;
         n.title = title;
         n.content = content;
