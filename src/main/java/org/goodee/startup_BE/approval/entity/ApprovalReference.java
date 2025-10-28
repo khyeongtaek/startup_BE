@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 public class ApprovalReference {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(nullable = false)
     @Comment("참조 고유 ID")
     private Long referenceId;

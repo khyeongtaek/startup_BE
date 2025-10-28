@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 public class ApprovalLine {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(nullable = false)
     @Comment("결재선 고유 ID")
     private Long lineId;

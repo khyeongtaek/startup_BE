@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 public class ApprovalDoc {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(nullable = false)
     @Comment("문서 고유 ID")
     private Long docId;
