@@ -10,6 +10,8 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.nio.file.AccessDeniedException;
+
 @RestControllerAdvice
 public class CommonExceptionHandler {
 
@@ -20,6 +22,14 @@ public class CommonExceptionHandler {
                 .message(e.getMessage())
                 .build();
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+    
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<APIResponseDTO<Void>> handleAccessDeniedException(AccessDeniedException e) {
+        APIResponseDTO<Void> response = APIResponseDTO.<Void>builder()
+                .message(e.getMessage())
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
     }
 
 
