@@ -2,6 +2,9 @@ package org.goodee.startup_BE.notification.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.goodee.startup_BE.common.entity.CommonCode;
+import org.goodee.startup_BE.common.repository.CommonCodeRepository;
+import org.goodee.startup_BE.common.service.CommonCodeService;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
 import org.goodee.startup_BE.notification.dto.NotificationRequestDTO;
@@ -10,6 +13,7 @@ import org.goodee.startup_BE.notification.entity.Notification;
 import org.goodee.startup_BE.notification.repository.NotificationRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -24,6 +28,8 @@ public class NotificationServiceImpl implements NotificationService{
 
     private final NotificationRepository notificationRepository;
     private final EmployeeRepository employeeRepository;
+    private final SimpMessagingTemplate simpMessagingTemplate;
+    private final CommonCodeRepository commonCodeRepository;
 
     // 알림 생성
     @Override
@@ -33,18 +39,31 @@ public class NotificationServiceImpl implements NotificationService{
         Employee employee = employeeRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("존재 하지 않는 사원 입니다"));
 
+        // OwnerType CommonCode 조회
+        // DTO에서 받은 code를 사용하여 CommonCode Entity를 조회 하기
+        CommonCode ownerType = commonCodeRepository.findById(requestDTO.getOwnerTypeCommonCodeId())
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "유효하지 않은 알림 출처 CommonCode Id 입니다 ID: " + requestDTO.getOwnerTypeCommonCodeId()
+                ));
+
         // 알림 생성
         Notification notification =
                 Notification
-                        .createNotification(employee,
-                                requestDTO.getOwnerType(),
+                        .createNotification(
+                                employee,
+                                ownerType,
                                 requestDTO.getUrl(),
                                 requestDTO.getTitle(),
                                 requestDTO.getContent()
                         );
-
         // 저장
-        return NotificationResponseDTO.toDTO(notificationRepository.save(notification));
+        NotificationResponseDTO dto = NotificationResponseDTO.toDTO(notificationRepository.save(notification));
+
+        // Websocket 푸쉬
+        // pring Security Principal.getName()과 일치하는 username(recipientUsername)으로 메시지 전송
+        simpMessagingTemplate.convertAndSendToUser(username, "/queue/noti", dto);
+
+        return dto;
     }
 
     // 목록 조회
