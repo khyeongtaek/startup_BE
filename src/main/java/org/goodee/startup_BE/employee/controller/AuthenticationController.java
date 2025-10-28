@@ -43,8 +43,6 @@ public class AuthenticationController {
             @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
             @ApiResponse(responseCode = "403", description = "권한 없음 (관리자가 아님)")
     })
-    // 'bearerAuth'는 SpringDoc OpenAPI 설정에 정의된 SecurityScheme 이름이어야 함.
-    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<APIResponseDTO<EmployeeResponseDTO>> register(
             Authentication authentication // Spring Security가 주입하는 인증된 사용자 정보
             , @RequestBody EmployeeRequestDTO employeeRequestDTO // 등록할 직원 정보
