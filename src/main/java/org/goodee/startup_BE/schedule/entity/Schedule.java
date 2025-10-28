@@ -11,6 +11,8 @@ import java.time.LocalDateTime;
 @Table(name="tbl_schedule")
 @Entity
 @Getter
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Schedule {
 
@@ -59,13 +61,15 @@ public class Schedule {
 
 
     @Column(name = "is_deleted")
-    private Boolean is_deleted;
+    private Boolean isDeleted;
 
 
     public static Schedule createSchedule(
             Employee employee,
             String title,
             String content,
+            CommonCode category,
+            CommonCode color,
             LocalDateTime startTime,
             LocalDateTime endTime
     ) {
@@ -73,16 +77,18 @@ public class Schedule {
         schedule.employee = employee;
         schedule.title = title;
         schedule.content = content;
+        schedule.category = category;
+        schedule.color = color;
         schedule.startTime = startTime;
         schedule.endTime = endTime;
-        schedule.is_deleted = false;
+        schedule.isDeleted = false;
         schedule.createdAt = LocalDateTime.now();
         schedule.updatedAt = LocalDateTime.now();
         return schedule;
     }
 
     public void delete() {
-        this.is_deleted = true;
+        this.isDeleted = true;
         this.updatedAt = LocalDateTime.now();
     }
 
