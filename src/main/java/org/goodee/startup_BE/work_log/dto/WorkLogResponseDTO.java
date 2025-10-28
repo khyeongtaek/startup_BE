@@ -32,6 +32,7 @@ public class WorkLogResponseDTO {
 			       .workDate(workLog.getWorkDate())
 			       .title(workLog.getTitle())
 			       .content(workLog.getContent())
+			       .isRead(workLog.getIsDeleted())
 			       .build();
 	}
 }

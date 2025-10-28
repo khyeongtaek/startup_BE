@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.nio.file.AccessDeniedException;
+import java.util.NoSuchElementException;
 
 @RestControllerAdvice
 public class CommonExceptionHandler {
@@ -32,5 +33,11 @@ public class CommonExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
     }
 
-
+    @ExceptionHandler(NoSuchElementException.class)
+    public ResponseEntity<APIResponseDTO<Void>> handleNoSuchElementException(NoSuchElementException e) {
+        APIResponseDTO<Void> response = APIResponseDTO.<Void>builder()
+                .message(e.getMessage())
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    }
 }
