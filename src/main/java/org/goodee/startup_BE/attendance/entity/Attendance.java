@@ -13,8 +13,10 @@ import java.time.LocalDateTime;
 
 @Table(name="tbl_attendance")
 @Entity
-@Getter
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Builder
+@Getter
 public class Attendance {
 
     @Id
