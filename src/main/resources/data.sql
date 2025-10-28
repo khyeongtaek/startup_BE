@@ -268,86 +268,6 @@ VALUES
     ('WO15', '옵션 더미 데이터', 'MINUTES', '회의록 작성', 'WT03', 0, NULL, NOW(), NOW(), false),
     ('WO16', '옵션 더미 데이터', 'REPORT', '보고서 작성', 'WT04', 0, NULL, NOW(), NOW(), false),
     ('WO17', '옵션 더미 데이터', 'SUPPORT', '업무 지원', 'WT04', 0, NULL, NOW(), NOW(), false);
-/*
-* =============================================
-* Receiver Type (수신자 타입)
-* code: RT + 번호 (Receiver Type)
-* value1: 타입 값 (영문)
-* =============================================
-*/
-
-INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
-VALUES
-    ('RT1', '수신', 'TO', NULL, NULL, 1, NULL, NOW(), NOW(), false),
-    ('RT2', '참조', 'CC', NULL, NULL, 2, NULL, NOW(), NOW(), false),
-    ('RT3', '숨은 참조', 'BCC', NULL, NULL, 3, NULL, NOW(), NOW(), false);
-
-
-/*
-* =============================================
-* Mailbox Type (메일함 타입)
-* code: MT + 번호 (Mailbox Type)
-* value1: 타입 값 (영문)
-* =============================================
-*/
-
-INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
-VALUES
-    ('MT1', '수신함', 'INBOX', NULL, NULL, 1, NULL, NOW(), NOW(), false),
-    ('MT2', '발신함', 'SENT', NULL, NULL, 2, NULL, NOW(), NOW(), false),
-    ('MT3', '개인 보관함', 'MYBOX', NULL, NULL, 3, NULL, NOW(), NOW(), false);
-
-
-/*
-* =============================================
-* Work Type (업무 분류)
-* code: WT + 번호 (Work Type)
-* value1: 분류 코드 (영문)
-* value2: 분류 이름 (한글)
-* =============================================
-*/
-
-INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
-VALUES
-    ('WT01', '업무 분류 : 프로젝트', 'PROJECT', '프로젝트', NULL, 1, NULL, NOW(), NOW(), false),
-    ('WT02', '업무 분류 : 연구', 'STUDY', '연구', NULL, 0, NULL, NOW(), NOW(), false),
-    ('WT03', '업무 분류 : 회의', 'MEETING', '회의', NULL, 0, NULL, NOW(), NOW(), false),
-    ('WT04', '업무 분류 : 기타 업무', 'ETC', '기타 업무', NULL, 0, NULL, NOW(), NOW(), false);
-
-
-/*
-* =============================================
-* Work Type Option (업무 분류별 세무 항목)
-* code: WO + 번호 (Work Type Option)
-* value1: 옵션 코드 (영문)
-* value2: 옵션 이름 (한글)
-* value3: 상위 분류 (상위 코드 값)
-* =============================================
-*/
-
-INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
-VALUES
-    ('WO01', '메일 기능 개발', 'MAIL', '메일', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO02', '업무일지 기능 개발', 'WORKLOG', '업무일지', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO03', '게시판 기능 개발', 'BOARD', '게시판', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO04', '조직도 기능 개발', 'ORGANIZATION', '조직도', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO05', '회원가입 기능 개발', 'SIGNUP', '회원가입', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO06', '로그인 기능 개발', 'LOGIN', '로그인', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO07', '전자결재 기능 개발', 'APPROVAL', '전자결재', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO08', '메신저 기능 개발', 'CHAT', '메신저', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO09', '알림 기능 개발', 'NOTIFICATION', '알림', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO10', '일정 기능 개발', 'CALENDAR', '일정', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO11', '근태관리 기능 개발', 'ATTENDANCE', '근태관리', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO12', '옵션 더미 데이터', 'TECH_STUDY', '기술 스터디', 'WT02', 0, NULL, NOW(), NOW(), false),
-    ('WO13', '옵션 더미 데이터', 'DOC', '문서 정리', 'WT02', 0, NULL, NOW(), NOW(), false),
-    ('WO14', '옵션 더미 데이터', 'MEETING_PREP', '회의 준비', 'WT03', 0, NULL, NOW(), NOW(), false),
-    ('WO15', '옵션 더미 데이터', 'MINUTES', '회의록 작성', 'WT03', 0, NULL, NOW(), NOW(), false),
-    ('WO16', '옵션 더미 데이터', 'REPORT', '보고서 작성', 'WT04', 0, NULL, NOW(), NOW(), false),
-    ('WO17', '옵션 더미 데이터', 'SUPPORT', '업무 지원', 'WT04', 0, NULL, NOW(), NOW(), false);
 
 
 /*
@@ -363,7 +283,6 @@ INSERT INTO tbl_common_code
 VALUES
     ('OT01', '출처 모듈 : 메일', 'MAIL', '', '', 0, NULL, NOW(), NOW(), false),
     ('OT02', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false);
-
 
 /*
 * =============================================
