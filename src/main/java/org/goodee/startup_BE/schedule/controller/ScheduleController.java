@@ -62,7 +62,7 @@ public class ScheduleController {
             @ApiResponse(responseCode = "200", description = "일정 조회 성공"),
             @ApiResponse(responseCode = "404", description = "일정을 찾을 수 없음", content = @Content)
     })
-    @GetMapping("/{scheduleID}")
+    @GetMapping("/{scheduleId}")
     public ResponseEntity<APIResponseDTO<ScheduleResponseDTO>> getMySchedule(
             @Parameter(description = "조회할 일정 ID", required = true, example = "1")
             @PathVariable Long scheduleId){
