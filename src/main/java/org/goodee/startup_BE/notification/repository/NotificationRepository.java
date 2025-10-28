@@ -9,15 +9,15 @@ import java.util.List;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
-    // 목록(최신순)
+    // 목록 조회(최신순)
     Page<Notification> findByEmployeeEmployeeIdAndIsDeletedFalseOrderByCreatedAtDesc(Long empolyeeId, Pageable pageable);
 
-    // 읽지 않은 알림의 개수
+    // 읽지 않은 알림의 개수 조회
     long countByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(String username);
 
-    // 삭제되지 않은 모든 알림 조회
+    // 삭제되지 않은 모든 알림 조회 (전체 알림 읽기)
     List<Notification> findByEmployeeUsernameAndIsDeletedFalse(String username);
 
-    // 읽지 않은 모든 알림 조회
+    // 읽지 않은 모든 알림 조회 (전체 알림 삭제)
     List<Notification> findByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(String username);
 }

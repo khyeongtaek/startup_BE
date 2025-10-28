@@ -1,6 +1,7 @@
 package org.goodee.startup_BE.notification.dto;
 
 import lombok.*;
+import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.mail.entity.Mail;
@@ -8,7 +9,7 @@ import org.goodee.startup_BE.notification.entity.Notification;
 
 import java.time.LocalDateTime;
 
-@Getter @Setter
+@Getter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
@@ -16,21 +17,21 @@ import java.time.LocalDateTime;
 public class NotificationResponseDTO {
 
     private Long notificationId;
-    private OwnerType ownerType;
+    private String ownerTypeDescription;
     private String url;
     private String title;
     private String content;
     private LocalDateTime createdAt;
     private Boolean readAt;
 
-    public Notification toEntity(Employee employee) {
+    public Notification toEntity(Employee employee, CommonCode ownerType) {
         return Notification.createNotification(employee, ownerType, url, title, content);
     }
 
     public static NotificationResponseDTO toDTO(Notification notification) {
         return NotificationResponseDTO.builder()
                 .notificationId(notification.getNotificationId())
-                .ownerType(OwnerType.valueOf(notification.getOwnerType().name()))
+                .ownerTypeDescription(notification.getOwnerType().getCodeDescription())
                 .url(notification.getUrl())
                 .title(notification.getTitle())
                 .content(notification.getContent())
