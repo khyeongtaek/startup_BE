@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
@@ -28,8 +29,10 @@ public class Notification {
     @JoinColumn(nullable = false)
     private Employee employee;
 
-    @Comment("알림 종류")
-    private OwnerType ownerType;
+    @Comment("알림 출처 (Common Code")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "owner_type", nullable = false)
+    private CommonCode ownerType;
 
     @Comment("알림 링크")
     @Column(columnDefinition = "LONGTEXT")
@@ -57,7 +60,7 @@ public class Notification {
 
     public static Notification createNotification(
             Employee employee,
-            OwnerType ownerType,
+            CommonCode ownerType,
             String url,
             String title,
             String content) {
