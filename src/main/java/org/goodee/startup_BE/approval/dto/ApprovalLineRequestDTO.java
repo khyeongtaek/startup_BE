@@ -49,17 +49,17 @@ public class ApprovalLineRequestDTO {
      * @return ApprovalLine 엔티티
      */
     public ApprovalLine toEntity(
-            ApprovalDoc doc, // (주석) 이 결재선이 속한 문서 엔티티
-            Employee approver, // (주석) 이 결재선의 결재자 엔티티
-            CommonCode approvalStatus // (주석) 초기 결재 상태 (예: '대기')
+            ApprovalDoc doc, // 이 결재선이 속한 문서 엔티티
+            Employee approver, // 이 결재선의 결재자 엔티티
+            CommonCode approvalStatus // 초기 결재 상태 (예: '대기')
     ) {
-        // (주석) 엔티티의 정적 팩토리 메서드 호출
+        // 엔티티의 정적 팩토리 메서드 호출
         return ApprovalLine.createApprovalLine(
                 this.approvalOrder,
                 doc,
                 approver,
                 approvalStatus,
-                null, // (주석) 결재일(approvalDate)은 생성 시점엔 null
+                null, // 결재일(approvalDate)은 생성 시점엔 null
                 this.comment
         );
     }

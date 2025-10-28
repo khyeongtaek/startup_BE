@@ -25,7 +25,7 @@ public class ApprovalDocResponseDTO {
     // 내용
     private String content;
 
-    // 문서 상태 (DTO로 변환)
+    // 문서 상태
     private CommonCodeResponseDTO docStatus;
 
     // 작성일
@@ -41,7 +41,7 @@ public class ApprovalDocResponseDTO {
     private LocalDateTime endDate;
 
     // 기안자 정보 (DTO로 변환)
-    private EmployeeResponseDTO creater;
+    private EmployeeResponseDTO creator;
 
     // 수정자 정보 (DTO로 변환, null 가능)
     private EmployeeResponseDTO updater;
@@ -75,7 +75,7 @@ public class ApprovalDocResponseDTO {
                 .updatedAt(doc.getUpdatedAt())
                 .startDate(doc.getStartDate())
                 .endDate(doc.getEndDate())
-                .creater(EmployeeResponseDTO.toDTO(doc.getCreater()))
+                .creator(EmployeeResponseDTO.toDTO(doc.getCreator()))
                 .updater(doc.getUpdater() != null ? EmployeeResponseDTO.toDTO(doc.getUpdater()) : null)
                 .approvalLines(lineList)
                 .approvalReferences(referenceList)

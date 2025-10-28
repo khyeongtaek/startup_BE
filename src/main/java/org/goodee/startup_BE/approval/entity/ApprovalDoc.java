@@ -52,9 +52,9 @@ public class ApprovalDoc {
     private LocalDateTime endDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "creater_id", nullable = false)
+    @JoinColumn(name = "creator_id", nullable = false)
     @Comment("기안자 ID")
-    private Employee creater;
+    private Employee creator;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "updater_id")
@@ -70,7 +70,7 @@ public class ApprovalDoc {
     public static ApprovalDoc createApprovalDoc(
             String title
             , String content
-            , Employee creater
+            , Employee creator
 //            , Long templateId
             , LocalDateTime startDate
             , LocalDateTime endDate
@@ -79,7 +79,7 @@ public class ApprovalDoc {
         ApprovalDoc doc = new ApprovalDoc();
         doc.updateTitle(title);
         doc.updateContent(content);
-        doc.creater = creater;
+        doc.creator = creator;
 //        doc.setTemplateId(templateId);
         doc.updateStartDate(startDate);
         doc.updateEndDate(endDate);

@@ -17,13 +17,13 @@ public class ApprovalReferenceResponseDTO {
     // 참조 고유 ID
     private Long referenceId;
 
-    // 이 참조가 속한 문서 ID (추가)
+    // 이 참조가 속한 문서 ID
     private Long docId;
 
     // 참조자가 문서를 열람한 시간
     private LocalDateTime viewedAt;
 
-    // 참조자 정보 (DTO로 변환)
+    // 참조자 정보
     private EmployeeResponseDTO referrer;
 
     /**

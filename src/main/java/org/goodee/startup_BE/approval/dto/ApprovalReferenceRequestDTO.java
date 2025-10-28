@@ -34,10 +34,9 @@ public class ApprovalReferenceRequestDTO {
      * @return ApprovalReference 엔티티
      */
     public ApprovalReference toEntity(
-            ApprovalDoc doc, // (주석) 이 참조가 속한 문서 엔티티
-            Employee referrer // (주석) 참조자 엔티티
+            ApprovalDoc doc, //  이 참조가 속한 문서 엔티티
+            Employee referrer // 참조자 엔티티
     ) {
-        // (주석) 엔티티의 정적 팩토리 메서드 호출
         return ApprovalReference.createApprovalReference(
                 doc,
                 referrer

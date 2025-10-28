@@ -18,13 +18,13 @@ public class ApprovalLineResponseDTO {
     // 결재선 고유 ID
     private Long lineId;
 
-    // 이 결재선이 속한 문서 ID (추가)
+    // 이 결재선이 속한 문서 ID
     private Long docId;
 
     // 결재 순서
     private Long approvalOrder;
 
-    // 결재 상태 (DTO로 변환)
+    // 결재 상태
     private CommonCodeResponseDTO approvalStatus;
 
     // 결재 처리일
@@ -33,7 +33,7 @@ public class ApprovalLineResponseDTO {
     // 결재 의견
     private String comment;
 
-    // 결재자 정보 (DTO로 변환)
+    // 결재자 정보
     private EmployeeResponseDTO approver;
 
     /**

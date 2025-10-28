@@ -51,19 +51,18 @@ public class ApprovalDocRequestDTO {
     /**
      * DTO를 ApprovalDoc 엔티티로 변환
      *
-     * @param creater        기안자 엔티티 (현재 로그인한 사용자)
+     * @param creator        기안자 엔티티 (현재 로그인한 사용자)
      * @param docStatus      문서 상태 CommonCode 엔티티 (예: '결재중' 또는 '임시저장')
      * @return ApprovalDoc 엔티티
      */
     public ApprovalDoc toEntity(
-            Employee creater, // (주석) 현재 로그인한 사용자(기안자)
-            CommonCode docStatus // (주석) 초기 문서 상태 (예: '임시저장' 또는 '결재중')
+            Employee creator,
+            CommonCode docStatus
     ) {
-        // (주석) 엔티티의 정적 팩토리 메서드 호출
         return ApprovalDoc.createApprovalDoc(
                 this.title,
                 this.content,
-                creater,
+                creator,
                 this.startDate,
                 this.endDate,
                 docStatus
