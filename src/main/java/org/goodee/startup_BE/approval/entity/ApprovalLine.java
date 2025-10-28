@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee; // Employee 임포트
 import org.hibernate.annotations.Comment;
@@ -49,7 +48,6 @@ public class ApprovalLine {
     @Comment("결재자 ID")
     private Employee employee;
 
-    // --- 생성 팩토리 메서드 ---
     public static ApprovalLine createApprovalLine(
             Long lineId, Long approvalOrder, ApprovalDoc doc, Employee employee, CommonCode approvalStatus, LocalDateTime approvalDate, String comment
     ) {
@@ -58,16 +56,21 @@ public class ApprovalLine {
         line.approvalOrder = approvalOrder;
         line.doc = doc;
         line.employee = employee;
-        line.approvalStatus = approvalStatus;
+        line.updateApprovalStatus(approvalStatus);
+        line.updateComment(comment);
         line.approvalDate = approvalDate;
         line.comment = comment;
         return line;
     }
 
-    public void update(CommonCode approvalStatus,  String comment) {
+    public void updateApprovalStatus(CommonCode approvalStatus) {
         this.approvalStatus = approvalStatus;
+    }
+
+    public void updateComment(String comment) {
         this.comment = comment;
     }
+
 
     @PreUpdate
     protected void onPreUpdate() {

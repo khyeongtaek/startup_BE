@@ -4,8 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
-import org.goodee.startup_BE.employee.entity.Employee; // Employee 임포트
+import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
 
 import java.time.LocalDateTime;
@@ -39,7 +38,7 @@ public class ApprovalReference {
             Long referenceId, ApprovalDoc doc, Employee employee
     ) {
         ApprovalReference reference = new ApprovalReference();
-        reference.referenceId =referenceId;
+        reference.referenceId = referenceId;
         reference.doc = doc;
         reference.employee = employee;
         return reference;

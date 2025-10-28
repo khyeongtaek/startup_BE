@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.Setter; // Lombok Setter 임포트 (필드 레벨에서 사용할 것이므로 유지)
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "tbl_approval_doc")
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ApprovalDoc {
 
@@ -53,9 +52,14 @@ public class ApprovalDoc {
     private LocalDateTime endDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
+    @JoinColumn(name = "creater_id", nullable = false)
     @Comment("기안자 ID")
-    private Employee employee;
+    private Employee creater;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "updater_id")
+    @Comment("수정자")
+    private Employee updater;
 
     //아직 테이블이 없음
 //    @Column(name = "template_id", nullable = false)
@@ -67,31 +71,48 @@ public class ApprovalDoc {
             Long docId
             , String title
             , String content
-            , Employee employee
+            , Employee creater
 //            , Long templateId
             , LocalDateTime startDate
             , LocalDateTime endDate
             , CommonCode docStatus
     ) {
         ApprovalDoc doc = new ApprovalDoc();
-        doc.setDocId(docId);
-        doc.setTitle(title);
-        doc.setContent(content);
-        doc.setEmployee(employee);
+        doc.docId = docId;
+        doc.updateTitle(title);
+        doc.updateContent(content);
+        doc.creater = creater;
 //        doc.setTemplateId(templateId);
-        doc.setStartDate(startDate);
-        doc.setEndDate(endDate);
-        doc.setDocStatus(docStatus);
+        doc.updateStartDate(startDate);
+        doc.updateEndDate(endDate);
+        doc.updateDocStatus(docStatus);
         return doc;
     }
 
-    public void update(String title, String content, LocalDateTime startDate, LocalDateTime endDate, CommonCode docStatus) {
-        this.setTitle(title);
-        this.setContent(content);
-        this.setStartDate(startDate);
-        this.setEndDate(endDate);
-        this.setDocStatus(docStatus);
+    public void updateTitle(String title) {
+        this.title = title;
     }
+
+    public void updateContent(String content) {
+        this.content = content;
+    }
+
+    public void updateStartDate(LocalDateTime startDate) {
+        this.startDate = startDate;
+    }
+
+    public void updateEndDate(LocalDateTime endDate) {
+        this.endDate = endDate;
+    }
+
+    public void updateDocStatus(CommonCode docStatus) {
+        this.docStatus = docStatus;
+    }
+
+    public void updateUpdater(Employee updater) {
+        this.updater = updater;
+    }
+
 
     @PrePersist
     protected void onPrePersist() {
@@ -103,8 +124,4 @@ public class ApprovalDoc {
     protected void onPreUpdate() {
         updatedAt = LocalDateTime.now();
     }
-
-
-
-
 }
