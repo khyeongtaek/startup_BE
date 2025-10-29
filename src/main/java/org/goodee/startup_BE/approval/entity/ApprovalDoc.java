@@ -4,12 +4,14 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter; // Lombok Setter 임포트 (필드 레벨에서 사용할 것이므로 유지)
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.Comment;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "tbl_approval_doc")
@@ -66,6 +68,17 @@ public class ApprovalDoc {
 //    @Column(name = "template_id", nullable = false)
 //    @Comment("문서 양식 ID")
 //    private Long templateId;
+
+    // --- 연관관계 매핑 추가 ---
+    // mappedBy는 ApprovalLine 엔티티에 있는 ApprovalDoc 타입의 필드명(doc)
+    @BatchSize(size = 100)  // 다중 List 조회를 위한 옵션
+    @OneToMany(mappedBy = "doc", fetch = FetchType.LAZY)
+    private List<ApprovalLine> approvalLineList = new ArrayList<>();
+
+    // mappedBy는 ApprovalReference 엔티티에 있는 ApprovalDoc 타입의 필드명(doc)
+    @BatchSize(size = 100)  // 다중 List 조회를 위한 옵션
+    @OneToMany(mappedBy = "doc", fetch = FetchType.LAZY)
+    private List<ApprovalReference> approvalReferenceList = new ArrayList<>();
 
     // --- 생성 팩토리 메서드 ---
     public static ApprovalDoc createApprovalDoc(

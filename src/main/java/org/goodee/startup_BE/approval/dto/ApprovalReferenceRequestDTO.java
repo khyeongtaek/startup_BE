@@ -23,7 +23,6 @@ public class ApprovalReferenceRequestDTO {
     @NotNull(message = "참조자 ID는 필수입니다.", groups = {ValidationGroups.Create.class})
     private Long referrerId;
 
-    @NotNull(message = "결재 문서 ID는 필수입니다.", groups = {ValidationGroups.Create.class, ValidationGroups.Update.class})
     private Long docId;
 
     /**

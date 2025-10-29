@@ -22,10 +22,10 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class ApprovalLineRequestDTO {
 
-    @NotNull(message = "결재선 ID는 필수입니다.", groups = {ValidationGroups.Create.class, ValidationGroups.Update.class})
+    @NotNull(message = "결재선 ID는 필수입니다.", groups = {ValidationGroups.Update.class})
     private Long lineId;
 
-    @NotNull(message = "결재 문서 ID는 필수입니다.", groups = {ValidationGroups.Create.class, ValidationGroups.Update.class})
+    @NotNull(message = "결재 문서 ID는 필수입니다.")
     private Long docId;
 
     @NotNull(message = "결재 순서는 필수입니다.", groups = ValidationGroups.Create.class)
@@ -35,7 +35,7 @@ public class ApprovalLineRequestDTO {
     @NotNull(message = "결재자 ID는 필수입니다.", groups = ValidationGroups.Create.class)
     private Long approverId;
 
-    @NotEmpty(message = "결재선 상태는 필수입니다.", groups = {ValidationGroups.Update.class})
+    @NotNull(message = "결재선 상태는 필수입니다.", groups = {ValidationGroups.Update.class})
     private Long statusCodeId;
 
     private String comment;
