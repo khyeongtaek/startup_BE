@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 import org.goodee.startup_BE.approval.entity.ApprovalDoc;
 import org.goodee.startup_BE.common.entity.CommonCode;
@@ -20,6 +21,7 @@ import java.util.List;
  * (Doc + Lines + References)
  */
 @Getter
+@Setter
 @ToString
 @NoArgsConstructor
 public class ApprovalDocRequestDTO {

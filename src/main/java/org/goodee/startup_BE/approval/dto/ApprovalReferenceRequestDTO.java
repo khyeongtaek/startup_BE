@@ -3,6 +3,7 @@ package org.goodee.startup_BE.approval.dto;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 import org.goodee.startup_BE.approval.entity.ApprovalDoc;
 import org.goodee.startup_BE.approval.entity.ApprovalReference;
@@ -13,6 +14,7 @@ import org.goodee.startup_BE.employee.entity.Employee;
  * 참조자 정보를 위한 Request DTO
  */
 @Getter
+@Setter
 @ToString
 @NoArgsConstructor
 public class ApprovalReferenceRequestDTO {

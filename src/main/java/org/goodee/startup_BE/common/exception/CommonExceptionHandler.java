@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.HashMap;
 import java.util.Map;
 
-import java.nio.file.AccessDeniedException;
 import java.util.NoSuchElementException;
 
 @RestControllerAdvice
@@ -51,7 +50,6 @@ public class CommonExceptionHandler {
                 .build();
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
-
 
 
     /**
@@ -92,7 +90,7 @@ public class CommonExceptionHandler {
     }
 
 
-    @ExceptionHandler(AccessDeniedException.class)
+    @ExceptionHandler(java.nio.file.AccessDeniedException.class)
     public ResponseEntity<APIResponseDTO<Void>> handleFileAccessDeniedException(AccessDeniedException e) {
         APIResponseDTO<Void> response = APIResponseDTO.<Void>builder()
                 .message(e.getMessage())
