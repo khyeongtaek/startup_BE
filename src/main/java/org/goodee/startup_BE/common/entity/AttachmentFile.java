@@ -54,7 +54,6 @@ public class AttachmentFile {
 	@Comment("업로드 모듈명")
 	private CommonCode ownerType;		// 공용 테이블에 모듈 추가 필요, OwnerType enum값 추가 필요
 	
-	@Column(nullable = false)
 	@Comment("모듈 내 고유 ID")
 	private Long ownerId;
 
@@ -77,5 +76,9 @@ public class AttachmentFile {
 		attachmentFile.ownerType = ownerType;
 		attachmentFile.ownerId = ownerId;
 		return attachmentFile;
+	}
+	
+	public void deleteAttachmentFile() {
+		this.isDeleted = true;
 	}
 }

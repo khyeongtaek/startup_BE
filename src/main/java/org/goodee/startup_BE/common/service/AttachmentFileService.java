@@ -6,7 +6,8 @@ import org.goodee.startup_BE.common.dto.AttachmentFileRequestDTO;
 import java.util.List;
 
 public interface AttachmentFileService {
-	List<AttachmentFileResponseDTO> uploadFiles(AttachmentFileRequestDTO request);
-	List<AttachmentFileResponseDTO> listFiles(AttachmentFileRequestDTO request);
+	List<AttachmentFileResponseDTO> uploadFiles(AttachmentFileRequestDTO request, Long ownerTypeId, Long ownerId);
+	List<AttachmentFileResponseDTO> listFiles(Long ownerTypeId, Long ownerId);
 	AttachmentFileResponseDTO resolveFile(AttachmentFileRequestDTO request);
+	void deleteFile(AttachmentFileRequestDTO request);
 }
