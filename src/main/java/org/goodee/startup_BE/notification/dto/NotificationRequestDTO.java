@@ -12,7 +12,7 @@ import org.goodee.startup_BE.notification.entity.Notification;
 @NoArgsConstructor
 @AllArgsConstructor
 public class NotificationRequestDTO {
-    private Long employeeId;
+    private String employee;
     private Long ownerTypeCommonCodeId;
     private String url;
     private String title;
