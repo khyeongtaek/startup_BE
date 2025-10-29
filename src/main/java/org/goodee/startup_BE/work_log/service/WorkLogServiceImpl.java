@@ -1,8 +1,11 @@
 package org.goodee.startup_BE.work_log.service;
 
 import lombok.RequiredArgsConstructor;
+import org.goodee.startup_BE.common.dto.AttachmentFileRequestDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
+import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
+import org.goodee.startup_BE.common.service.AttachmentFileServiceImpl;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.exception.ResourceNotFoundException;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
@@ -20,6 +23,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -31,18 +35,33 @@ public class WorkLogServiceImpl implements WorkLogService {
     private final WorkLogReadRepository workLogReadRepository;
     private final EmployeeRepository employeeRepository;
     private final CommonCodeRepository commonCodeRepository;
+    private final AttachmentFileServiceImpl attachmentFileService;
 
     // 업무일지 등록
     @Override
-    public WorkLogResponseDTO saveWorkLog(WorkLogRequestDTO workLogDTO, String username) {
+    public WorkLogResponseDTO saveWorkLog(WorkLogRequestDTO workLogDTO, String username
+                                          //,AttachmentFileRequestDTO req  //  <- 파일첨부할때 필요
+    ) {
         Employee employee = employeeRepository.findByUsername(username)
                               .orElseThrow(() -> new ResourceNotFoundException("직원이 존재하지 않습니다."));
         CommonCode workType = commonCodeRepository.findById(workLogDTO.getWorkTypeId())
                                 .orElseThrow(() -> new ResourceNotFoundException("업무분류 코드가 존재하지 않습니다."));
         CommonCode workOption = commonCodeRepository.findById(workLogDTO.getWorkOptionId())
                                   .orElseThrow(() -> new ResourceNotFoundException("업무옵션 코드가 존재하지 않습니다."));
-
+        
         WorkLog workLog = workLogRepository.save(workLogDTO.toEntity(employee, workType, workOption));
+        
+//        if(req != null && req.getFiles() != null && !req.getFiles().isEmpty()){
+//            List<CommonCode> ownerTypeList = commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.WORKLOG.name());
+//            if(ownerTypeList.isEmpty()) {
+//                throw new ResourceNotFoundException("모듈 타입이 존재 하지 않습니다.");
+//            }
+//            CommonCode ownerType = ownerTypeList.get(0);
+//
+//            attachmentFileService.uploadFiles(req, ownerType.getCommonCodeId(), workLog.getWorkLogId());
+//        }
+        
+        
         return WorkLogResponseDTO.toDTO(workLog);
     }
 
@@ -104,15 +123,27 @@ public class WorkLogServiceImpl implements WorkLogService {
     @Override
     @Transactional(readOnly = true)
     public Page<WorkLogResponseDTO> getWorkLogList(String username, String type, int page, int size) {
-        var employee = employeeRepository.findByUsername(username)
+        Employee employee = employeeRepository.findByUsername(username)
                     .orElseThrow(() -> new ResourceNotFoundException("직원이 존재하지 않습니다."));
         
+        String key = (type == null ? "all" : type.toLowerCase());
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "workLogId"));
         
-        return switch (type == null ? "my" : type.toLowerCase()) {
-            case "all"  -> workLogRepository.findWithRead(employee.getEmployeeId(), null, false, pageable);
-            case "dept" -> workLogRepository.findWithRead(employee.getEmployeeId(), employee.getDepartment().getCommonCodeId(), false, pageable); // 또는 deptCode
-            default     -> workLogRepository.findWithRead(employee.getEmployeeId(), null, true,  pageable);
-        };
+        switch (key) {
+            case "all":
+                return workLogRepository.findWithRead(employee.getEmployeeId(), null, false, pageable);
+            
+            case "dept": {
+                CommonCode dept = employee.getDepartment(); // CommonCode 연관
+                if (dept == null) {
+                    throw new ResourceNotFoundException("부서가 지정되지 않은 직원입니다.");
+                }
+                Long deptId = dept.getCommonCodeId(); // PK만 추출
+                return workLogRepository.findWithRead(employee.getEmployeeId(), deptId, false, pageable);
+            }
+            
+            default:
+                return workLogRepository.findWithRead(employee.getEmployeeId(), null, true, pageable);
+        }
     }
 }
