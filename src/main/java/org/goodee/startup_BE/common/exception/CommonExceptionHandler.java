@@ -18,6 +18,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.HashMap;
 import java.util.Map;
 
+import java.nio.file.AccessDeniedException;
+import java.util.NoSuchElementException;
+
 @RestControllerAdvice
 @Slf4j
 public class CommonExceptionHandler {
@@ -89,4 +92,19 @@ public class CommonExceptionHandler {
     }
 
 
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<APIResponseDTO<Void>> handleFileAccessDeniedException(AccessDeniedException e) {
+        APIResponseDTO<Void> response = APIResponseDTO.<Void>builder()
+                .message(e.getMessage())
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(NoSuchElementException.class)
+    public ResponseEntity<APIResponseDTO<Void>> handleNoSuchElementException(NoSuchElementException e) {
+        APIResponseDTO<Void> response = APIResponseDTO.<Void>builder()
+                .message(e.getMessage())
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    }
 }

@@ -187,10 +187,10 @@ VALUES
 INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
 VALUES
-    ('WT01', '업무 분류 : 프로젝트', 'PROJECT', '프로젝트', NULL, 1, NULL, NOW(), NOW(), false),
-    ('WT02', '업무 분류 : 연구', 'STUDY', '연구', NULL, 0, NULL, NOW(), NOW(), false),
-    ('WT03', '업무 분류 : 회의', 'MEETING', '회의', NULL, 0, NULL, NOW(), NOW(), false),
-    ('WT04', '업무 분류 : 기타 업무', 'ETC', '기타 업무', NULL, 0, NULL, NOW(), NOW(), false);
+    ('WT1', '업무 분류 : 프로젝트', 'PROJECT', '프로젝트', NULL, 1, NULL, NOW(), NOW(), false),
+    ('WT2', '업무 분류 : 연구', 'STUDY', '연구', NULL, 0, NULL, NOW(), NOW(), false),
+    ('WT3', '업무 분류 : 회의', 'MEETING', '회의', NULL, 0, NULL, NOW(), NOW(), false),
+    ('WT4', '업무 분류 : 기타 업무', 'ETC', '기타 업무', NULL, 0, NULL, NOW(), NOW(), false);
 
 
 /*
@@ -206,15 +206,15 @@ VALUES
 INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
 VALUES
-    ('WO01', '메일 기능 개발', 'MAIL', '메일', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO02', '업무일지 기능 개발', 'WORKLOG', '업무일지', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO03', '게시판 기능 개발', 'BOARD', '게시판', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO04', '조직도 기능 개발', 'ORGANIZATION', '조직도', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO05', '회원가입 기능 개발', 'SIGNUP', '회원가입', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO06', '로그인 기능 개발', 'LOGIN', '로그인', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO07', '전자결재 기능 개발', 'APPROVAL', '전자결재', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO08', '메신저 기능 개발', 'CHAT', '메신저', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO09', '알림 기능 개발', 'NOTIFICATION', '알림', 'WT01', 0, NULL, NOW(), NOW(), false),
+    ('WO1', '메일 기능 개발', 'MAIL', '메일', 'WT01', 0, NULL, NOW(), NOW(), false),
+    ('WO2', '업무일지 기능 개발', 'WORKLOG', '업무일지', 'WT01', 0, NULL, NOW(), NOW(), false),
+    ('WO3', '게시판 기능 개발', 'BOARD', '게시판', 'WT01', 0, NULL, NOW(), NOW(), false),
+    ('WO4', '조직도 기능 개발', 'ORGANIZATION', '조직도', 'WT01', 0, NULL, NOW(), NOW(), false),
+    ('WO5', '회원가입 기능 개발', 'SIGNUP', '회원가입', 'WT01', 0, NULL, NOW(), NOW(), false),
+    ('WO6', '로그인 기능 개발', 'LOGIN', '로그인', 'WT01', 0, NULL, NOW(), NOW(), false),
+    ('WO7', '전자결재 기능 개발', 'APPROVAL', '전자결재', 'WT01', 0, NULL, NOW(), NOW(), false),
+    ('WO8', '메신저 기능 개발', 'CHAT', '메신저', 'WT01', 0, NULL, NOW(), NOW(), false),
+    ('WO9', '알림 기능 개발', 'NOTIFICATION', '알림', 'WT01', 0, NULL, NOW(), NOW(), false),
     ('WO10', '일정 기능 개발', 'CALENDAR', '일정', 'WT01', 0, NULL, NOW(), NOW(), false),
     ('WO11', '근태관리 기능 개발', 'ATTENDANCE', '근태관리', 'WT01', 0, NULL, NOW(), NOW(), false),
     ('WO12', '옵션 더미 데이터', 'TECH_STUDY', '기술 스터디', 'WT02', 0, NULL, NOW(), NOW(), false),
@@ -236,8 +236,8 @@ VALUES
 INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
 VALUES
-    ('OT01', '출처 모듈 : 메일', 'MAIL', '', '', 0, NULL, NOW(), NOW(), false),
-    ('OT02', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false);
+    ('OT1', '출처 모듈 : 메일', 'MAIL', '', '', 0, NULL, NOW(), NOW(), false),
+    ('OT2', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false);
 
 
 /*

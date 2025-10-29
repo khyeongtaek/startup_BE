@@ -35,6 +35,9 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.3")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.3")
 
+    // Websocket Message Broker
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
     // Swagger(OpenAPI) 추가
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
 
@@ -43,6 +46,11 @@ dependencies {
     runtimeOnly 'com.mysql:mysql-connector-j'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    // H2 Database (테스트 환경에서 인메모리 DB로 사용)
+    testRuntimeOnly 'com.h2database:h2'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     // H2 Database (테스트 환경에서 인메모리 DB로 사용)
     testRuntimeOnly 'com.h2database:h2'

@@ -23,4 +23,11 @@ public class ValidationGroups {
      */
     public interface Update {}
 
+    
+    // 첨부파일
+    public interface Attachment {
+        interface Upload {}
+        interface List {}
+        interface Download {}
+    }
 }

@@ -5,12 +5,14 @@ import lombok.Getter;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
+import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
 
 
 @Entity
 @Table(name = "tbl_work_log")
+@Where(clause = "is_deleted = false")
 @Getter
 public class WorkLog {
     @Id
@@ -25,12 +27,12 @@ public class WorkLog {
     private Employee employee;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(nullable = false)
+    @JoinColumn(name = "work_type_id", nullable = false)
     @Comment("업무 분류")
     private CommonCode workType;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(nullable = false)
+    @JoinColumn(name = "work_option_id", nullable = false)
     @Comment("업무별 세부 항목")
     private CommonCode workOption;
 
@@ -84,6 +86,17 @@ public class WorkLog {
         workLog.title = title;
         workLog.content = content;
         return workLog;
+    }
+
+    public void updateWorkLog(
+            CommonCode workType, CommonCode option,
+            LocalDateTime workDate, String title, String content
+    ) {
+        this.workType = workType;
+        this.workOption = option;
+        this.workDate = workDate;
+        this.title = title;
+        this.content = content;
     }
 
     public void deleteWorkLog() {
