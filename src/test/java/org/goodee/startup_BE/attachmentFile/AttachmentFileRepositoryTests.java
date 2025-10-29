@@ -1,4 +1,4 @@
-package org.goodee.startup_BE;
+package org.goodee.startup_BE.attachmentFile;
 
 import org.goodee.startup_BE.common.entity.AttachmentFile;
 import org.goodee.startup_BE.common.entity.CommonCode;

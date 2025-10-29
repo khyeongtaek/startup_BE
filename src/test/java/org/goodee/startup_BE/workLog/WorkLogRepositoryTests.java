@@ -1,4 +1,4 @@
-package org.goodee.startup_BE;
+package org.goodee.startup_BE.workLog;
 
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
@@ -20,7 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;

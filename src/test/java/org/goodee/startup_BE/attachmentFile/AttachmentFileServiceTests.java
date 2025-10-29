@@ -1,8 +1,7 @@
-package org.goodee.startup_BE;
+package org.goodee.startup_BE.attachmentFile;
 
 import org.goodee.startup_BE.common.dto.AttachmentFileRequestDTO;
 import org.goodee.startup_BE.common.dto.AttachmentFileResponseDTO;
-import org.goodee.startup_BE.common.entity.AttachmentFile;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.AttachmentFileRepository;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
