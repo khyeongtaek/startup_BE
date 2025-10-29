@@ -18,7 +18,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     Optional<Attendance> findByEmployeeEmployeeIdAndAttendanceDate(Long employeeId, LocalDate attendanceDate);
 
-    @Query("SELECT a FROM Attendance a WHERE a.employee.employeeId = :employeeId AND a.endTime IS NULL AND a.isDeleted = false")
+    @Query("SELECT a FROM Attendance a WHERE a.employee.employeeId = :employeeId AND a.attendanceDate = CURRENT_DATE AND a.isDeleted = false")
     Optional<Attendance> findCurrentWorkingRecord(Long employeeId);
 
     List<Attendance> findByEmployeeEmployeeIdAndAttendanceDateBetween(Long employeeEmployeeId, LocalDate attendanceDateAfter, LocalDate attendanceDateBefore);

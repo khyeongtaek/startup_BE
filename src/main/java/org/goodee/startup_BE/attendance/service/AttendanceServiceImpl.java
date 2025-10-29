@@ -63,7 +63,10 @@ public class AttendanceServiceImpl implements AttendanceService{
         Attendance attendance = Attendance.createAttendance(employee, today, workStatus);
         attendance.update(LocalDateTime.now(), null);  // 출근 시간 기록
 
+
         Attendance saved = attendanceRepository.save(attendance);
+        attendanceRepository.flush();
+
         return  AttendanceResponseDTO.toDTO(saved);
     }
 
