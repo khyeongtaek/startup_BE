@@ -25,7 +25,8 @@ public class AnnualLeave {
 
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = true)
+    @JoinColumn(name = "employee_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee employee;
 
     @Column(name = "total_days")
