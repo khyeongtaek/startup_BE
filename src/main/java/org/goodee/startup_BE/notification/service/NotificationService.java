@@ -8,7 +8,7 @@ import org.springframework.data.domain.Pageable;
 public interface NotificationService {
 
     /* 알림 생성 */
-    NotificationResponseDTO create(String username, NotificationRequestDTO requestDTO);
+    NotificationResponseDTO create(NotificationRequestDTO requestDTO);
 
     /* 목록(직원별, 미삭제, 최신순) */
     Page<NotificationResponseDTO> list(String username, Pageable pageable);
