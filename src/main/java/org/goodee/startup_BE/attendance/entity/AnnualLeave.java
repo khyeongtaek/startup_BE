@@ -25,9 +25,7 @@ public class AnnualLeave {
 
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @JoinColumn(name = "employee_id", nullable = true)
     private Employee employee;
 
     @Column(name = "total_days")
