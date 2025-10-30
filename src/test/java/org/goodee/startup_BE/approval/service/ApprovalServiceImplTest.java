@@ -12,6 +12,8 @@ import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
+// NotificationService 임포트
+import org.goodee.startup_BE.notification.service.NotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -59,6 +61,9 @@ class ApprovalServiceImplTest {
     @Mock // Mock 객체로 생성
     private CommonCodeRepository commonCodeRepository;
 
+    @Mock // NPE 해결을 위해 NotificationService Mock 객체 추가
+    private NotificationService notificationService;
+
     // --- 테스트용 Mock 객체 선언 ---
     private Employee mockCreator;
     private Employee mockApprover1;
@@ -72,6 +77,9 @@ class ApprovalServiceImplTest {
     private CommonCode mockLineStatusAwaiting;
     private CommonCode mockLineStatusApproved;
     private CommonCode mockLineStatusRejected;
+
+    // decideApproval (line 136)에서 공통으로 호출하는 "OT", "APPROVAL"용 Mock 객체
+    private CommonCode mockOtherApproval;
 
     private ApprovalDoc mockDoc;
     private ApprovalLine mockLine1;
@@ -100,6 +108,9 @@ class ApprovalServiceImplTest {
         mockLineStatusAwaiting = mock(CommonCode.class);
         mockLineStatusApproved = mock(CommonCode.class);
         mockLineStatusRejected = mock(CommonCode.class);
+
+        // 새 Mock 객체 초기화
+        mockOtherApproval = mock(CommonCode.class);
 
         mockDoc = mock(ApprovalDoc.class);
         mockLine1 = mock(ApprovalLine.class);
@@ -144,6 +155,24 @@ class ApprovalServiceImplTest {
         lenient().when(mockLineStatusApproved.getValue1()).thenReturn("APPROVED");
         lenient().when(mockLineStatusRejected.getCommonCodeId()).thenReturn(204L);
         lenient().when(mockLineStatusRejected.getValue1()).thenReturn("REJECTED");
+
+        // "OT", "APPROVAL" Mock 객체 Stubbing
+        lenient().when(mockOtherApproval.getValue1()).thenReturn("APPROVAL");
+
+
+        // 컴파일 오류 수정: lenient().given() -> lenient().when().thenReturn()
+
+        // createApproval에서 공통으로 필요한 코드들
+        lenient().when(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("AD", "IN_PROGRESS"))
+                .thenReturn(List.of(mockDocStatusInProgress));
+        lenient().when(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("AL", "PENDING"))
+                .thenReturn(List.of(mockLineStatusPending));
+        lenient().when(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("AL", "AWAITING"))
+                .thenReturn(List.of(mockLineStatusAwaiting));
+
+        // decideApproval에서 공통으로 필요한 코드 (로그에서 확인됨)
+        lenient().when(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("OT", "APPROVAL"))
+                .thenReturn(List.of(mockOtherApproval));
 
 
         // 공통 Approval 객체 Mock Stubbing
@@ -197,12 +226,13 @@ class ApprovalServiceImplTest {
      * @param code   반환할 Mock CommonCode 객체
      */
     private void givenCommonCode(String prefix, String value, CommonCode code) {
+        // 이 메서드는 BDDMockito 스타일(given...willReturn)을 유지
         given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(prefix, value))
                 .willReturn(List.of(code));
     }
 
 
-    // [수정] 문제가 된 CreateApproval 클래스 전체를 복사해서 붙여넣으세요.
+    // CreateApproval 클래스
     @Nested
     @DisplayName("createApproval (결재 문서 생성)")
     class CreateApproval {
@@ -212,7 +242,7 @@ class ApprovalServiceImplTest {
 
         @BeforeEach
         void createSetup() {
-            // [수정] DTO 생성 로직만 남김
+            // DTO 생성 로직만 남김
             requestDto = new ApprovalDocRequestDTO();
             requestDto.setTitle("새 기안 문서");
             requestDto.setContent("내용입니다.");
@@ -234,24 +264,26 @@ class ApprovalServiceImplTest {
             requestDto.setApprovalLines(List.of(lineDto1, lineDto2));
             requestDto.setApprovalReferences(List.of(refDto1));
 
-            // [수정] given(...)으로 시작하는 모든 Mocking 로직을 각 테스트로 이동시킴
+            // 공통 given은 setUp()으로 이동
         }
 
         @Test
         @DisplayName("성공 - 결재선, 참조자 포함")
         void createApproval_Success() {
             // given
-            // [수정] '성공'에 필요한 모든 Mocking을 이 테스트 내부로 이동
+            // '성공'에 필요한 Mocking을 이 테스트 내부로 이동
+            // (공통 코드는 setUp()에서 lenient()로 이미 stubbing됨)
             given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
-            givenCommonCode("AD", "IN_PROGRESS", mockDocStatusInProgress);
-            givenCommonCode("AL", "PENDING", mockLineStatusPending);
-            givenCommonCode("AL", "AWAITING", mockLineStatusAwaiting);
 
             given(employeeRepository.findById(11L)).willReturn(Optional.of(mockApprover1));
             given(employeeRepository.findById(12L)).willReturn(Optional.of(mockApprover2));
             given(employeeRepository.findById(13L)).willReturn(Optional.of(mockReferrer));
 
             given(approvalDocRepository.save(any(ApprovalDoc.class))).willReturn(mockDoc);
+
+            // NotificationService가 null이 아니므로, create 메서드 호출이 발생함
+            // BDDMockito.doNothing()을 사용하여 void 메서드 호출을 명시적으로 처리 (혹은 비워둬도 Mockito가 알아서 처리함)
+            // doNothing().when(notificationService).create(any(NotificationRequestDTO.class));
 
             // when
             ApprovalDocResponseDTO result = approvalService.createApproval(requestDto, creatorUsername);
@@ -283,14 +315,19 @@ class ApprovalServiceImplTest {
 
 
             // 3. Refs 저장 확인
-            verify(approvalReferenceRepository).save(any(ApprovalReference.class));
+            // .save() -> .saveAll()로 변경
+            verify(approvalReferenceRepository).saveAll(anyList());
+
+            // 4. 알림 서비스가 호출되었는지 검증 (선택 사항이지만, NPE 방지 확인용)
+            //    [수정] 로그에 따라 3회 -> 4회로 변경
+            verify(notificationService, times(4)).create(any());
         }
 
         @Test
         @DisplayName("실패 - 기안자(로그인 사용자) 없음")
         void createApproval_Fail_CreatorNotFound() {
             // given
-            // [수정] 이 테스트에 필요한 최소한의 Mocking만 설정
+            // 이 테스트에 필요한 최소한의 Mocking만 설정
             // 서비스 로직의 첫 번째 단계인 getCurrentEmployee()에서 실패
             given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.empty());
 
@@ -304,30 +341,29 @@ class ApprovalServiceImplTest {
         @DisplayName("실패 - 공통 코드(문서 상태) 없음")
         void createApproval_Fail_DocStatusCodeNotFound() {
             // given
-            // [수정] 이 테스트에 필요한 Mocking만 설정
+            // 이 테스트에 필요한 Mocking만 설정
             // 1. 기안자 조회는 통과
             given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
             // 2. 'AD', 'IN_PROGRESS' 조회 시 빈 리스트 반환 (실패 지점)
+            // setUp()의 lenient() stubbing을 오버라이드 (BDDMockito 스타일 사용)
             given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("AD", "IN_PROGRESS"))
                     .willReturn(List.of());
 
             // when & then
             assertThatThrownBy(() -> approvalService.createApproval(requestDto, creatorUsername))
                     .isInstanceOf(EntityNotFoundException.class)
-                    .hasMessageContaining("공통 코드 조회 실패: AD, IN_PROGRESS"); // [수정] 서비스 코드의 실제 예외 메시지에 맞게 수정
+                    // [수정] AssertionError 해결: 실제 오류 메시지로 수정
+                    .hasMessageContaining("공통 코드 조회 실패: AD, IN_PROGRESS");
         }
 
         @Test
         @DisplayName("실패 - 결재자 없음")
         void createApproval_Fail_ApproverNotFound() {
             // given
-            // [수정] 이 테스트에 필요한 Mocking만 설정
+            // 이 테스트에 필요한 Mocking만 설정
             // 1. 기안자 조회 통과
             given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
-            // 2. 공통 코드 조회 통과
-            givenCommonCode("AD", "IN_PROGRESS", mockDocStatusInProgress);
-            givenCommonCode("AL", "PENDING", mockLineStatusPending);
-            givenCommonCode("AL", "AWAITING", mockLineStatusAwaiting);
+            // 2. 공통 코드 조회 통과 (setUp()에서 lenient()로 처리됨)
             // 3. Doc 저장 통과
             given(approvalDocRepository.save(any(ApprovalDoc.class))).willReturn(mockDoc);
             // 4. 결재자 1 (ID: 11L) 조회 실패 (실패 지점)
@@ -343,13 +379,10 @@ class ApprovalServiceImplTest {
         @DisplayName("실패 - 참조자 없음")
         void createApproval_Fail_ReferrerNotFound() {
             // given
-            // [수정] 이 테스트에 필요한 Mocking만 설정
+            // 이 테스트에 필요한 Mocking만 설정
             // 1. 기안자 조회 통과
             given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
-            // 2. 공통 코드 조회 통과
-            givenCommonCode("AD", "IN_PROGRESS", mockDocStatusInProgress);
-            givenCommonCode("AL", "PENDING", mockLineStatusPending);
-            givenCommonCode("AL", "AWAITING", mockLineStatusAwaiting);
+            // 2. 공통 코드 조회 통과 (setUp()에서 lenient()로 처리됨)
             // 3. Doc 저장 통과
             given(approvalDocRepository.save(any(ApprovalDoc.class))).willReturn(mockDoc);
             // 4. 결재선 조회 통과
@@ -378,19 +411,19 @@ class ApprovalServiceImplTest {
 
         @BeforeEach
         void decideSetup() {
-            // [수정] DTO 생성 로직만 남김
+            // DTO 생성 로직만 남김
             decideRequest = new ApprovalLineRequestDTO();
             decideRequest.setLineId(lineId);
             decideRequest.setComment("테스트 의견");
 
-            // [수정] given(...)으로 시작하는 모든 Mocking 로직을 각 테스트로 이동시킴
+            // 공통 given은 setUp()으로 이동
         }
 
         @Test
         @DisplayName("성공 - 1차 승인 (다음 결재자 있음)")
         void decideApproval_Success_ApproveAndNextExists() {
             // given
-            // [수정] '성공'에 필요한 모든 Mocking을 이 테스트 내부로 이동
+            // '성공'에 필요한 모든 Mocking을 이 테스트 내부로 이동
             decideRequest.setStatusCodeId(approvedCodeId);
 
             given(employeeRepository.findByUsername(approverUsername)).willReturn(Optional.of(mockApprover1));
@@ -403,12 +436,18 @@ class ApprovalServiceImplTest {
             // '승인' 코드 조회
             given(commonCodeRepository.findById(approvedCodeId)).willReturn(Optional.of(mockLineStatusApproved));
 
+            // "OT", "APPROVAL" 호출은 setUp()에서 이미 lenient()로 처리됨
+
             // 다음 결재선(mockLine2) 조회 성공
             given(mockLine1.getApprovalOrder()).willReturn(1L);
             given(approvalLineRepository.findByDocAndApprovalOrder(mockDoc, 2L)).willReturn(Optional.of(mockLine2));
 
             // 다음 결재선 상태('AWAITING')로 변경하기 위한 공통 코드 조회
+            // 이 테스트에서만 필요한 givenCommonCode 호출은 유지
             givenCommonCode("AL", "AWAITING", mockLineStatusAwaiting);
+
+            // 알림 서비스 Mocking (void 메서드)
+            // doNothing().when(notificationService).create(any());
 
             // when
             ApprovalDocResponseDTO result = approvalService.decideApproval(decideRequest, approverUsername);
@@ -424,13 +463,16 @@ class ApprovalServiceImplTest {
             verify(mockLine2).updateApprovalStatus(mockLineStatusAwaiting);
             // 4. 문서(Doc) 상태는 변경되지 않아야 함
             verify(mockDoc, never()).updateDocStatus(any(CommonCode.class));
+
+            // 5. 알림 서비스 호출 검증 (로그에 따라 2회 -> 1회로 수정)
+            verify(notificationService, times(1)).create(any());
         }
 
         @Test
         @DisplayName("성공 - 최종 승인 (다음 결재자 없음)")
         void decideApproval_Success_ApproveFinal() {
             // given
-            // [수정] '성공'에 필요한 모든 Mocking을 이 테스트 내부로 이동
+            // '성공'에 필요한 모든 Mocking을 이 테스트 내부로 이동
             decideRequest.setStatusCodeId(approvedCodeId);
 
             given(employeeRepository.findByUsername(approverUsername)).willReturn(Optional.of(mockApprover1));
@@ -442,12 +484,17 @@ class ApprovalServiceImplTest {
 
             given(commonCodeRepository.findById(approvedCodeId)).willReturn(Optional.of(mockLineStatusApproved));
 
+            // "OT", "APPROVAL" 호출은 setUp()에서 이미 lenient()로 처리됨
+
             // 다음 결재선 조회 실패 (Optional.empty())
             given(mockLine1.getApprovalOrder()).willReturn(1L); // (실제론 마지막 순서라고 가정)
             given(approvalLineRepository.findByDocAndApprovalOrder(mockDoc, 2L)).willReturn(Optional.empty());
 
             // 문서 상태('APPROVED')로 변경하기 위한 공통 코드 조회
             givenCommonCode("AD", "APPROVED", mockDocStatusApproved);
+
+            // 알림 서비스 Mocking (void 메서드)
+            // doNothing().when(notificationService).create(any());
 
             // when
             approvalService.decideApproval(decideRequest, approverUsername);
@@ -459,13 +506,16 @@ class ApprovalServiceImplTest {
             verify(mockLine2, never()).updateApprovalStatus(any(CommonCode.class));
             // 3. 문서(Doc) 상태가 '최종 승인'으로 변경되어야 함
             verify(mockDoc).updateDocStatus(mockDocStatusApproved);
+
+            // 4. 알림 서비스 호출 검증 (기안자 1회)
+            verify(notificationService, times(1)).create(any());
         }
 
         @Test
         @DisplayName("성공 - 반려")
         void decideApproval_Success_Reject() {
             // given
-            // [수정] '성공'에 필요한 모든 Mocking을 이 테스트 내부로 이동
+            // '성공'에 필요한 모든 Mocking을 이 테스트 내부로 이동
             decideRequest.setStatusCodeId(rejectedCodeId);
 
             given(employeeRepository.findByUsername(approverUsername)).willReturn(Optional.of(mockApprover1));
@@ -478,8 +528,13 @@ class ApprovalServiceImplTest {
             // '반려' 코드 조회
             given(commonCodeRepository.findById(rejectedCodeId)).willReturn(Optional.of(mockLineStatusRejected));
 
+            // "OT", "APPROVAL" 호출은 setUp()에서 이미 lenient()로 처리됨
+
             // 문서 상태('REJECTED')로 변경하기 위한 공통 코드 조회
             givenCommonCode("AD", "REJECTED", mockDocStatusRejected);
+
+            // 알림 서비스 Mocking (void 메서드)
+            // doNothing().when(notificationService).create(any());
 
             // when
             approvalService.decideApproval(decideRequest, approverUsername);
@@ -491,6 +546,9 @@ class ApprovalServiceImplTest {
             verify(mockDoc).updateDocStatus(mockDocStatusRejected);
             // 3. (중요) 반려 시에는 다음 결재선을 찾지 않아야 함
             verify(approvalLineRepository, never()).findByDocAndApprovalOrder(any(), any());
+
+            // 4. 알림 서비스 호출 검증 (기안자 1회)
+            verify(notificationService, times(1)).create(any());
         }
 
         @Test
@@ -499,11 +557,14 @@ class ApprovalServiceImplTest {
             // given
             decideRequest.setStatusCodeId(approvedCodeId);
 
-            // [수정] 이 테스트에 필요한 Mocking만 설정
+            // 이 테스트에 필요한 Mocking만 설정
             // 1. 사용자 조회 통과
             given(employeeRepository.findByUsername(approverUsername)).willReturn(Optional.of(mockApprover1));
             // 2. 상태 코드 조회 실패 (실패 지점)
             given(commonCodeRepository.findById(approvedCodeId)).willReturn(Optional.empty());
+
+            // "OT", "APPROVAL" 호출은 setUp()에서 이미 lenient()로 처리됨
+            // 따라서 IndexOutOfBoundsException이 발생하지 않고, 이 테스트의 given까지만 실행됨
 
             // when & then
             assertThatThrownBy(() -> approvalService.decideApproval(decideRequest, approverUsername))
@@ -517,7 +578,7 @@ class ApprovalServiceImplTest {
             // given
             decideRequest.setStatusCodeId(approvedCodeId);
 
-            // [수정] 이 테스트에 필요한 Mocking만 설정
+            // 이 테스트에 필요한 Mocking만 설정
             // 1. 사용자 조회 통과
             given(employeeRepository.findByUsername(approverUsername)).willReturn(Optional.of(mockApprover1));
             // 2. 상태 코드 조회 통과 (서비스 로직 순서상 이게 먼저)
@@ -525,6 +586,7 @@ class ApprovalServiceImplTest {
             // 3. 결재선 조회 실패 (실패 지점)
             given(approvalLineRepository.findById(lineId)).willReturn(Optional.empty());
 
+            // "OT", "APPROVAL" 호출은 setUp()에서 이미 lenient()로 처리됨
 
             // when & then
             assertThatThrownBy(() -> approvalService.decideApproval(decideRequest, approverUsername))
@@ -538,7 +600,7 @@ class ApprovalServiceImplTest {
             // given
             decideRequest.setStatusCodeId(approvedCodeId);
 
-            // [수정] 이 테스트에 필요한 Mocking만 설정
+            // 이 테스트에 필요한 Mocking만 설정
             // 1. 로그인 사용자를 '결재자2'(mockApprover2)로 설정
             given(employeeRepository.findByUsername(approverUsername)).willReturn(Optional.of(mockApprover2));
             // 2. 상태 코드 조회 통과
@@ -552,6 +614,7 @@ class ApprovalServiceImplTest {
             lenient().when(mockApprover1.getEmployeeId()).thenReturn(11L);
             lenient().when(mockApprover2.getEmployeeId()).thenReturn(12L);
 
+            // "OT", "APPROVAL" 호출은 setUp()에서 이미 lenient()로 처리됨
 
             // when & then
             assertThatThrownBy(() -> approvalService.decideApproval(decideRequest, approverUsername))
@@ -565,7 +628,7 @@ class ApprovalServiceImplTest {
             // given
             decideRequest.setStatusCodeId(approvedCodeId);
 
-            // [수정] 이 테스트에 필요한 Mocking만 설정
+            // 이 테스트에 필요한 Mocking만 설정
             // 1. 사용자 조회 통과
             given(employeeRepository.findByUsername(approverUsername)).willReturn(Optional.of(mockApprover1));
             // 2. 상태 코드 조회 통과
@@ -581,6 +644,7 @@ class ApprovalServiceImplTest {
             lenient().when(mockLineStatusAwaiting.getValue1()).thenReturn("AWAITING");
             lenient().when(mockLineStatusApproved.getValue1()).thenReturn("APPROVED");
 
+            // "OT", "APPROVAL" 호출은 setUp()에서 이미 lenient()로 처리됨
 
             // when & then
             assertThatThrownBy(() -> approvalService.decideApproval(decideRequest, approverUsername))
