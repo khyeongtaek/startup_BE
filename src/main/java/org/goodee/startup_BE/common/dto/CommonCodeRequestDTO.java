@@ -4,6 +4,7 @@ import lombok.*;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
 
+
 @Getter @Setter
 @ToString
 @Builder
@@ -23,9 +24,6 @@ public class CommonCodeRequestDTO {
     public CommonCode toEntity(Employee employee) {
         return CommonCode.createCommonCode(code, codeDescription, value1, value2, value3, sortOrder, employee);
     }
-
-
-
 
 
 }
