@@ -37,9 +37,10 @@ VALUES
 INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
 VALUES
-    ('AL1', '결재선 상태 - 대기', 'PENDING', NULL, NULL, 1, NULL, NOW(), NOW(), false),
-    ('AL2', '결재선 상태 - 승인', 'APPROVED', NULL, NULL, 2, NULL, NOW(), NOW(), false),
-    ('AL3', '결재선 상태 - 반려', 'REJECTED', NULL, NULL, 3, NULL, NOW(), NOW(), false);
+    ('AL1', '결재선 상태 - 미결', 'PENDING', NULL, NULL, 1, NULL, NOW(), NOW(), false),
+    ('AL2', '결재선 상태 - 대기', 'AWAITING', NULL, NULL, 4, NULL, NOW(), NOW(), false),
+    ('AL3', '결재선 상태 - 승인', 'APPROVED', NULL, NULL, 2, NULL, NOW(), NOW(), false),
+    ('AL4', '결재선 상태 - 반려', 'REJECTED', NULL, NULL, 3, NULL, NOW(), NOW(), false);
 
 
 /*
@@ -141,52 +142,6 @@ VALUES
     ('LS2', '로그인 상태 - 실패', 'FAIL', NULL, NULL, 2, NULL, NOW(), NOW(), false);
 
 
-/*
-* =============================================
-* Employee (직원) - 최초 관리자
-* employeeId: 1 (수동 할당)
-* =============================================
-*/
-
-INSERT INTO tbl_employee (
-    employee_id,
-    username,
-    password,
-    name,
-    email,
-    phone_number,
-    hire_date,
-    status,
-    profile_img,
-    is_initial_password,
-    department_common_code_id,
-    position_common_code_id,
-    role_common_code_id,
-    created_at,
-    updated_at,
-    creator_id,
-    updater_id
-)
-VALUES (
-           1, -- employee_id (Employee.java에 @GeneratedValue가 없으므로 수동 할당)
-           'admin', -- username (로그인 아이디)
-           'admin', -- password (!!주의: 실제로는 암호화된 값이어야 함)
-           '관리자', -- name
-           'admin@company.com', -- email
-           '010-0000-0000', -- phone_number
-           CURDATE(), -- hire_date (오늘 날짜)
-           (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'), -- status (ES1: 재직중)
-           'default_profile.png', -- profile_img
-           true, -- is_initial_password (초기 비밀번호 맞음)
-           (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP16'), -- department_common_code_id (DP16: 대표이사)
-           (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS8'), -- position_common_code_id (PS8: 대표이사)
-           (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU1'), -- role_common_code_id (AU1: 관리자)
-           NOW(), -- created_at
-           NOW(), -- updated_at
-           NULL, -- creator_id (최초의 관리자이므로 생성자 없음)
-           NULL -- updater_id (최초의 관리자이므로 수정자 없음)
-       );
-
 
 /*
 * =============================================
@@ -232,10 +187,10 @@ VALUES
 INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
 VALUES
-    ('WT01', '업무 분류 : 프로젝트', 'PROJECT', '프로젝트', NULL, 1, NULL, NOW(), NOW(), false),
-    ('WT02', '업무 분류 : 연구', 'STUDY', '연구', NULL, 0, NULL, NOW(), NOW(), false),
-    ('WT03', '업무 분류 : 회의', 'MEETING', '회의', NULL, 0, NULL, NOW(), NOW(), false),
-    ('WT04', '업무 분류 : 기타 업무', 'ETC', '기타 업무', NULL, 0, NULL, NOW(), NOW(), false);
+    ('WT1', '업무 분류 : 프로젝트', 'PROJECT', '프로젝트', NULL, 1, NULL, NOW(), NOW(), false),
+    ('WT2', '업무 분류 : 연구', 'STUDY', '연구', NULL, 0, NULL, NOW(), NOW(), false),
+    ('WT3', '업무 분류 : 회의', 'MEETING', '회의', NULL, 0, NULL, NOW(), NOW(), false),
+    ('WT4', '업무 분류 : 기타 업무', 'ETC', '기타 업무', NULL, 0, NULL, NOW(), NOW(), false);
 
 
 /*
@@ -251,15 +206,15 @@ VALUES
 INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
 VALUES
-    ('WO01', '메일 기능 개발', 'MAIL', '메일', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO02', '업무일지 기능 개발', 'WORKLOG', '업무일지', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO03', '게시판 기능 개발', 'BOARD', '게시판', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO04', '조직도 기능 개발', 'ORGANIZATION', '조직도', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO05', '회원가입 기능 개발', 'SIGNUP', '회원가입', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO06', '로그인 기능 개발', 'LOGIN', '로그인', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO07', '전자결재 기능 개발', 'APPROVAL', '전자결재', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO08', '메신저 기능 개발', 'CHAT', '메신저', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO09', '알림 기능 개발', 'NOTIFICATION', '알림', 'WT01', 0, NULL, NOW(), NOW(), false),
+    ('WO1', '메일 기능 개발', 'MAIL', '메일', 'WT01', 0, NULL, NOW(), NOW(), false),
+    ('WO2', '업무일지 기능 개발', 'WORKLOG', '업무일지', 'WT01', 0, NULL, NOW(), NOW(), false),
+    ('WO3', '게시판 기능 개발', 'BOARD', '게시판', 'WT01', 0, NULL, NOW(), NOW(), false),
+    ('WO4', '조직도 기능 개발', 'ORGANIZATION', '조직도', 'WT01', 0, NULL, NOW(), NOW(), false),
+    ('WO5', '회원가입 기능 개발', 'SIGNUP', '회원가입', 'WT01', 0, NULL, NOW(), NOW(), false),
+    ('WO6', '로그인 기능 개발', 'LOGIN', '로그인', 'WT01', 0, NULL, NOW(), NOW(), false),
+    ('WO7', '전자결재 기능 개발', 'APPROVAL', '전자결재', 'WT01', 0, NULL, NOW(), NOW(), false),
+    ('WO8', '메신저 기능 개발', 'CHAT', '메신저', 'WT01', 0, NULL, NOW(), NOW(), false),
+    ('WO9', '알림 기능 개발', 'NOTIFICATION', '알림', 'WT01', 0, NULL, NOW(), NOW(), false),
     ('WO10', '일정 기능 개발', 'CALENDAR', '일정', 'WT01', 0, NULL, NOW(), NOW(), false),
     ('WO11', '근태관리 기능 개발', 'ATTENDANCE', '근태관리', 'WT01', 0, NULL, NOW(), NOW(), false),
     ('WO12', '옵션 더미 데이터', 'TECH_STUDY', '기술 스터디', 'WT02', 0, NULL, NOW(), NOW(), false),
@@ -281,6 +236,7 @@ VALUES
 INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
 VALUES
+<<<<<<< HEAD
     ('OT01', '출처 모듈 : 메일', 'MAIL', '', '', 0, NULL, NOW(), NOW(), false),
     ('OT02', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false);
 
@@ -323,6 +279,10 @@ VALUES
     ('WS05', '근무 상태 - 휴가', 'VACATION', '휴가', NULL, 5, NULL, NOW(), NOW(), false),
     ('WS06','근무 상태 - 외근', 'OUT_ON_BUSINESS', '외근', NULL , 6 , NULL, NOW(), NOW(), false ),
     ('WS07','근무 상태 - 퇴근', 'CLOCK_OUT', '퇴근', NULL , 6 , NULL, NOW(), NOW(), false );
+=======
+    ('OT1', '출처 모듈 : 메일', 'MAIL', '', '', 0, NULL, NOW(), NOW(), false),
+    ('OT2', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false);
+>>>>>>> develop
 
 
 /*
@@ -389,3 +349,337 @@ INSERT INTO tbl_common_code
 VALUES
     ('OT01', '출처 모듈 : 메일', 'MAIL', '', '', 0, NULL, NOW(), NOW(), false),
     ('OT02', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false);
+
+/*
+* Employee (직원) 데이터 삽입 (스네이크 케이스)
+* - 모든 부서(DP1~DP16)에 직원 배정
+* - 2명의 관리자(AU1) 포함 (admin, ceo)
+* - 모든 비밀번호는 '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K'로 고정
+* - 첫 번째 관리자(admin)를 생성자/수정자로 지정 (employee_id = 1 가정)
+* =============================================
+*/
+-- 첫 번째 사용자: 관리자 (ID: 1)
+INSERT INTO tbl_employee (
+    employee_id, username, password, name, email, phone_number, hire_date,
+    status, profile_img, is_initial_password,
+    department_common_code_id, position_common_code_id, role_common_code_id,
+    created_at, updated_at, creator_id, updater_id
+)
+VALUES
+    -- 1. 관리자 (R&D 본부 - 백엔드개발팀)
+    (
+        1, 'admin', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '관리자', 'admin@startup.com', '010-0000-0001', '2024-01-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'), -- 재직중
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP7'), -- 백엔드개발팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS6'), -- 부장
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU1'), -- 관리자
+        NOW(), NOW(), NULL, NULL -- 첫 사용자는 creator/updater가 없음
+    );
+
+-- 두 번째 INSERT: 나머지 모든 사용자 (ID: 2 ~ 32)
+-- employee_id 컬럼을 추가하고 각 VALUES에 ID 값을 직접 지정
+INSERT INTO tbl_employee (
+    employee_id, username, password, name, email, phone_number, hire_date,
+    status, profile_img, is_initial_password,
+    department_common_code_id, position_common_code_id, role_common_code_id,
+    created_at, updated_at, creator_id, updater_id
+)
+VALUES
+    -- 2. 대표이사 (C-Level - 대표이사)
+    (
+        2, 'ceo', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '대표이사', 'ceo@startup.com', '010-1111-1111', '2024-01-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'), -- 재직중
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP16'), -- 대표이사(부서)
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS8'), -- 대표이사(직급)
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU1'), -- 관리자
+        NOW(), NOW(), 1, 1 -- admin(1)이 생성
+    ),
+    -- 3. 인사팀
+    (
+        3, 'hr_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '인사과장', 'hr@startup.com', '010-2222-2222', '2024-02-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP3'), -- 인사팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS4'), -- 과장
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'), -- 일반사용자
+        NOW(), NOW(), 1, 1
+    ),
+    (
+        4, 'hr_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '인사사원', 'hr_staff@startup.com', '010-2222-2223', '2024-03-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP3'), -- 인사팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS1'), -- 사원
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    -- 4. 재무회계팀
+    (
+        5, 'finance_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '재무차장', 'finance@startup.com', '010-3333-3333', '2024-02-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP4'), -- 재무회계팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS5'), -- 차장
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    (
+        6, 'finance_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '재무주임', 'finance_staff@startup.com', '010-3333-3334', '2024-03-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP4'), -- 재무회계팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS2'), -- 주임
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    -- 5. 총무팀
+    (
+        7, 'ga_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '총무대리', 'ga@startup.com', '010-4444-4444', '2024-02-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP5'), -- 총무팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS3'), -- 대리
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    (
+        8, 'ga_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '총무사원', 'ga_staff@startup.com', '010-4444-4445', '2024-03-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP5'), -- 총무팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS1'), -- 사원
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    -- 6. 백엔드개발팀 (admin 외 추가)
+    (
+        9, 'backend_dev1', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '백엔드대리', 'backend1@startup.com', '010-5555-5551', '2024-02-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP7'), -- 백엔드개발팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS3'), -- 대리
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    (
+        10, 'backend_dev2', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '백엔드사원', 'backend2@startup.com', '010-5555-5552', '2024-03-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP7'), -- 백엔드개발팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS1'), -- 사원
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    -- 7. 프론트엔드개발팀
+    (
+        11, 'frontend_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '프론트과장', 'frontend1@startup.com', '010-6666-6661', '2024-02-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP8'), -- 프론트엔드개발팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS4'), -- 과장
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    (
+        12, 'frontend_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '프론트사원', 'frontend2@startup.com', '010-6666-6662', '2024-03-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP8'), -- 프론트엔드개발팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS1'), -- 사원
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    -- 8. UI/UX 디자인팀
+    (
+        13, 'designer_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '디자인대리', 'design1@startup.com', '010-7777-7771', '2024-02-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP9'), -- UI/UX 디자인팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS3'), -- 대리
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    (
+        14, 'designer_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '디자인주임', 'design2@startup.com', '010-7777-7772', '2024-03-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP9'), -- UI/UX 디자인팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS2'), -- 주임
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    -- 9. QA팀
+    (
+        15, 'qa_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '품질대리', 'qa1@startup.com', '010-8888-8881', '2024-02-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP10'), -- QA팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS3'), -- 대리
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    (
+        16, 'qa_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '품질사원', 'qa2@startup.com', '010-8888-8882', '2024-03-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP10'), -- QA팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS1'), -- 사원
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    -- 10. 영업1팀
+    (
+        17, 'sales1_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '영업1팀장', 'sales1@startup.com', '010-9999-9991', '2024-02-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP12'), -- 영업1팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS5'), -- 차장
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    (
+        18, 'sales1_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '영업1팀원', 'sales1_staff@startup.com', '010-9999-9992', '2024-03-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP12'), -- 영업1팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS1'), -- 사원
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    -- 11. 영업2팀
+    (
+        19, 'sales2_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '영업2팀장', 'sales2@startup.com', '010-1010-1011', '2024-02-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP13'), -- 영업2팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS4'), -- 과장
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    (
+        20, 'sales2_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '영업2팀원', 'sales2_staff@startup.com', '010-1010-1012', '2024-03-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP13'), -- 영업2팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS1'), -- 사원
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    -- 12. 마케팅팀
+    (
+        21, 'marketing_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '마케팅대리', 'mkt1@startup.com', '010-1212-1211', '2024-02-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP14'), -- 마케팅팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS3'), -- 대리
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    (
+        22, 'marketing_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '마케팅사원', 'mkt2@startup.com', '010-1212-1212', '2024-03-01',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP14'), -- 마케팅팀
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS1'), -- 사원
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+
+    -- "모든 부서" 요청을 만족하기 위해 상위 부서에도 인원 배정 --
+    -- 13. C-Level (상위)
+    (
+        23, 'clevel_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '경영이사', 'clevel@startup.com', '010-1313-1313', '2024-01-15',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP15'), -- C-Level
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS7'), -- 이사
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    (
+        24, 'clevel_staff2', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '전략기획', 'strategy@startup.com', '010-1313-1314', '2024-01-20',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP15'), -- C-Level
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS6'), -- 부장
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    -- 14. 사업본부 (상위)
+    (
+        25, 'biz_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '사업본부장', 'biz@startup.com', '010-1414-1414', '2024-01-15',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP11'), -- 사업본부
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS7'), -- 이사
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    (
+        26, 'biz_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '사업기획', 'biz_staff@startup.com', '010-1414-1415', '2024-02-15',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP11'), -- 사업본부
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS4'), -- 과장
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    -- 15. R&D 본부 (상위)
+    (
+        27, 'rnd_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', 'R&D본부장', 'rnd@startup.com', '010-1515-1515', '2024-01-15',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP6'), -- R&D 본부
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS7'), -- 이사
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    (
+        28, 'rnd_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', 'R&D기획', 'rnd_staff@startup.com', '010-1515-1516', '2024-02-15',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP6'), -- R&D 본부
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS5'), -- 차장
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    -- 16. 경영지원본부 (상위)
+    (
+        29, 'mgmt_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '경영지원본부장', 'mgmt@startup.com', '010-1616-1616', '2024-01-15',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP2'), -- 경영지원본부
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS7'), -- 이사
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    (
+        30, 'mgmt_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '경영지원', 'mgmt_staff@startup.com', '010-1616-1617', '2024-02-15',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP2'), -- 경영지원본부
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS5'), -- 차장
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    -- 17. 스타트업 (최상위)
+    (
+        31, 'root_staff1', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '감사', 'audit@startup.com', '010-1717-1717', '2024-01-10',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP1'), -- 스타트업
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS7'), -- 이사
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    ),
+    (
+        32, 'root_staff2', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '법무', 'legal@startup.com', '010-1717-1718', '2024-01-10',
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
+        'default_profile.png', true,
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP1'), -- 스타트업
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'PS6'), -- 부장
+        (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
+        NOW(), NOW(), 1, 1
+    );

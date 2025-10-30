@@ -33,7 +33,7 @@ public class Employee implements UserDetails {
     private Long employeeId;
 
     @Lob
-    @Column(nullable = false, columnDefinition = "LONGTEXT")
+    @Column(nullable = false, unique = true, columnDefinition = "LONGTEXT")
     @Comment("로그인 아이디")
     @Schema(description = "로그인 아이디", example = "user123")
     private String username;
@@ -51,7 +51,7 @@ public class Employee implements UserDetails {
     private String name;
 
     @Lob
-    @Column(nullable = false, columnDefinition = "LONGTEXT")
+    @Column(nullable = false, unique = true, columnDefinition = "LONGTEXT")
     @Comment("이메일")
     @Schema(description = "이메일", example = "test@example.com")
     private String email;
