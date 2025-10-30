@@ -89,5 +89,9 @@ public class Attendance {
         this.workStatus = workStatus;
         this.updatedAt = LocalDateTime.now();
     }
+
+    public void setWorkDate(Integer workDate) {
+        this.workDate = workDate;
+    }
 }
 

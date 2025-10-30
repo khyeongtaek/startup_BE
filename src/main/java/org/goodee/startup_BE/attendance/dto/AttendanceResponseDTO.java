@@ -2,6 +2,7 @@ package org.goodee.startup_BE.attendance.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
+import org.goodee.startup_BE.attendance.entity.AnnualLeave;
 import org.goodee.startup_BE.attendance.entity.Attendance;
 
 import java.time.LocalDate;
@@ -50,19 +51,31 @@ public class AttendanceResponseDTO {
     @Schema(description = "수정 시간", example = "2025-10-27T17:00:00")
     private LocalDateTime updatedAt;
 
-    public static AttendanceResponseDTO toDTO(Attendance attendance){
+
+    @Schema(description = "직원 총 연차", example = "15")
+    private Long totalAnnualLeave;
+
+    @Schema(description = "사용한 연차", example = "3")
+    private Long usedAnnualLeave;
+
+    @Schema(description = "남은 연차", example = "12")
+    private Long remainingAnnualLeave;
+
+    public static AttendanceResponseDTO toDTO(Attendance attendance, AnnualLeave annualLeave){
         return AttendanceResponseDTO.builder()
                 .attendanceId(attendance.getAttendanceId())
                 .employeeId(attendance.getEmployee().getEmployeeId())
                 .employeeName(attendance.getEmployee().getName())
                 .attendanceDate(attendance.getAttendanceDate())
-                //.annualLeaveCount(attendance.)
                 .workDate(attendance.getWorkDate())
                 .startTime(attendance.getStartTime())
                 .endTime(attendance.getEndTime())
                 .workStatus(attendance.getWorkStatus().getValue1())
                 .createdAt(attendance.getCreatedAt())
                 .updatedAt(attendance.getUpdatedAt())
+                .totalAnnualLeave(annualLeave.getTotalDays())
+                .usedAnnualLeave(annualLeave.getUsedDays())
+                .remainingAnnualLeave(annualLeave.getRemainingDays())
                 .build();
     }
 }
