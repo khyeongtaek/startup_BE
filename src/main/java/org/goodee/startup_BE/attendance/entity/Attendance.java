@@ -1,4 +1,4 @@
-package org.goodee.startup_BE.attendance;
+package org.goodee.startup_BE.attendance.entity;
 
 
 import jakarta.persistence.*;
@@ -7,13 +7,16 @@ import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
 
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 
 @Table(name="tbl_attendance")
 @Entity
-@Getter
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Builder
+@Getter
 public class Attendance {
 
     @Id
@@ -28,11 +31,17 @@ public class Attendance {
     private Employee employee;
 
 
+    // 누적 근무 일수
     @Column(name="work_date", nullable = false)
-    private LocalDateTime workDate;
+    private Integer workDate;
+
+    // 근무한 날짜
+    @Column(name = "attendance_date", nullable = false)
+    private LocalDate attendanceDate;
+
 
     @Column(name = "is_deleted")
-    private Boolean is_deleted;
+    private Boolean isDeleted;
 
     @Column(name="start_time")
     private LocalDateTime startTime;
@@ -53,24 +62,31 @@ public class Attendance {
     private CommonCode workStatus;
 
 
-    public static Attendance createAttendance(Employee employee, LocalDateTime workDate) {
+    public static Attendance createAttendance(Employee employee, LocalDate attendanceDate, CommonCode workStatus) {
         Attendance attendance = new Attendance();
         attendance.employee = employee;
-        attendance.workDate = workDate;
-        attendance.is_deleted = false;
+        attendance.attendanceDate = attendanceDate;
+        attendance.workStatus = workStatus;
+        attendance.workDate = 1;
+        attendance.isDeleted = false;
         attendance.createdAt = LocalDateTime.now();
         attendance.updatedAt = LocalDateTime.now();
         return attendance;
     }
 
     public void delete() {
-        this.is_deleted = true;
+        this.isDeleted = true;
         this.updatedAt = LocalDateTime.now();
     }
 
     public void update(LocalDateTime startTime, LocalDateTime endTime) {
         this.startTime = startTime;
         this.endTime = endTime;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void changeWorkStatus(CommonCode workStatus) {
+        this.workStatus = workStatus;
         this.updatedAt = LocalDateTime.now();
     }
 }
