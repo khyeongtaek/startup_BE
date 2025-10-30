@@ -32,10 +32,10 @@ public class NotificationServiceImpl implements NotificationService{
 
     // 알림 생성
     @Override
-    public NotificationResponseDTO create(String username, NotificationRequestDTO requestDTO) {
+    public NotificationResponseDTO create(NotificationRequestDTO requestDTO) {
 
         // 사원 조회
-        Employee employee = employeeRepository.findByUsername(username)
+        Employee employee = employeeRepository.findById(requestDTO.getEmployeeId())
                 .orElseThrow(() -> new UsernameNotFoundException("존재 하지 않는 사원 입니다"));
 
         // OwnerType CommonCode 조회
@@ -60,7 +60,7 @@ public class NotificationServiceImpl implements NotificationService{
 
         // Websocket 푸쉬
         // pring Security Principal.getName()과 일치하는 username(recipientUsername)으로 메시지 전송
-        simpMessagingTemplate.convertAndSendToUser(username, "/queue/noti", dto);
+        simpMessagingTemplate.convertAndSendToUser(employee.getUsername(), "/queue/noti", dto);
 
         return dto;
     }

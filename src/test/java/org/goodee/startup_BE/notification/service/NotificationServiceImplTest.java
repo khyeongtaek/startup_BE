@@ -67,39 +67,41 @@ class NotificationServiceImplTest {
         lenient().when(mockEmployee.getEmployeeId()).thenReturn(testEmployeeId);
     }
 
+    // --- Create Notification 테스트 수정 ---
     @Nested
     @DisplayName("create (알림 생성)")
     class CreateNotification {
 
         private NotificationRequestDTO requestDTO;
+        private Long ownerTypeCodeId = 101L;
 
         @BeforeEach
         void createSetup() {
-            // 알림 생성 요청 DTO 준비
+            // 알림 생성 요청 DTO 준비 (employeeId 사용)
+            // *가정: NotificationRequestDTO에 employeeId 필드가 Long 타입으로 존재*
             requestDTO = new NotificationRequestDTO(
-                    testUsername, 101L, "/mail/1", "테스트 제목", "테스트 내용"
+                    testEmployeeId, // 받는 사람 Employee ID
+                    ownerTypeCodeId, // CommonCode ID
+                    "/mail/1",
+                    "테스트 제목",
+                    "테스트 내용"
             );
         }
 
         @Test
         @DisplayName("성공")
         void create_Success() {
-            // given: 사원 조회, CommonCode 조회, 알림 저장, DTO 변환 과정 Mocking
-            given(employeeRepository.findByUsername(testUsername)).willReturn(Optional.of(mockEmployee));
-            given(commonCodeRepository.findById(101L)).willReturn(Optional.of(mockOwnerType));
-
-            // Notification.createNotification이 static이라 mocking 불가.
-            // repository.save()가 Notification 객체를 반환하도록 설정
-            // NotificationResponseDTO.toDTO()가 static이라 mocking 불가.
-            // DTO 변환에 필요한 getter들을 Mocking
+            // given: 사원 조회(ID 기준), CommonCode 조회, 알림 저장, DTO 변환 과정 Mocking
+            given(employeeRepository.findById(testEmployeeId)).willReturn(Optional.of(mockEmployee));
+            given(commonCodeRepository.findById(ownerTypeCodeId)).willReturn(Optional.of(mockOwnerType));
             given(mockOwnerType.getCodeDescription()).willReturn("메일");
-
-            // Service.create() 내부에서 생성된 notification 객체를 캡처하기 위해
-            // save 메서드가 인자로 받은 객체를 그대로 반환하도록 설정
             given(notificationRepository.save(any(Notification.class))).willAnswer(invocation -> invocation.getArgument(0));
+            // WebSocket 푸시에 사용할 username Mocking (findById로 찾은 employee 객체에서 가져옴)
+            given(mockEmployee.getUsername()).willReturn(testUsername);
 
-            // when: 알림 생성 실행
-            NotificationResponseDTO resultDTO = notificationService.create(testUsername, requestDTO);
+
+            // when: 알림 생성 실행 (파라미터 변경)
+            NotificationResponseDTO resultDTO = notificationService.create(requestDTO);
 
             // then: 결과 검증
             // 1. DTO 변환 검증
@@ -108,9 +110,10 @@ class NotificationServiceImplTest {
             assertThat(resultDTO.getOwnerTypeDescription()).isEqualTo("메일");
 
             // 2. Repository 및 Template 호출 검증
-            verify(employeeRepository, times(1)).findByUsername(testUsername);
-            verify(commonCodeRepository, times(1)).findById(101L);
+            verify(employeeRepository, times(1)).findById(testEmployeeId);
+            verify(commonCodeRepository, times(1)).findById(ownerTypeCodeId);
             verify(notificationRepository, times(1)).save(any(Notification.class));
+            // WebSocket 푸시 username 검증 (mockEmployee에서 가져온 값)
             verify(simpMessagingTemplate, times(1)).convertAndSendToUser(
                     eq(testUsername), eq("/queue/noti"), any(NotificationResponseDTO.class)
             );
@@ -119,29 +122,30 @@ class NotificationServiceImplTest {
         @Test
         @DisplayName("실패 - 사원 없음")
         void create_Fail_UserNotFound() {
-            // given: 사원 조회 실패
-            given(employeeRepository.findByUsername(testUsername)).willReturn(Optional.empty());
+            // given: 사원 조회 실패 (ID 기준)
+            given(employeeRepository.findById(testEmployeeId)).willReturn(Optional.empty());
 
-            // when & then: UsernameNotFoundException 발생 확인
-            assertThatThrownBy(() -> notificationService.create(testUsername, requestDTO))
-                    .isInstanceOf(UsernameNotFoundException.class)
+            // when & then: UsernameNotFoundException 발생 확인 (호출 방식 변경)
+            assertThatThrownBy(() -> notificationService.create(requestDTO))
+                    .isInstanceOf(UsernameNotFoundException.class) // Service 내부 Exception 타입 확인 필요 (UsernameNotFoundException or EntityNotFoundException)
                     .hasMessageContaining("존재 하지 않는 사원 입니다");
         }
 
         @Test
         @DisplayName("실패 - CommonCode 없음")
         void create_Fail_CommonCodeNotFound() {
-            // given: 사원 조회는 성공, CommonCode 조회 실패
-            given(employeeRepository.findByUsername(testUsername)).willReturn(Optional.of(mockEmployee));
-            given(commonCodeRepository.findById(101L)).willReturn(Optional.empty());
+            // given: 사원 조회는 성공 (ID 기준), CommonCode 조회 실패
+            given(employeeRepository.findById(testEmployeeId)).willReturn(Optional.of(mockEmployee));
+            given(commonCodeRepository.findById(ownerTypeCodeId)).willReturn(Optional.empty());
 
-            // when & then: EntityNotFoundException 발생 확인
-            assertThatThrownBy(() -> notificationService.create(testUsername, requestDTO))
+            // when & then: EntityNotFoundException 발생 확인 (호출 방식 변경)
+            assertThatThrownBy(() -> notificationService.create(requestDTO))
                     .isInstanceOf(EntityNotFoundException.class)
                     .hasMessageContaining("유효하지 않은 알림 출처 CommonCode Id 입니다");
         }
     }
 
+    // ... (list, checkRole, getUrl, softDelete, getUnreadNotiCount, readAll, softDeleteAll 테스트는 변경 없음) ...
     @Nested
     @DisplayName("list (목록 조회)")
     class ListNotification {
