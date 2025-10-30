@@ -13,9 +13,12 @@ import org.goodee.startup_BE.approval.repository.ApprovalDocRepository;
 import org.goodee.startup_BE.approval.repository.ApprovalLineRepository;
 import org.goodee.startup_BE.approval.repository.ApprovalReferenceRepository;
 import org.goodee.startup_BE.common.entity.CommonCode;
+import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
+import org.goodee.startup_BE.notification.dto.NotificationRequestDTO;
+import org.goodee.startup_BE.notification.service.NotificationService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -39,6 +42,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     private final ApprovalReferenceRepository approvalReferenceRepository;
     private final EmployeeRepository employeeRepository;
     private final CommonCodeRepository commonCodeRepository;
+    private final NotificationService notificationService;
 
     // --- 공통 코드 Prefix 정의 ---
     private static final String DOC_STATUS_PREFIX = ApprovalDocStatus.PREFIX;
@@ -68,6 +72,9 @@ public class ApprovalServiceImpl implements ApprovalService {
         CommonCode docStatus = getCommonCode(DOC_STATUS_PREFIX, DOC_STATUS_IN_PROGRESS); // '진행중'
         CommonCode linePendingStatus = getCommonCode(LINE_STATUS_PREFIX, LINE_STATUS_PENDING); // '미결' (AL1)
         CommonCode lineAwaitingStatus = getCommonCode(LINE_STATUS_PREFIX, LINE_STATUS_AWAITING); // '대기' (AL2)
+        CommonCode ownerCode = commonCodeRepository                                            // 결재 모듈
+                .findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.APPROVAL.name())
+                .get(0);
 
         // 2. 문서(Doc) 생성 및 저장 (ID 자동 생성)
         ApprovalDoc doc = approvalDocRepository.save(request.toEntity(creator, docStatus));
@@ -94,17 +101,22 @@ public class ApprovalServiceImpl implements ApprovalService {
         approvalLineRepository.saveAll(lineList);
 
         // 4. 참조자가 있는 경우 ApprovalReference 생성
+        List<ApprovalReference> refList = new ArrayList<>(); // 알림 발송을 위해 리스트 생성
         if (request.getApprovalReferences() != null && !request.getApprovalReferences().isEmpty()) {
             for (ApprovalReferenceRequestDTO refDto : request.getApprovalReferences()) {
                 Employee referrer = employeeRepository.findById(refDto.getReferrerId())
                         .orElseThrow(() -> new EntityNotFoundException("참조자를 찾을 수 없습니다: " + refDto.getReferrerId()));
 
                 ApprovalReference reference = refDto.toEntity(doc, referrer);
-                approvalReferenceRepository.save(reference);
+                refList.add(reference); // 리스트에 추가
             }
+            approvalReferenceRepository.saveAll(refList); // 참조자 일괄 저장
         }
 
-        // 5. 저장된 전체 문서를 DTO로 변환하여 반환
+        // 5. 알림 발송
+        sendCreationNotifications(doc, lineList, refList, ownerCode);
+
+        // 6. 저장된 전체 문서를 DTO로 변환하여 반환
         return convertToDocResponseDTO(doc);
     }
 
@@ -119,6 +131,11 @@ public class ApprovalServiceImpl implements ApprovalService {
         Long lineId = request.getLineId();
         Long newStatusCodeId = request.getStatusCodeId();
         String comment = request.getComment();
+        CommonCode finalDocStatus = null; // 최종 승인/최종반려 여부.
+        CommonCode ownerCode = commonCodeRepository  // 결재 모듈
+                .findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.APPROVAL.name())
+                .get(0);
+        ApprovalLine nextLine = null;   // 다음 결재선 정보
 
         // 1. 전달 받은 상태 id를 공통 코드에서 조회 (승인 또는 반려)
         CommonCode newStatus = commonCodeRepository.findById(newStatusCodeId)
@@ -149,8 +166,8 @@ public class ApprovalServiceImpl implements ApprovalService {
         doc.updateUpdater(loginUser); // 문서 최종 수정자 업데이트
 
         if (newStatusValue.equals(LINE_STATUS_REJECTED)) {  // 4-1. '반려'된 경우: 문서 상태를 '최종 반려'로 변경
-            CommonCode rejectedDocStatus = getCommonCode(DOC_STATUS_PREFIX, DOC_STATUS_REJECTED);
-            doc.updateDocStatus(rejectedDocStatus);
+            finalDocStatus = getCommonCode(DOC_STATUS_PREFIX, DOC_STATUS_REJECTED);
+            doc.updateDocStatus(finalDocStatus);
 
         } else if (newStatusValue.equals(LINE_STATUS_APPROVED)) {   // 4-2. '승인'된 경우
             // 다음 결재 순서 찾기
@@ -160,19 +177,21 @@ public class ApprovalServiceImpl implements ApprovalService {
             Optional<ApprovalLine> nextLineOpt = approvalLineRepository.findByDocAndApprovalOrder(doc, nextOrder);
 
             if (nextLineOpt.isPresent()) {  // 4-2-1. 다음 결재자가 있으면: 다음 결재선의 상태를 '미결'(PENDING) -> '대기'(AWAITING)로 변경
-                ApprovalLine nextLine = nextLineOpt.get();
+                nextLine = nextLineOpt.get();
                 CommonCode awaitingStatus = getCommonCode(LINE_STATUS_PREFIX, LINE_STATUS_AWAITING);    //대기 코드 가져옴
 
-                // 대기로 변경
-                nextLine.updateApprovalStatus(awaitingStatus);
+                nextLine.updateApprovalStatus(awaitingStatus);                // 대기로 변경
             } else {
                 // 4-2-2. 다음 결재자가 없으면 (최종 승인): 문서 상태를 '최종 승인'으로 변경
-                CommonCode approvedDocStatus = getCommonCode(DOC_STATUS_PREFIX, DOC_STATUS_APPROVED);
-                doc.updateDocStatus(approvedDocStatus);     // 상태 변경
+                finalDocStatus = getCommonCode(DOC_STATUS_PREFIX, DOC_STATUS_APPROVED);
+                doc.updateDocStatus(finalDocStatus);
             }
         }
 
-        // 5. 업데이트된 결재 문서 상세 반환
+        // 5. 알림 발송
+        sendDecisionNotifications(doc, nextLine, finalDocStatus, ownerCode);
+
+        // 6. 업데이트된 결재 문서 상세 반환
         return convertToDocResponseDTO(doc);
     }
 
@@ -325,6 +344,78 @@ public class ApprovalServiceImpl implements ApprovalService {
 
         // 3. 최종 DTO 조합
         return ApprovalDocResponseDTO.toDTO(doc, lineDTOs, refDTOs);
+    }
+
+    /**
+     * [헬퍼] 신규 결재 생성 시 알림 발송
+     */
+    private void sendCreationNotifications(ApprovalDoc doc, List<ApprovalLine> lines, List<ApprovalReference> references, CommonCode ownerCode) {
+        // 결재자에게 알림 발송
+        lines.forEach(line -> {
+            notificationService.create(
+                    NotificationRequestDTO
+                            .builder()
+                            .employeeId(line.getEmployee().getEmployeeId())
+                            .ownerTypeCommonCodeId(ownerCode.getCommonCodeId())
+                            .url("/approval/detail/" + doc.getDocId())
+                            .title("새로운 결재의 결재자로 등록되었습니다.")
+                            .content(doc.getTitle())
+                            .build());
+            if (line.getApprovalOrder() == 1L) {  // 첫번째 결재자라면 바로 결재 차례를 추가로 알림
+                notificationService.create(
+                        NotificationRequestDTO
+                                .builder()
+                                .employeeId(line.getEmployee().getEmployeeId())
+                                .ownerTypeCommonCodeId(ownerCode.getCommonCodeId())
+                                .url("/approval/detail/" + doc.getDocId())
+                                .title("결재 대기중인 문서가 있습니다.")
+                                .content(doc.getTitle())
+                                .build());
+            }
+
+        });
+
+        // 참조자에게 알림 발송
+        references.forEach(reference -> {
+            notificationService.create(
+                    NotificationRequestDTO
+                            .builder()
+                            .employeeId(reference.getEmployee().getEmployeeId())
+                            .ownerTypeCommonCodeId(ownerCode.getCommonCodeId())
+                            .url("/approval/detail/" + doc.getDocId())
+                            .title("새로운 결재의 참조자로 등록되었습니다.")
+                            .content(doc.getTitle())
+                            .build());
+        });
+    }
+
+    /**
+     * [헬퍼] 결재 승인/반려 시 알림 발송
+     */
+    private void sendDecisionNotifications(ApprovalDoc doc, ApprovalLine nextLine, CommonCode finalDocStatus, CommonCode ownerCode) {
+        // 최종 완료 상태 변경이 있다면 기안자에게 알림 발송
+        if (finalDocStatus != null) {
+            notificationService.create(
+                    NotificationRequestDTO
+                            .builder()
+                            .employeeId(doc.getCreator().getEmployeeId())
+                            .ownerTypeCommonCodeId(ownerCode.getCommonCodeId())
+                            .url("/approval/detail/" + doc.getDocId())
+                            .title("상신한 결재가 " + finalDocStatus.getValue1() + "되었습니다.") // APPROVED 또는 REJECTED
+                            .content(doc.getTitle())
+                            .build());
+        } else { // 최종 완료가 아니라면 다음 결재자에게만 알림 보냄.
+            // (로직상 nextLine은 null이 될 수 없음)
+            notificationService.create(
+                    NotificationRequestDTO
+                            .builder()
+                            .employeeId(nextLine.getEmployee().getEmployeeId())
+                            .ownerTypeCommonCodeId(ownerCode.getCommonCodeId())
+                            .url("/approval/detail/" + doc.getDocId())
+                            .title("결재 대기중인 문서가 있습니다.")
+                            .content(doc.getTitle())
+                            .build());
+        }
     }
 
 }

@@ -237,7 +237,9 @@ INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
 VALUES
     ('OT01', '출처 모듈 : 메일', 'MAIL', '', '', 0, NULL, NOW(), NOW(), false),
-    ('OT02', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false);
+    ('OT02', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false),
+    ('OT03', '출처 모듈 : 사원', 'EMPLOYEE', '', '', 0, NULL, NOW(), NOW(), false),
+    ('OT04', '출처 모듈 : 전자결재', 'APPROVAL', '', '', 0, NULL, NOW(), NOW(), false);
 
 /*
 * =============================================
