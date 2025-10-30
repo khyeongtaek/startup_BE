@@ -315,19 +315,6 @@ VALUES
     ('PS02', '참여 상태 - 거절', 'REJECT', '거절', NULL, 2, NULL, NOW(), NOW(), false),
     ('PS03', '참여 상태 - 미응답', 'PENDING', '미응답', NULL, 3, NULL, NOW(), NOW(), false);
 
-/*
-* =============================================
-* Owner Type (출처 모듈 타입)
-* code: OT + 번호 (Owner Type)
-* value1: 모듈 값 (OwnerType 값)
-* =============================================
-*/
-
-INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
-VALUES
-    ('OT01', '출처 모듈 : 메일', 'MAIL', '', '', 0, NULL, NOW(), NOW(), false),
-    ('OT02', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false);
 
 /*
 * Employee (직원) 데이터 삽입 (스네이크 케이스)
