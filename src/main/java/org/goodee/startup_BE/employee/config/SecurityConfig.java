@@ -4,6 +4,7 @@ package org.goodee.startup_BE.employee.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.goodee.startup_BE.common.exception.ExceptionHandlerFilter;
 import org.goodee.startup_BE.employee.enums.Role;
 import org.goodee.startup_BE.employee.filter.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
@@ -31,11 +32,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    private final ExceptionHandlerFilter exceptionHandlerFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    // JSON 응답을 만들기 위한 ObjectMapper
     private final ObjectMapper objectMapper = new ObjectMapper();
-    // 스웨거 경로
-    private static final String[] PERMIT_ALL_PATH = {
+    // 허용 경로
+    public static final String[] PERMIT_ALL_PATH = {
             // 인증관련 경로 허용
             "/api/auth/login",
             "/api/auth/refresh",
@@ -99,7 +100,10 @@ public class SecurityConfig {
                 // JwtAuthenticationFilter를 UsernamePasswordAuthenticationFilter 앞에 배치
                 // UsernamePasswordAuthenticationFilter는 폼 로그인 시(POST /login) 사용하는 필터
                 // JwtAuthenticationFilter가 먼저 동작하고 인증에 성공하면 UsernamePasswordAuthenticationFilter가 실행되지 않는다.
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                // UsernamePasswordAuthenticationFilter 앞에 JwtAuthenticationFilter를 추가
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // JwtAuthenticationFilter 앞에 ExceptionHandlerFilter를 추가 (따라서 가장 먼저 실행됨)
+                .addFilterBefore(exceptionHandlerFilter, JwtAuthenticationFilter.class);
 
         return http.build();
 

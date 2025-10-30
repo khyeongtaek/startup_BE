@@ -1,6 +1,9 @@
 package org.goodee.startup_BE.employee.filter;
 
 
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -8,13 +11,17 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.goodee.startup_BE.employee.config.SecurityConfig;
+import org.goodee.startup_BE.employee.exception.ResourceNotFoundException;
 import org.goodee.startup_BE.employee.service.JwtService;
 import org.goodee.startup_BE.employee.service.JwtUserDetailsService;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -24,73 +31,71 @@ import java.io.IOException;
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    // 요청 쿠키에 포함된 JWT Access Token을 꺼내서
-    // JWT 토큰의 유효성을 검증한 뒤
-    // 인증 토큰을 발행하여 SecurityContext에 저장.
-
     private final JwtService jwtService;
     private final JwtUserDetailsService jwtUserDetailsService;
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
+
 
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
             FilterChain filterChain
-    ) throws ServletException, IOException {
+    ) throws ServletException, IOException,
+            ExpiredJwtException, SignatureException, MalformedJwtException,
+            ResourceNotFoundException, UsernameNotFoundException {
+
         final String servletPath = request.getServletPath();
 
-        // 로그인 및 토큰 갱신 요청일 경우, 토큰 검증 로직을 건너뛰고 다음 필터로 진행
-        if (servletPath.equals("/api/auth/login") || servletPath.equals("/api/auth/refresh")) {
-            filterChain.doFilter(request, response);
-            return;
+        // --- 현재 경로가 permitAll 경로인지 확인 하고 해당 되면 건너뜀 ---
+        boolean isPermitAll = false;
+        for (String path : SecurityConfig.PERMIT_ALL_PATH) {
+            if (pathMatcher.match(path, servletPath)) {
+                isPermitAll = true;
+                break;
+            }
         }
 
-        //----- Authorization 헤더 대신 쿠키에서 JWT 토큰 추출
         final String jwtToken = extractTokenFromCookies(request, "accessToken");
 
-        // 쿠키에 "accessToken"이 없으면 다음 필터 진행
         if (jwtToken == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        //----- 사용자 이름과 토큰 만료시간을 이용해 JWT 토큰 검증
-        try {
+        if (isPermitAll) {
+            // 토큰이 있고 만료됐지만 스웨거에 접속해야 하는 경우 토큰 검증 건너뜀
+            log.debug("Token found, but path {} is permitAll. Skipping token validation.", servletPath);
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-            // JWT 토큰에 포함된 사용자 이름 추출
-            final String username = jwtService.extractUsername(jwtToken);
+        log.debug("Token found, path {} requires authentication. Validating token.", servletPath);
 
-            // 검증이 필요한지 체크
-            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        // JWT 토큰에 포함된 사용자 이름 추출
+        final String username = jwtService.extractUsername(jwtToken);
 
-                // JWT 토큰 검증을 위해 UserDetails 객체 생성
-                UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(username);
+        // 검증이 필요한지 체크
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                // JWT 토큰 검증
-                if (jwtService.isValidToken(jwtToken, userDetails)) {
+            // JWT 토큰 검증을 위해 UserDetails 객체 생성
+            UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(username);
 
-                    // 검증 완료 시 인증 토큰 생성
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails,                  // principal (사용자 정보)
-                            null,                         // credentials (비밀번호)
-                            userDetails.getAuthorities()  // authorities (권한)
-                    );
+            // JWT 토큰 검증
+            if (jwtService.isValidToken(jwtToken, userDetails)) {
 
-                    // 인증 토큰에 요청 세부사항 설정
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                // 검증 완료 시 인증 토큰 생성
+                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                        userDetails,
+                        null,
+                        userDetails.getAuthorities()
+                );
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                    // Security Context에 인증 토큰 저장
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
-
-                }
-
+                // Security Context에 인증 토큰 저장
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+                log.debug("Token validated successfully for user {}", username);
             }
-        } catch (Exception e) {
-            // 토큰 검증 실패 시(예: 만료된 토큰) 예외가 발생하지만,
-            // SecurityContext에 인증 정보를 설정하지 않고 다음 필터로 계속 진행시킴.
-            // .permitAll() 경로는 인증 없이도 통과되며,
-            // 인증이 필요한 경로는 SecurityContext에 인증 정보가 없으므로 401이 발생함.
-            log.warn("JWT token validation failed: {}", e.getMessage());
         }
 
         // 다음 필터를 진행
@@ -98,7 +103,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     }
 
-    // HttpServletRequest에서 특정 이름의 쿠키 값을 추출하는 헬퍼 메서드
     private String extractTokenFromCookies(HttpServletRequest request, String cookieName) {
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {

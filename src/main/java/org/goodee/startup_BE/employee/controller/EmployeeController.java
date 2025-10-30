@@ -24,7 +24,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/employees")
 @RequiredArgsConstructor
-@SecurityRequirement(name = "bearerAuth")
 public class EmployeeController {
     private final EmployeeService employeeService;
 
