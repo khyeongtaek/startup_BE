@@ -236,7 +236,6 @@ VALUES
 INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
 VALUES
-<<<<<<< HEAD
     ('OT01', '출처 모듈 : 메일', 'MAIL', '', '', 0, NULL, NOW(), NOW(), false),
     ('OT02', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false);
 
@@ -279,10 +278,6 @@ VALUES
     ('WS05', '근무 상태 - 휴가', 'VACATION', '휴가', NULL, 5, NULL, NOW(), NOW(), false),
     ('WS06','근무 상태 - 외근', 'OUT_ON_BUSINESS', '외근', NULL , 6 , NULL, NOW(), NOW(), false ),
     ('WS07','근무 상태 - 퇴근', 'CLOCK_OUT', '퇴근', NULL , 6 , NULL, NOW(), NOW(), false );
-=======
-    ('OT1', '출처 모듈 : 메일', 'MAIL', '', '', 0, NULL, NOW(), NOW(), false),
-    ('OT2', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false);
->>>>>>> develop
 
 
 /*
@@ -317,24 +312,6 @@ VALUES
     ('PS01', '참여 상태 - 참석', 'ATTEND', '참석', NULL, 1, NULL, NOW(), NOW(), false),
     ('PS02', '참여 상태 - 거절', 'REJECT', '거절', NULL, 2, NULL, NOW(), NOW(), false),
     ('PS03', '참여 상태 - 미응답', 'PENDING', '미응답', NULL, 3, NULL, NOW(), NOW(), false);
-
-/*
-* =============================================
-* Approval Template (결재 양식 기본 데이터)
-* code: 없음 (별도 테이블)
-* created_by: admin (employee_id = 1)
-* =============================================
-*/
-
-INSERT INTO tbl_approval_template
-(template_name, created_by, created_at, updated_at, is_deleted)
-VALUES
-    ('연차 신청서', 1 , NOW() , NOW(), false),
-    ('출장 신청서', 1, NOW(), NOW(), false),
-    ('외근 신청서', 1, NOW(), NOW(), false),
-    ('조퇴 보고서', 1, NOW(), NOW(), false),
-    ('휴가 신청서', 1 , NOW(),NOW(), false);
-
 
 /*
 * =============================================
@@ -683,3 +660,21 @@ VALUES
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'AU2'),
         NOW(), NOW(), 1, 1
     );
+
+
+/*
+* =============================================
+* Approval Template (결재 양식 기본 데이터)
+* code: 없음 (별도 테이블)
+* created_by: admin (employee_id = 1)
+* =============================================
+*/
+
+INSERT INTO tbl_approval_template
+(template_name, created_by, created_at, updated_at, is_deleted)
+VALUES
+    ('연차 신청서', 1 , NOW() , NOW(), false),
+    ('출장 신청서', 1, NOW(), NOW(), false),
+    ('외근 신청서', 1, NOW(), NOW(), false),
+    ('조퇴 보고서', 1, NOW(), NOW(), false),
+    ('휴가 신청서', 1 , NOW(),NOW(), false);
