@@ -4,10 +4,14 @@ package org.goodee.startup_BE.employee.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.goodee.startup_BE.common.dto.APIResponseDTO;
+import org.goodee.startup_BE.common.exception.ExceptionHandlerFilter;
 import org.goodee.startup_BE.employee.enums.Role;
 import org.goodee.startup_BE.employee.filter.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -22,20 +26,18 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-
 
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
+@Slf4j
 public class SecurityConfig {
 
+    private final ExceptionHandlerFilter exceptionHandlerFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    // JSON 응답을 만들기 위한 ObjectMapper
     private final ObjectMapper objectMapper = new ObjectMapper();
-    // 스웨거 경로
-    private static final String[] PERMIT_ALL_PATH = {
+    // 허용 경로
+    public static final String[] PERMIT_ALL_PATH = {
             // 인증관련 경로 허용
             "/api/auth/login",
             "/api/auth/refresh",
@@ -86,20 +88,28 @@ public class SecurityConfig {
                             // 응답 인코딩을 UTF-8로 설정
                             response.setCharacterEncoding("UTF-8");
 
-                            // 프론트엔드로 보낼 에러 메시지 본문 구성
-                            Map<String, String> errorDetails = new HashMap<>();
-                            errorDetails.put("error", "Unauthorized");
-                            errorDetails.put("message", "인증이 필요합니다. 토큰이 만료되었거나 유효하지 않습니다.");
+                            // 예외 로그 기록
+                            log.warn("Unauthorized request: {}", request.getRequestURI());
+                            log.warn("Exception: {}", authException.getMessage());
 
-                            // ObjectMapper를 사용해 Map을 JSON 문자열로 변환하고 응답에 써줌
-                            response.getWriter().write(objectMapper.writeValueAsString(errorDetails));
+                            // APIResponseDTO를 사용하여 에러 응답 본문 구성
+                            APIResponseDTO<String> errorResponse = APIResponseDTO.<String>builder()
+                                    .message(authException.getMessage())
+                                    .data(HttpStatus.UNAUTHORIZED.getReasonPhrase())
+                                    .build();
+
+                            // ObjectMapper를 사용해 DTO를 JSON 문자열로 변환하고 응답에 써줌
+                            response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
                         })
                 )
 
                 // JwtAuthenticationFilter를 UsernamePasswordAuthenticationFilter 앞에 배치
                 // UsernamePasswordAuthenticationFilter는 폼 로그인 시(POST /login) 사용하는 필터
                 // JwtAuthenticationFilter가 먼저 동작하고 인증에 성공하면 UsernamePasswordAuthenticationFilter가 실행되지 않는다.
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                // UsernamePasswordAuthenticationFilter 앞에 JwtAuthenticationFilter를 추가
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // JwtAuthenticationFilter 앞에 ExceptionHandlerFilter를 추가 (따라서 가장 먼저 실행됨)
+                .addFilterBefore(exceptionHandlerFilter, JwtAuthenticationFilter.class);
 
         return http.build();
 

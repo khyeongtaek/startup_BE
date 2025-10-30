@@ -16,12 +16,12 @@ public class WorkLogRead {
     private Long readId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(nullable = false)
+    @JoinColumn(name = "work_log_id", nullable = false)
     @Comment("읽은 업무일지 ID")
     private WorkLog workLog;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(nullable = false)
+    @JoinColumn(name= "employee_id", nullable = false)
     @Comment("읽은 직원 ID")
     private Employee employee;
 

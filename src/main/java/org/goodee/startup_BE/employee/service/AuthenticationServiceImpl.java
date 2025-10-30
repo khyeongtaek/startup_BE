@@ -57,16 +57,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .findById(request.getPosition())
                 .orElseThrow(() -> new ResourceNotFoundException("position code: " + request.getPosition() + " 를 찾을 수 없습니다."));
 
-        Employee creater = employeeRepository
+        Employee creator = employeeRepository
                 .findByUsername(authentication.getName())
                 .orElseThrow(() -> new BadCredentialsException("인증되지 않은 사용자입니다."));
 
 
         // 새 사용자 엔티티 생성
-        Employee employee = request.toEntity(statusCode, roleCode, departmentCode, positionCode, creater);
+        Employee employee = request.toEntity(statusCode, roleCode, departmentCode, positionCode, creator);
 
         //초기비밀번호를 사용자아이디로 등록
-        employee.updateInitPassword(passwordEncoder.encode(employee.getUsername()), creater);
+        employee.updateInitPassword(passwordEncoder.encode(employee.getUsername()), creator);
 
         // 사용자 등록
         employee = employeeRepository.save(employee);
