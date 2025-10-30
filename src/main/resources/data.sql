@@ -236,12 +236,121 @@ VALUES
 INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
 VALUES
-    ('OT1', '출처 모듈 : 메일', 'MAIL', '', '', 0, NULL, NOW(), NOW(), false),
-    ('OT2', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false);
+<<<<<<< HEAD
+    ('OT01', '출처 모듈 : 메일', 'MAIL', '', '', 0, NULL, NOW(), NOW(), false),
+    ('OT02', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false);
+
+/*
+* =============================================
+* Schedule Color (일정 색상)
+* code: CL + 번호 (Color)
+* value1: 색상 코드 (영문)
+* value2: HEX 코드
+* =============================================
+*/
+
+INSERT INTO tbl_common_code
+(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+VALUES
+    ('CL01', '색상 코드 - 파란색', 'BLUE', '#3498db', NULL, 1, NULL, NOW(), NOW(), false),
+    ('CL02', '색상 코드 - 빨간색', 'RED', '#e74c3c', NULL, 2, NULL, NOW(), NOW(), false),
+    ('CL03', '색상 코드 - 초록색', 'GREEN', '#27ae60', NULL, 3, NULL, NOW(), NOW(), false),
+    ('CL04', '색상 코드 - 노란색', 'YELLOW', '#f1c40f', NULL, 4, NULL, NOW(), NOW(), false),
+    ('CL05', '색상 코드 - 회색', 'GRAY', '#7f8c8d', NULL, 5, NULL, NOW(), NOW(), false);
+
 
 
 /*
 * =============================================
+* Work Status (근무 상태)
+* code: WS + 번호 (Work Status)
+* value1: 상태 코드 (영문)
+* value2: 상태 이름 (한글)
+* =============================================
+*/
+
+INSERT INTO tbl_common_code
+(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+VALUES
+    ('WS01', '근무 상태 - 정상근무', 'NORMAL', '정상근무', NULL, 1, NULL, NOW(), NOW(), false),
+    ('WS02', '근무 상태 - 지각', 'LATE', '지각', NULL, 2, NULL, NOW(), NOW(), false),
+    ('WS03', '근무 상태 - 조퇴', 'EARLY_LEAVE', '조퇴', NULL, 3, NULL, NOW(), NOW(), false),
+    ('WS04', '근무 상태 - 결근', 'ABSENT', '결근', NULL, 4, NULL, NOW(), NOW(), false),
+    ('WS05', '근무 상태 - 휴가', 'VACATION', '휴가', NULL, 5, NULL, NOW(), NOW(), false),
+    ('WS06','근무 상태 - 외근', 'OUT_ON_BUSINESS', '외근', NULL , 6 , NULL, NOW(), NOW(), false ),
+    ('WS07','근무 상태 - 퇴근', 'CLOCK_OUT', '퇴근', NULL , 6 , NULL, NOW(), NOW(), false );
+=======
+    ('OT1', '출처 모듈 : 메일', 'MAIL', '', '', 0, NULL, NOW(), NOW(), false),
+    ('OT2', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false);
+>>>>>>> develop
+
+
+/*
+* =============================================
+* Schedule Category (일정 카테고리)
+* code: SC + 번호 (Schedule Category)
+* value1: 분류 코드 (영문)
+* value2: 분류 이름 (한글)
+* =============================================
+*/
+
+INSERT INTO tbl_common_code
+(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+VALUES
+    ('SC01', '일정 카테고리 - 회의', 'MEETING', '회의', NULL, 1, NULL, NOW(), NOW(), false),
+    ('SC02', '일정 카테고리 - 출장', 'BUSINESS_TRIP', '출장', NULL, 2, NULL, NOW(), NOW(), false),
+    ('SC03', '일정 카테고리 - 휴가', 'VACATION', '휴가', NULL, 3, NULL, NOW(), NOW(), false),
+    ('SC04', '일정 카테고리 - 프로젝트', 'PROJECT', '프로젝트', NULL, 4, NULL, NOW(), NOW(), false),
+    ('SC05', '일정 카테고리 - 기타', 'ETC', '기타 일정', NULL, 5, NULL, NOW(), NOW(), false);
+/*
+* =============================================
+* Participant Status (참여 상태)
+* code: PS + 번호 (Participant Status)
+* value1: 상태 코드 (영문)
+* value2: 상태 이름 (한글)
+* =============================================
+*/
+
+INSERT INTO tbl_common_code
+(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+VALUES
+    ('PS01', '참여 상태 - 참석', 'ATTEND', '참석', NULL, 1, NULL, NOW(), NOW(), false),
+    ('PS02', '참여 상태 - 거절', 'REJECT', '거절', NULL, 2, NULL, NOW(), NOW(), false),
+    ('PS03', '참여 상태 - 미응답', 'PENDING', '미응답', NULL, 3, NULL, NOW(), NOW(), false);
+
+/*
+* =============================================
+* Approval Template (결재 양식 기본 데이터)
+* code: 없음 (별도 테이블)
+* created_by: admin (employee_id = 1)
+* =============================================
+*/
+
+INSERT INTO tbl_approval_template
+(template_name, created_by, created_at, updated_at, is_deleted)
+VALUES
+    ('연차 신청서', 1 , NOW() , NOW(), false),
+    ('출장 신청서', 1, NOW(), NOW(), false),
+    ('외근 신청서', 1, NOW(), NOW(), false),
+    ('조퇴 보고서', 1, NOW(), NOW(), false),
+    ('휴가 신청서', 1 , NOW(),NOW(), false);
+
+
+/*
+* =============================================
+* Owner Type (출처 모듈 타입)
+* code: OT + 번호 (Owner Type)
+* value1: 모듈 값 (OwnerType 값)
+* =============================================
+*/
+
+INSERT INTO tbl_common_code
+(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+VALUES
+    ('OT01', '출처 모듈 : 메일', 'MAIL', '', '', 0, NULL, NOW(), NOW(), false),
+    ('OT02', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false);
+
+/*
 * Employee (직원) 데이터 삽입 (스네이크 케이스)
 * - 모든 부서(DP1~DP16)에 직원 배정
 * - 2명의 관리자(AU1) 포함 (admin, ceo)

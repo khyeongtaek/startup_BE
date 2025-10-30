@@ -1,4 +1,4 @@
-package org.goodee.startup_BE.attendance;
+package org.goodee.startup_BE.attendance.entity;
 
 
 import jakarta.persistence.*;
@@ -30,5 +30,8 @@ public class ApprovalTemplate {
 
     @Column(name="updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "is_deleted")
+    private Boolean is_deleted;
 }
 
