@@ -4,8 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
-import org.goodee.startup_BE.employee.entity.Employee; // Employee 임포트
+import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
 
 import java.time.LocalDateTime;
@@ -17,6 +16,7 @@ import java.time.LocalDateTime;
 public class ApprovalReference {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(nullable = false)
     @Comment("참조 고유 ID")
     private Long referenceId;
@@ -36,10 +36,9 @@ public class ApprovalReference {
 
     // --- 생성 팩토리 메서드 ---
     public static ApprovalReference createApprovalReference(
-            Long referenceId, ApprovalDoc doc, Employee employee
+            ApprovalDoc doc, Employee employee
     ) {
         ApprovalReference reference = new ApprovalReference();
-        reference.referenceId =referenceId;
         reference.doc = doc;
         reference.employee = employee;
         return reference;

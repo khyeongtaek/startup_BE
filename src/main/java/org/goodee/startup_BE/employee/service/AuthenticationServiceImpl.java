@@ -3,6 +3,7 @@ package org.goodee.startup_BE.employee.service;
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.common.dto.APIResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
+import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.employee.dto.EmployeeRequestDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeResponseDTO;
@@ -12,6 +13,8 @@ import org.goodee.startup_BE.employee.enums.LoginStatus;
 import org.goodee.startup_BE.employee.exception.DuplicateEmailException;
 import org.goodee.startup_BE.employee.exception.ResourceNotFoundException;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
+import org.goodee.startup_BE.notification.dto.NotificationRequestDTO;
+import org.goodee.startup_BE.notification.service.NotificationService;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,6 +33,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final LoginHistoryService loginHistoryService;
+    private final NotificationService notificationService;
 
     // 회원가입
     @Override
@@ -57,16 +61,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .findById(request.getPosition())
                 .orElseThrow(() -> new ResourceNotFoundException("position code: " + request.getPosition() + " 를 찾을 수 없습니다."));
 
-        Employee creater = employeeRepository
+        Employee creator = employeeRepository
                 .findByUsername(authentication.getName())
                 .orElseThrow(() -> new BadCredentialsException("인증되지 않은 사용자입니다."));
 
 
         // 새 사용자 엔티티 생성
-        Employee employee = request.toEntity(statusCode, roleCode, departmentCode, positionCode, creater);
+        Employee employee = request.toEntity(statusCode, roleCode, departmentCode, positionCode, creator);
 
         //초기비밀번호를 사용자아이디로 등록
-        employee.updateInitPassword(passwordEncoder.encode(employee.getUsername()), creater);
+        employee.updateInitPassword(passwordEncoder.encode(employee.getUsername()), creator);
 
         // 사용자 등록
         employee = employeeRepository.save(employee);
@@ -113,7 +117,19 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         // 만약 초기비밀번호 상태라면 초기비밀번호 알림을 보내줘야함.
         if (employee.getIsInitialPassword()) {
-            //추후 추가
+            CommonCode commonCode = commonCodeRepository
+                    .findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.EMPLOYEE.name())
+                    .get(0);
+
+            notificationService.create(
+                    NotificationRequestDTO
+                    .builder()
+                    .employeeId(employee.getEmployeeId())
+                    .ownerTypeCommonCodeId(commonCode.getCommonCodeId())
+                    .url("/mypage")
+                    .title("시스템 메세지")
+                    .content("초기 비밀번호를 사용중입니다.")
+                    .build());
         }
 
         // JWT 토큰 생성 (AccessToken, RefreshToken)

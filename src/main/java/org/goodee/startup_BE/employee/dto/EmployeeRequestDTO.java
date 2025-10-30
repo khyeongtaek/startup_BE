@@ -58,7 +58,7 @@ public class EmployeeRequestDTO {
             CommonCode roleCode,
             CommonCode departmentCode,
             CommonCode positionCode,
-            Employee creater
+            Employee creator
     ) {
 
         return Employee.createEmployee(
@@ -72,7 +72,7 @@ public class EmployeeRequestDTO {
                 roleCode,
                 departmentCode,
                 positionCode,
-                creater
+                creator
         );
     }
 
