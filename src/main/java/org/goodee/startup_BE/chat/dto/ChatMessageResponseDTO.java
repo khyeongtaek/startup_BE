@@ -1,15 +1,18 @@
 package org.goodee.startup_BE.chat.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import org.goodee.startup_BE.chat.entity.ChatMessage;
+import org.goodee.startup_BE.chat.entity.ChatRoom;
 
 import java.time.LocalDateTime;
 
-@Getter
+@Getter @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
 @Builder
+@JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class ChatMessageResponseDTO {
 
     private Long chatMessageId;     // 메시지 PK
@@ -18,6 +21,9 @@ public class ChatMessageResponseDTO {
     private String senderName;      // 선택: 표시용(있으면 편리)
     private String content;         // 내용
     private LocalDateTime createdAt;// 생성 시각
+
+    @Builder.Default
+    private long unreadCount = 0;  // 미읽음 카운트
 
     /** 엔티티 -> DTO 변환 */
     public static ChatMessageResponseDTO toDTO(ChatMessage chatMessage) {
