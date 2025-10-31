@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.hibernate.annotations.Comment;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -48,6 +50,7 @@ public class LoginHistory {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id")
     @Comment("로그인 성공 시 참조할 직원 ID")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee employee;
 
     // --- 생성 팩토리 메서드 ---

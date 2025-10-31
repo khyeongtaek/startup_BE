@@ -1,18 +1,17 @@
 package org.goodee.startup_BE.notification.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.goodee.startup_BE.common.entity.CommonCode;
-import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.notification.entity.Notification;
 
-@Getter
+@Getter @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
+@ToString
 public class NotificationRequestDTO {
-    private String employee;
+    private Long employeeId;
     private Long ownerTypeCommonCodeId;
     private String url;
     private String title;

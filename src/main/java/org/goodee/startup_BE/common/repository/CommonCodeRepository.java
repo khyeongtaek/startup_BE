@@ -7,7 +7,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface CommonCodeRepository extends JpaRepository<CommonCode, Long> {
@@ -22,6 +21,11 @@ public interface CommonCodeRepository extends JpaRepository<CommonCode, Long> {
             @Param("keyword") String keyword
     );
 
-    // code 로 데이터 조회 (jkw 추가)
-    Optional<CommonCode> findByCode(String code);
+    // 부모 자식 관계가 모두 담긴 부서 List를 List<CommonCode>로 반환
+    @Query("SELECT c FROM CommonCode c " +
+            "WHERE c.codeDescription = '부서' " +
+            "AND c.isDeleted = false " +
+            "ORDER BY c.sortOrder ASC")
+    List<CommonCode> findAllDepartments();
+
 }

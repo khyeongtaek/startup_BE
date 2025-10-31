@@ -2,8 +2,8 @@ package org.goodee.startup_BE.common.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
-import org.goodee.startup_BE.common.enums.OwnerType;
 import org.hibernate.annotations.Comment;
+import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
 
@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "tbl_file")
+@Where(clause = "is_deleted = false")
 @Getter
 public class AttachmentFile {
 	@Id
@@ -33,19 +34,26 @@ public class AttachmentFile {
 	@Comment("파일 사이즈")
 	private Long size;
 
-	@Column(nullable = false, length = 500)
+	@Column(nullable = false, length = 500, unique = true)
 	@Comment("파일 저장 경로")
 	private String storagePath;
 	
+	@Column(name = "mime_type", length = 100)
+	@Comment("mime 타입")
+	private String mimeType;
+	
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;
+	
+	@Column(name = "is_deleted", nullable = false)
+	@Comment("삭제여부 - true:삭제, false:삭제X (소프트삭제)")
+	private Boolean isDeleted;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(nullable = false)
+	@JoinColumn(name = "owner_type_id", nullable = false)
 	@Comment("업로드 모듈명")
 	private CommonCode ownerType;		// 공용 테이블에 모듈 추가 필요, OwnerType enum값 추가 필요
 	
-	@Column()
 	@Comment("모듈 내 고유 ID")
 	private Long ownerId;
 
@@ -53,18 +61,24 @@ public class AttachmentFile {
 	@PrePersist
 	protected void onPrePersist() {
 		if(createdAt == null) createdAt = LocalDateTime.now();
+		if(isDeleted == null) isDeleted = false;
 	}
 
-	protected AttachmentFile () {};
+	protected AttachmentFile() {};
 
-	public static AttachmentFile createAttachmentFile(String originalName, String ext, Long size, String storagePath, CommonCode ownerType, Long ownerId) {
+	public static AttachmentFile createAttachmentFile(String originalName, String ext, Long size, String storagePath, String mimeType, CommonCode ownerType, Long ownerId) {
 		AttachmentFile attachmentFile = new AttachmentFile();
 		attachmentFile.originalName = originalName;
 		attachmentFile.ext = ext;
 		attachmentFile.size = size;
 		attachmentFile.storagePath = storagePath;
+		attachmentFile.mimeType = mimeType;
 		attachmentFile.ownerType = ownerType;
 		attachmentFile.ownerId = ownerId;
 		return attachmentFile;
+	}
+	
+	public void deleteAttachmentFile() {
+		this.isDeleted = true;
 	}
 }

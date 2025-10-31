@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee; // Employee 임포트
 import org.hibernate.annotations.Comment;
@@ -18,6 +17,7 @@ import java.time.LocalDateTime;
 public class ApprovalLine {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(nullable = false)
     @Comment("결재선 고유 ID")
     private Long lineId;
@@ -49,25 +49,28 @@ public class ApprovalLine {
     @Comment("결재자 ID")
     private Employee employee;
 
-    // --- 생성 팩토리 메서드 ---
     public static ApprovalLine createApprovalLine(
-            Long lineId, Long approvalOrder, ApprovalDoc doc, Employee employee, CommonCode approvalStatus, LocalDateTime approvalDate, String comment
+            Long approvalOrder, ApprovalDoc doc, Employee employee, CommonCode approvalStatus, LocalDateTime approvalDate, String comment
     ) {
         ApprovalLine line = new ApprovalLine();
-        line.lineId = lineId;
         line.approvalOrder = approvalOrder;
         line.doc = doc;
         line.employee = employee;
-        line.approvalStatus = approvalStatus;
+        line.updateApprovalStatus(approvalStatus);
+        line.updateComment(comment);
         line.approvalDate = approvalDate;
         line.comment = comment;
         return line;
     }
 
-    public void update(CommonCode approvalStatus,  String comment) {
+    public void updateApprovalStatus(CommonCode approvalStatus) {
         this.approvalStatus = approvalStatus;
+    }
+
+    public void updateComment(String comment) {
         this.comment = comment;
     }
+
 
     @PreUpdate
     protected void onPreUpdate() {

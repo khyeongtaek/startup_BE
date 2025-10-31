@@ -1,10 +1,8 @@
 package org.goodee.startup_BE.common.dto;
 
 
-import jakarta.persistence.Column;
 import lombok.*;
 import org.goodee.startup_BE.common.entity.CommonCode;
-import org.hibernate.annotations.Comment;
 
 import java.time.LocalDateTime;
 

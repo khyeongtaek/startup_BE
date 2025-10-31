@@ -1,13 +1,25 @@
 package org.goodee.startup_BE.work_log.service;
 
-import org.goodee.startup_BE.work_log.dto.WorkLogDTO;
+import org.goodee.startup_BE.work_log.dto.WorkLogRequestDTO;
+import org.goodee.startup_BE.work_log.dto.WorkLogResponseDTO;
 
+import org.springframework.data.domain.Page;
+import org.springframework.security.access.AccessDeniedException;
 import java.util.List;
 
 public interface WorkLogService {
-    void saveWorkLog(WorkLogDTO workLogDTO);      // 업무일지 작성
-    void updateWorkLog(Long id, WorkLogDTO workLogDTO);
-    void deleteWorkLog(Long id);                  // 업무일지 삭제
-    WorkLogDTO getWorkLogDetail(Long id);         // 업무일지 조회(상세 페이지)
-    List<WorkLogDTO> getWorkLogList();            // 업무일지 조회(리스트)
+    // 업무일지 작성
+    WorkLogResponseDTO saveWorkLog(WorkLogRequestDTO workLogDTO, String username);
+    
+    // 업무일지 수정
+    WorkLogResponseDTO updateWorkLog(WorkLogRequestDTO workLogDTO, String username) throws AccessDeniedException;
+    
+    // 업무일지 삭제
+    void deleteWorkLog(Long id, String username) throws AccessDeniedException;
+    
+    // 업무일지 조회(상세 페이지)
+    WorkLogResponseDTO getWorkLogDetail(Long id, String username);
+    
+    // 업무일지 조회(리스트)
+    Page<WorkLogResponseDTO> getWorkLogList(String username, String type, int page, int size);
 }
