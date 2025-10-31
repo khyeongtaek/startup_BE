@@ -1,8 +1,11 @@
 package org.goodee.startup_BE.attendance.service;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.goodee.startup_BE.attendance.dto.AttendanceResponseDTO;
 import org.goodee.startup_BE.attendance.entity.Attendance;
+import org.goodee.startup_BE.attendance.enums.WorkStatus;
 import org.goodee.startup_BE.attendance.exception.AttendanceException;
 import org.goodee.startup_BE.attendance.exception.DuplicateAttendanceException;
 import org.goodee.startup_BE.attendance.repository.AttendanceRepository;
@@ -18,6 +21,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -27,6 +31,22 @@ public class AttendanceServiceImpl implements AttendanceService {
     private final EmployeeRepository employeeRepository;
     private final CommonCodeRepository commonCodeRepository;
     private final AnnualLeaveService annualLeaveService;
+
+    // 공통 코드 Prefix 정의
+    private static final String WOKR_STATUS_PREFIX = WorkStatus.PREFIX;
+
+    // Value 1 정의
+    // 근무 상태
+    private static final String WORK_STATUS_NORMAL = WorkStatus.NORMAL.name();
+    private static final String WORK_STATUS_LATE = WorkStatus.LATE.name();
+    private static final String WORK_STATUS_EARLY_LEAVE = WorkStatus.EARLY_LEAVE.name();
+    private static final String WORK_STATUS_ABSENT = WorkStatus.ABSENT.name();
+    private static final String WORK_STATUS_VACATION = WorkStatus.VACATION.name();
+    private static final String WORK_STATUS_OUT_ON_BUSINESS = WorkStatus.OUT_ON_BUSINESS.name();
+    private static final String WORK_STATUS_CLOCK_OUT = WorkStatus.CLOCK_OUT.name();
+
+
+
 
     // 오늘 출근 기록 조회
     @Override
@@ -72,7 +92,7 @@ public class AttendanceServiceImpl implements AttendanceService {
 
         // 근무 상태 코드 NORMAL 조회
         List<CommonCode> codes = commonCodeRepository
-                .findByCodeStartsWithAndKeywordExactMatchInValues("WS", "NORMAL");
+                .findByCodeStartsWithAndKeywordExactMatchInValues(WorkStatus.PREFIX, WORK_STATUS_NORMAL);
         if (codes.isEmpty()) {
             throw new AttendanceException("근무 상태 코드 'NORMAL'을 찾을 수 없습니다.");
         }
@@ -181,5 +201,28 @@ public class AttendanceServiceImpl implements AttendanceService {
                         .updatedAt(a.getUpdatedAt())
                         .build())
                 .toList();
+    }
+
+    /**
+     * 공통 코드 조회
+     *
+     * @param codePrefix (예: "AD", "AL")
+     * @param value1     (예: "IN_PROGRESS", "PENDING")
+     * @return CommonCode 엔티티
+     */
+    private CommonCode getCommonCode(String codePrefix, String value1) {
+        try {
+            List<CommonCode> codes = commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(
+                    codePrefix,
+                    value1
+            );
+            if (codes.isEmpty()) {
+                throw new EntityNotFoundException("공통 코드를 찾을 수 없습니다: " + codePrefix + ", " + value1);
+            }
+            return codes.get(0);
+        } catch (Exception e) {
+            log.error("공통 코드 조회 중 오류 발생: {} / {}", codePrefix, value1, e);
+            throw new EntityNotFoundException("공통 코드 조회 실패: " + codePrefix + ", " + value1);
+        }
     }
 }
