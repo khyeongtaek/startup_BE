@@ -5,9 +5,10 @@ import lombok.Getter;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
+import org.hibernate.annotations.Where;
 
 @Entity
-@Table(name = "tbl_mailbox", uniqueConstraints = {@UniqueConstraint(columnNames = {"employee_id", "mail_id", "type"})})
+@Table(name = "tbl_mailbox", uniqueConstraints = {@UniqueConstraint(columnNames = {"employee_id", "mail_id", "type_id"})})
 @Getter
 public class Mailbox {
 	@Id
@@ -22,14 +23,14 @@ public class Mailbox {
 	private Employee employee;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(nullable = false)
+	@JoinColumn(name = "mail_id", nullable = false)
 	@Comment("메일 ID")
-	private Mail mail;
+	private Mail mailId;
 	
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(nullable = false)
+	@JoinColumn(name = "type_id", nullable = false)
 	@Comment("메일함 타입")
-	private CommonCode type;
+	private CommonCode typeId;
 	
 	@Column(nullable = false)
 	@Comment("읽음 여부")
@@ -50,8 +51,8 @@ public class Mailbox {
 	public static Mailbox createMailbox(Employee employee, Mail mail, CommonCode type, Boolean isRead, Byte deletedStatus) {
 		Mailbox mailbox = new Mailbox();
 		mailbox.employee = employee;
-		mailbox.mail = mail;
-		mailbox.type = type;
+		mailbox.mailId = mail;
+		mailbox.typeId = type;
 		mailbox.isRead = isRead;
 		mailbox.deletedStatus = deletedStatus;
 		return mailbox;
