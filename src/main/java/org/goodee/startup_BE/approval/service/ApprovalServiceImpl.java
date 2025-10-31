@@ -253,7 +253,7 @@ public class ApprovalServiceImpl implements ApprovalService {
 
         return approvalDocRepository
                 .findByCreatorWithDetails(currentUser, pageable)
-                .map(this::convertToDocResponseDTO);
+                .map(this::convertToDraftedDTO);
     }
 
     /**
@@ -528,6 +528,47 @@ public class ApprovalServiceImpl implements ApprovalService {
                 .collect(Collectors.toList());
 
 
+        return ApprovalDocResponseDTO.toDTO(doc, lineDTOs, null);
+    }
+
+    /**
+     * 결재 기안 목록용 - 결재선을 하나만 남기기 위한 헬퍼 메소드
+     * - '완료/반려'면 마지막 결재선
+     * - '진행중'이면 현재 '대기'중인 결재선
+     */
+    private ApprovalDocResponseDTO convertToDraftedDTO(ApprovalDoc doc) {
+        // N+1 방지(BatchSize)를 위해 엔티티 getter 사용 후 정렬
+        List<ApprovalLine> allLines = new ArrayList<>(doc.getApprovalLineList());
+        allLines.sort(Comparator.comparing(ApprovalLine::getApprovalOrder)); // 순서 정렬
+
+        String docStatus = doc.getDocStatus().getValue1();
+        List<ApprovalLine> filteredLines = new ArrayList<>();
+
+        if (docStatus.equals(DOC_STATUS_APPROVED) || docStatus.equals(DOC_STATUS_REJECTED)) {
+            // 완료/반려 시: 마지막 결재자(마지막 수정자)
+            if (!allLines.isEmpty()) {
+                allLines.stream()
+                        .filter(line -> line.getApprovalStatus().getValue1().equals(LINE_STATUS_REJECTED) ||
+                                line.getApprovalStatus().getValue1().equals(LINE_STATUS_APPROVED))
+                        .max(Comparator.comparing(ApprovalLine::getApprovalOrder)) // 가장 높은 순서의 (처리된) 결재자
+                        .ifPresent(filteredLines::add);
+            }
+        } else {
+            // 진행중일 시: '대기'중인 결재자
+            allLines.stream()
+                    .filter(line -> line.getApprovalStatus().getValue1().equals(LINE_STATUS_AWAITING))
+                    .findFirst()
+                    .ifPresent(filteredLines::add); // AWAITING이 반드시 존재
+
+            System.out.println("이게왜");
+        }
+
+        // DTO 변환
+        List<ApprovalLineResponseDTO> lineDTOs = filteredLines.stream()
+                .map(ApprovalLineResponseDTO::toDTO)
+                .collect(Collectors.toList());
+
+        // 기안 목록에서는 참조자 목록 불필요
         return ApprovalDocResponseDTO.toDTO(doc, lineDTOs, null);
     }
 
