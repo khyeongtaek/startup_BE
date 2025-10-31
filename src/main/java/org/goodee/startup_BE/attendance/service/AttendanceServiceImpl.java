@@ -19,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.chrono.ChronoLocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -107,6 +109,16 @@ public class AttendanceServiceImpl implements AttendanceService {
         attendance.setWorkDate(workCount);
         attendance.update(LocalDateTime.now(), null);  // 출근 시간 기록
 
+        //  출근 시각 기준으로 지각 판정
+
+        LocalDateTime now = LocalDateTime.now();
+
+        if (now.toLocalTime().isAfter(LocalTime.of(9, 0))) {
+            attendance.changeWorkStatus(getCommonCode(WOKR_STATUS_PREFIX, WORK_STATUS_LATE));
+            log.info("[지각] {}님이 {}에 출근했습니다.", employee.getName(), now.toLocalTime());
+        } else {
+            log.info("[정상 출근] {}님이 {}에 출근했습니다.", employee.getName(), now.toLocalTime());
+        }
         Attendance saved = attendanceRepository.save(attendance);
 
         return AttendanceResponseDTO.builder()
@@ -145,6 +157,18 @@ public class AttendanceServiceImpl implements AttendanceService {
         // 퇴근 시간 업데이트
         attendance.changeWorkStatus(workStatus);
         attendance.update(attendance.getStartTime(), LocalDateTime.now());
+
+        LocalDateTime endTime = LocalDateTime.now();
+        attendance.update(attendance.getStartTime(), endTime);
+
+        //  조퇴 판정
+        if (endTime.toLocalTime().isBefore(LocalTime.of(18, 0))) {
+            attendance.changeWorkStatus(getCommonCode(WOKR_STATUS_PREFIX, WORK_STATUS_EARLY_LEAVE));
+            log.info("[조퇴] {}님이 {}에 퇴근했습니다.", attendance.getEmployee().getName(), endTime.toLocalTime());
+        } else {
+            attendance.changeWorkStatus(getCommonCode(WOKR_STATUS_PREFIX, WORK_STATUS_CLOCK_OUT));
+            log.info("[정상 퇴근] {}님이 {}에 퇴근했습니다.", attendance.getEmployee().getName(), endTime.toLocalTime());
+        }
         Attendance saved = attendanceRepository.save(attendance);
 
         return AttendanceResponseDTO.builder()
@@ -202,6 +226,8 @@ public class AttendanceServiceImpl implements AttendanceService {
                         .build())
                 .toList();
     }
+
+
 
     /**
      * 공통 코드 조회
