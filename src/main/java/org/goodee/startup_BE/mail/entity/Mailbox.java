@@ -5,7 +5,6 @@ import lombok.Getter;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
-import org.hibernate.annotations.Where;
 
 @Entity
 @Table(name = "tbl_mailbox", uniqueConstraints = {@UniqueConstraint(columnNames = {"employee_id", "mail_id", "type_id"})})
@@ -25,7 +24,7 @@ public class Mailbox {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "mail_id", nullable = false)
 	@Comment("메일 ID")
-	private Mail mailId;
+	private Mail mail;
 	
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "type_id", nullable = false)
@@ -51,7 +50,7 @@ public class Mailbox {
 	public static Mailbox createMailbox(Employee employee, Mail mail, CommonCode type, Boolean isRead, Byte deletedStatus) {
 		Mailbox mailbox = new Mailbox();
 		mailbox.employee = employee;
-		mailbox.mailId = mail;
+		mailbox.mail = mail;
 		mailbox.typeId = type;
 		mailbox.isRead = isRead;
 		mailbox.deletedStatus = deletedStatus;
@@ -66,5 +65,9 @@ public class Mailbox {
 	// 휴지통에서 삭제 (소프트 삭제)
 	public void deleteFromTrash() {
 		this.deletedStatus = 2;
+	}
+	
+	public void markAsRead() {
+		this.isRead = true;
 	}
 }

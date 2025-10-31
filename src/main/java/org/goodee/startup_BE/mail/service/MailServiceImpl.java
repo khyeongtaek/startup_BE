@@ -10,6 +10,7 @@ import org.goodee.startup_BE.common.service.AttachmentFileService;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.exception.ResourceNotFoundException;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
+import org.goodee.startup_BE.mail.dto.MailDetailResponseDTO;
 import org.goodee.startup_BE.mail.dto.MailSendRequestDTO;
 import org.goodee.startup_BE.mail.dto.MailSendResponseDTO;
 import org.goodee.startup_BE.mail.dto.MailUpdateRequestDTO;
@@ -319,5 +320,57 @@ public class MailServiceImpl implements MailService{
 		mail.updateEmlPath(emlPath);
 		
 		return MailSendResponseDTO.toDTO(mail, newTo.size(), newCc.size(), newBcc.size(), currentFiles.size());
+	}
+	
+	
+	// 메일 상세 조회 및 읽음 처리
+	@Override
+	public MailDetailResponseDTO getMailDetail(Long mailId, String username, boolean isRead) {
+		// 직원 정보, 메일함, 메일 정보 가져오기
+		Employee employee = employeeRepository.findByUsername(username)
+			                    .orElseThrow(() -> new ResourceNotFoundException("직원이 존재하지 않습니다."));
+		Mailbox mailbox = mailboxRepository.findByEmployeeEmployeeIdAndMailMailId(employee.getEmployeeId(), mailId)
+			                  .orElseThrow(() -> new ResourceNotFoundException("해당 메일을 조회할 권한이 없습니다."));
+		Mail mail = mailbox.getMail();
+		
+		// 삭제된 메일 조회 X (조회는 안되지만 url 조작)
+		if(mailbox.getDeletedStatus() != null && mailbox.getDeletedStatus() == 2) {
+			throw new ResourceNotFoundException("삭제된 메일입니다.");
+		}
+		
+		// 읽음 처리
+		if(isRead && (mailbox.getIsRead() == null || !mailbox.getIsRead())) {
+			mailbox.markAsRead();
+		}
+		
+		// 수신자 목록 조회
+		CommonCode toCode = firstOrNotFound(
+			commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(ReceiverType.PREFIX, ReceiverType.TO.name()), "TO 코드가 존재하지 않습니다."
+		);
+		CommonCode ccCode = firstOrNotFound(
+			commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(ReceiverType.PREFIX, ReceiverType.CC.name()), "CC 코드가 존재하지 않습니다."
+		);
+		CommonCode bccCode = firstOrNotFound(
+			commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(ReceiverType.PREFIX, ReceiverType.BCC.name()), "BCC 코드가 존재하지 않습니다."
+		);
+		
+		List<String> toList = mapEmails(mailReceiverRepository.findAllByMailAndType(mail, toCode));
+		List<String> ccList = mapEmails(mailReceiverRepository.findAllByMailAndType(mail, ccCode));
+		List<String> bccList = null;
+		
+		boolean ISender = mail.getEmployee() != null && mail.getEmployee().getEmployeeId().equals(employee.getEmployeeId());
+		if(ISender) {
+			// 숨은참조는 작성자만 볼수있음
+			bccList = mapEmails(mailReceiverRepository.findAllByMailAndType(mail, bccCode));
+		}
+		
+		// 첨부파일 조회
+		CommonCode ownerType = firstOrNotFound(
+			commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.MAIL.name()), "분류 코드가 존재하지 않습니다."
+		);
+		
+		List<AttachmentFileResponseDTO> files = attachmentFileService.listFiles(ownerType.getCommonCodeId(), mail.getMailId());
+		
+		return MailDetailResponseDTO.toDTO(Mail mail, toList, ccList, bccList, mailbox);
 	}
 }

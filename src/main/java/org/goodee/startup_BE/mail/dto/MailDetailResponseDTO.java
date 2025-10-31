@@ -1,10 +1,19 @@
 package org.goodee.startup_BE.mail.dto;
 
+import lombok.*;
 import org.goodee.startup_BE.common.dto.AttachmentFileResponseDTO;
+import org.goodee.startup_BE.mail.entity.Mail;
+import org.goodee.startup_BE.mail.entity.Mailbox;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@NoArgsConstructor
+@AllArgsConstructor
+@Getter
+@Setter
+@Builder
+@ToString(exclude = "attachmentFiles")
 public class MailDetailResponseDTO {
 	private Long mailId;
 	private String title;
@@ -30,5 +39,38 @@ public class MailDetailResponseDTO {
 	
 	// 첨부
 	private List<AttachmentFileResponseDTO> attachments;
+	
+	// 카운팅을 위한 필드
+	private int toCount;
+	private int ccCount;
+	private int bccCount;
 	private int attachmentCount;
+	
+	public static MailDetailResponseDTO toDTO(
+		Mail mail, List<String> toList, List<String> ccList, List<String> bccList,
+		Mailbox mailbox, List<AttachmentFileResponseDTO> attachmentFiles
+	) {
+		return MailDetailResponseDTO.builder()
+			       .mailId(mail.getMailId())
+			       .title(mail.getTitle())
+			       .content(mail.getContent())
+			       .sendAt(mail.getSendAt())
+			       .emlPath(mail.getEmlPath())
+			       .senderId(mail.getEmployee().getEmployeeId())
+			       .senderName(mail.getEmployee().getName())
+			       .senderEmail(mail.getEmployee().getEmail())
+			       .to(toList)
+			       .cc(ccList)
+			       .bcc(bccList)
+			       .boxId(mailbox.getBoxId())
+			       .mailboxType(mailbox.getTypeId().getValue1())
+			       .isRead(mailbox.getIsRead())
+			       .deletedStatus(mailbox.getDeletedStatus())
+			       .attachments(attachmentFiles)
+			       .toCount(toList.size())
+			       .ccCount(ccList.size())
+			       .bccCount(bccList.size())
+			       .attachmentCount(attachmentFiles.size())
+			       .build();
+	}
 }
