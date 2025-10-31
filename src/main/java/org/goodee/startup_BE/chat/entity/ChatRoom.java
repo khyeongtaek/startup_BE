@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -38,6 +37,10 @@ public class ChatRoom {
     @Column(nullable = false, name = "created_at")
     private LocalDateTime createdAt;
 
+    @Comment("삭제 여부")
+    @Column(nullable = false)
+    private Boolean isDeleted = false;
+
 
     public static ChatRoom createChatRoom(Employee employee, String name,Boolean isTeam) {
         ChatRoom chatRoom = new ChatRoom();
@@ -52,5 +55,15 @@ public class ChatRoom {
     @PrePersist
     protected void onPrePersist() {
         createdAt = LocalDateTime.now();
+    }
+
+    // 채팅방 삭제 여부
+    public void deleteRoom() { this.isDeleted = true; }
+
+    // 1:1 채팅방을 팀 채팅방으로 변경 한다.
+    public void updateToTeamRoom() {
+        if(!this.isTeam) {
+            this.isTeam = true;
+        }
     }
 }
