@@ -266,7 +266,7 @@ public class ApprovalServiceImpl implements ApprovalService {
 
         return approvalDocRepository
                 .findReferencedDocsForEmployee(currentUser, pageable)
-                .map(this::convertToPendingDTO);
+                .map(this::convertToReferenceDTO);
     }
 
     /**
