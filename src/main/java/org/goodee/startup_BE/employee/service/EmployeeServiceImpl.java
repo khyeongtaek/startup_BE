@@ -44,10 +44,20 @@ public class EmployeeServiceImpl implements EmployeeService{
     }
 
     @Override
-    public EmployeeResponseDTO updateEmployeeByAdmin(String username, EmployeeRequestDTO request) {
-        Employee admin = employeeRepository.findByUsername(username).orElse(null);
+    public EmployeeResponseDTO updateEmployeePassword(String username, EmployeeRequestDTO request) {
+        Employee employee = employeeRepository.findByUsername(username)
+                .orElseThrow(()-> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
 
-        Employee employee = employeeRepository.findByUsername(request.getUsername())
+        employee.updatePassword(passwordEncoder.encode(request.getPassword()),employee);
+        return EmployeeResponseDTO.toDTO(employee);
+    }
+
+    @Override
+    public EmployeeResponseDTO updateEmployeeByAdmin(String username, EmployeeRequestDTO request) {
+        Employee admin = employeeRepository.findByUsername(username)
+                .orElseThrow(()-> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
+
+        Employee employee = employeeRepository.findById(request.getEmployeeId())
                 .orElseThrow(()-> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
 
         CommonCode statusCode = commonCodeRepository
@@ -77,9 +87,10 @@ public class EmployeeServiceImpl implements EmployeeService{
 
     @Override
     public EmployeeResponseDTO initPassword(String username, EmployeeRequestDTO request) {
-        Employee admin = employeeRepository.findByUsername(username).orElse(null);
+        Employee admin = employeeRepository.findByUsername(username)
+                .orElseThrow(()-> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
 
-        Employee employee = employeeRepository.findByUsername(request.getUsername())
+        Employee employee = employeeRepository.findById(request.getEmployeeId())
                 .orElseThrow(()-> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
 
         employee.updateInitPassword(passwordEncoder.encode(employee.getUsername()), admin);
