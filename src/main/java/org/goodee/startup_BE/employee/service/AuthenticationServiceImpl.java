@@ -38,10 +38,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     // 회원가입
     @Override
     public APIResponseDTO<EmployeeResponseDTO> signup(Authentication authentication, EmployeeRequestDTO request) {
-        // 이메일 중복 체크
-        if (employeeRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateEmailException(request.getEmail() + "은(는) 이미 존재하는 이메일입니다.");
-        }
+        // 이메일은 로그인 아이디를 이용해 만듬.
+        request.setEmail(request.getUsername()+"@startup.com");
 
 
         // 새로운 사용자 생성을 위한 코드 entity 생성
