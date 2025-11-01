@@ -10,12 +10,15 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.common.dto.APIResponseDTO;
+import org.goodee.startup_BE.common.validation.ValidationGroups;
 import org.goodee.startup_BE.employee.dto.EmployeeRequestDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeResponseDTO;
 import org.goodee.startup_BE.employee.service.EmployeeService;
+import org.goodee.startup_BE.employee.validation.EmployeeValidationGroup;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -91,6 +94,7 @@ public class EmployeeController {
     @PatchMapping("/updateEmployeeByUser")
     public ResponseEntity<APIResponseDTO<EmployeeResponseDTO>> updateEmployeeByUser(
             @Parameter(hidden = true) Authentication authentication,
+            @Validated(ValidationGroups.Update.class)
             @RequestBody EmployeeRequestDTO request
     ) {
         return ResponseEntity.ok(APIResponseDTO.<EmployeeResponseDTO>builder()
@@ -117,8 +121,11 @@ public class EmployeeController {
     @PatchMapping("/updateEmployeeByAdmin")
     public ResponseEntity<APIResponseDTO<EmployeeResponseDTO>> updateEmployeeByAdmin(
             Authentication authentication,
-            @RequestBody EmployeeRequestDTO request
+            @Validated(EmployeeValidationGroup.AdminUpdate.class)
+            @RequestBody EmployeeRequestDTO request,
+            @PathVariable("id") Long employeeId
     ) {
+        request.setEmployeeId(employeeId);
         return ResponseEntity.ok(APIResponseDTO.<EmployeeResponseDTO>builder()
                 .message("사원 정보 수정(관리자) 성공")
                 .data(employeeService.updateEmployeeByAdmin(authentication.getName(), request))
@@ -139,11 +146,13 @@ public class EmployeeController {
             @ApiResponse(responseCode = "403", description = "접근 권한 없음 (ADMIN 아님)", content = @Content)
     })
     @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("/initPassword")
+    @PatchMapping("/initPassword/{id}")
     public ResponseEntity<APIResponseDTO<EmployeeResponseDTO>> initPassword(
             @Parameter(hidden = true) Authentication authentication,
-            @RequestBody EmployeeRequestDTO request
+            @RequestBody EmployeeRequestDTO request,
+            @PathVariable("id") Long employeeId
     ) {
+        request.setEmployeeId(employeeId);
         return ResponseEntity.ok(APIResponseDTO.<EmployeeResponseDTO>builder()
                 .message("사원 비밀번호 초기화 성공")
                 .data(employeeService.initPassword(authentication.getName(), request))
