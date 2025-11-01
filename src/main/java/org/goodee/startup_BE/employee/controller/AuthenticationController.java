@@ -12,12 +12,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.common.dto.APIResponseDTO;
+import org.goodee.startup_BE.common.validation.ValidationGroups;
 import org.goodee.startup_BE.employee.dto.EmployeeRequestDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeResponseDTO;
 import org.goodee.startup_BE.employee.service.AuthenticationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,8 +46,9 @@ public class AuthenticationController {
             @ApiResponse(responseCode = "403", description = "권한 없음 (관리자가 아님)")
     })
     public ResponseEntity<APIResponseDTO<EmployeeResponseDTO>> register(
-            Authentication authentication // Spring Security가 주입하는 인증된 사용자 정보
-            , @RequestBody EmployeeRequestDTO employeeRequestDTO // 등록할 직원 정보
+            Authentication authentication, // Spring Security가 주입하는 인증된 사용자 정보
+            @Validated(ValidationGroups.Create.class)
+            @RequestBody EmployeeRequestDTO employeeRequestDTO // 등록할 직원 정보
     ) {
         return ResponseEntity.ok(
                 authenticationService.signup(authentication, employeeRequestDTO));
