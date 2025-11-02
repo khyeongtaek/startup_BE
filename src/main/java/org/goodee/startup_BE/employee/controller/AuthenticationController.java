@@ -96,7 +96,7 @@ public class AuthenticationController {
             ))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "비밀번호 변경 성공"),
-            @ApiResponse(responseCode = "401", description = "인증되지 않았거나 현재 비밀번호가 틀림", content = @Content)
+            @ApiResponse(responseCode = "400", description = "인증되지 않았거나 현재 비밀번호가 틀림", content = @Content)
     })
     @PatchMapping("/updateEmployeePassword")
     public ResponseEntity<APIResponseDTO<EmployeeResponseDTO>> updateEmployeePassword(
