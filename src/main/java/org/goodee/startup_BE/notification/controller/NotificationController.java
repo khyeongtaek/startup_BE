@@ -57,7 +57,7 @@ public class NotificationController {
 
     // 알림을 읽음 처리 하고 URL 반환
     @Operation(summary = "알림을 읽음 처리 하고 URL 반환")
-    @GetMapping("/{notificationId}/read")
+    @PatchMapping("/{notificationId}/read")
     public ResponseEntity<String> readNotification(@PathVariable Long notificationId, Authentication authentication) {
         String url = notificationService.getUrl(notificationId, authentication.getName());
         return ResponseEntity.ok(url);
@@ -65,7 +65,7 @@ public class NotificationController {
 
     // 모든 알림 읽음 처리
     @Operation(summary = "모든 알림 읽음 처리")
-    @PutMapping("/read-all")  // 상태 변경이므로 PUT/PATCH 사용
+    @PatchMapping("/read-all")  // 상태 변경이므로 PUT/PATCH 사용
     public ResponseEntity<Void> readAll(Authentication authentication) {
         notificationService.readAll(authentication.getName());
         return ResponseEntity.noContent().build();
