@@ -5,6 +5,7 @@ import org.goodee.startup_BE.common.dto.APIResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
+import org.goodee.startup_BE.employee.dto.EmployeePWChangeRequestDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeRequestDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeResponseDTO;
 import org.goodee.startup_BE.employee.entity.Employee;
@@ -144,11 +145,18 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
-    public EmployeeResponseDTO updateEmployeePassword(String username, EmployeeRequestDTO request) {
+    public EmployeeResponseDTO updateEmployeePassword(String username, EmployeePWChangeRequestDTO request) {
         Employee employee = employeeRepository.findByUsername(username)
                 .orElseThrow(()-> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
 
-        employee.updatePassword(passwordEncoder.encode(request.getPassword()),employee);
+        // 현재 비밀번호 검증
+        if (!passwordEncoder.matches(request.getCurrentPassword(), employee.getPassword())) {
+            throw new BadCredentialsException("현재 비밀번호가 올바르지 않습니다.");
+        }
+
+        // 새 비밀번호로 업데이트
+        employee.updatePassword(passwordEncoder.encode(request.getNewPassword()), employee);
+
         return EmployeeResponseDTO.toDTO(employee);
     }
 
