@@ -1,9 +1,13 @@
 package org.goodee.startup_BE.employee.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.goodee.startup_BE.common.entity.CommonCode;
+import org.goodee.startup_BE.common.validation.ValidationGroups;
 import org.goodee.startup_BE.employee.entity.Employee;
+import org.goodee.startup_BE.employee.validation.EmployeeValidationGroup;
 
 import java.time.LocalDate;
 
@@ -21,36 +25,45 @@ public class EmployeeRequestDTO {
     private Long employeeId;
 
     @Schema(description = "로그인 아이디", example = "user123")
+    @NotBlank(message = "로그인 아이디는 필수 입력 값입니다.", groups = {ValidationGroups.Create.class})
     private String username;
 
-    @Schema(description = "비밀번호", example = "password123!", accessMode = Schema.AccessMode.WRITE_ONLY)
+    @NotBlank(message = "비밀번호는 필수 입력 값입니다.", groups = {EmployeeValidationGroup.ChangePassword.class})
+    @Size(min = 8, max = 20, message = "비밀번호는 8자 이상 20자 이하로 입력해주세요.", groups = {EmployeeValidationGroup.ChangePassword.class})
     private String password;
 
     @Schema(description = "이름", example = "홍길동")
+    @NotBlank(message = "이름은 필수 입력 값입니다.", groups = {ValidationGroups.Create.class})
     private String name;
 
     @Schema(description = "이메일", example = "test@example.com")
     private String email;
 
     @Schema(description = "연락처", example = "010-1234-5678")
+    @NotBlank(message = "연락처는 필수 입력 값입니다.", groups = {ValidationGroups.Create.class, ValidationGroups.Update.class})
     private String phoneNumber;
 
     @Schema(description = "입사일", example = "2024-01-01")
+    @NotBlank(message = "입사일은 필수 입력 값입니다.", groups = {ValidationGroups.Create.class})
     private LocalDate hireDate;
 
     @Schema(description = "재직 상태 (CommonCode ID)", example = "101")
+    @NotBlank(message = "재직상태는 필수 입력 값입니다.", groups = {ValidationGroups.Create.class, EmployeeValidationGroup.AdminUpdate.class})
     private Long status;
 
     @Schema(description = "프로필 이미지 URL", example = "default_profile.png")
     private String profileImg;
 
     @Schema(description = "소속 부서 (CommonCode ID)", example = "201")
+    @NotBlank(message = "소속부서는 필수 입력 값입니다.", groups = {ValidationGroups.Create.class, EmployeeValidationGroup.AdminUpdate.class})
     private Long department;
 
     @Schema(description = "직급 (CommonCode ID)", example = "301")
+    @NotBlank(message = "직급은 필수 입력 값입니다.", groups = {ValidationGroups.Create.class, EmployeeValidationGroup.AdminUpdate.class})
     private Long position;
 
     @Schema(description = "권한 (CommonCode ID)", example = "901")
+    @NotBlank(message = "권한은 필수 입력 값입니다.", groups = {ValidationGroups.Create.class, EmployeeValidationGroup.AdminUpdate.class})
     private Long role;
 
     public Employee toEntity(

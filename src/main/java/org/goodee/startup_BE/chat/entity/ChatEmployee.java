@@ -87,4 +87,9 @@ public class ChatEmployee {
     public void leftChatRoom() {
         this.isLeft = true;
     }
+
+    // 마지막 읽은 메시지 업데이트
+    public void updateLastReadMessage(ChatMessage lastReadMessage) {
+        this.lastReadMessage = lastReadMessage;
+    }
 }

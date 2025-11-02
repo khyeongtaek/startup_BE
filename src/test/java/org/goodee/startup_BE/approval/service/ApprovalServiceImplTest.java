@@ -297,10 +297,10 @@ class ApprovalServiceImplTest {
             assertThat(result.getApprovalLines()).hasSize(2);
             assertThat(result.getApprovalReferences()).hasSize(1);
 
-            // 1. Doc 저장 확인
+            // Doc 저장 확인
             verify(approvalDocRepository).save(any(ApprovalDoc.class));
 
-            // 2. Lines 저장 확인 (ArgumentCaptor 사용)
+            // Lines 저장 확인 (ArgumentCaptor 사용)
             ArgumentCaptor<List<ApprovalLine>> lineCaptor = ArgumentCaptor.forClass(List.class);
             verify(approvalLineRepository).saveAll(lineCaptor.capture());
 
@@ -314,11 +314,11 @@ class ApprovalServiceImplTest {
                     .isEqualTo(mockLineStatusPending);
 
 
-            // 3. Refs 저장 확인
+            // Refs 저장 확인
             // .save() -> .saveAll()로 변경
             verify(approvalReferenceRepository).saveAll(anyList());
 
-            // 4. 알림 서비스가 호출되었는지 검증 (선택 사항이지만, NPE 방지 확인용)
+            // 알림 서비스가 호출되었는지 검증 (선택 사항이지만, NPE 방지 확인용)
             //    [수정] 로그에 따라 3회 -> 4회로 변경
             verify(notificationService, times(4)).create(any());
         }
@@ -342,9 +342,9 @@ class ApprovalServiceImplTest {
         void createApproval_Fail_DocStatusCodeNotFound() {
             // given
             // 이 테스트에 필요한 Mocking만 설정
-            // 1. 기안자 조회는 통과
+            // 기안자 조회는 통과
             given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
-            // 2. 'AD', 'IN_PROGRESS' 조회 시 빈 리스트 반환 (실패 지점)
+            // 'AD', 'IN_PROGRESS' 조회 시 빈 리스트 반환 (실패 지점)
             // setUp()의 lenient() stubbing을 오버라이드 (BDDMockito 스타일 사용)
             given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("AD", "IN_PROGRESS"))
                     .willReturn(List.of());
@@ -361,12 +361,12 @@ class ApprovalServiceImplTest {
         void createApproval_Fail_ApproverNotFound() {
             // given
             // 이 테스트에 필요한 Mocking만 설정
-            // 1. 기안자 조회 통과
+            // 기안자 조회 통과
             given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
-            // 2. 공통 코드 조회 통과 (setUp()에서 lenient()로 처리됨)
-            // 3. Doc 저장 통과
+            // 공통 코드 조회 통과 (setUp()에서 lenient()로 처리됨)
+            // Doc 저장 통과
             given(approvalDocRepository.save(any(ApprovalDoc.class))).willReturn(mockDoc);
-            // 4. 결재자 1 (ID: 11L) 조회 실패 (실패 지점)
+            // 결재자 1 (ID: 11L) 조회 실패 (실패 지점)
             given(employeeRepository.findById(11L)).willReturn(Optional.empty());
 
             // when & then
@@ -380,15 +380,15 @@ class ApprovalServiceImplTest {
         void createApproval_Fail_ReferrerNotFound() {
             // given
             // 이 테스트에 필요한 Mocking만 설정
-            // 1. 기안자 조회 통과
+            // 기안자 조회 통과
             given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
-            // 2. 공통 코드 조회 통과 (setUp()에서 lenient()로 처리됨)
-            // 3. Doc 저장 통과
+            // 공통 코드 조회 통과 (setUp()에서 lenient()로 처리됨)
+            // Doc 저장 통과
             given(approvalDocRepository.save(any(ApprovalDoc.class))).willReturn(mockDoc);
-            // 4. 결재선 조회 통과
+            // 결재선 조회 통과
             given(employeeRepository.findById(11L)).willReturn(Optional.of(mockApprover1));
             given(employeeRepository.findById(12L)).willReturn(Optional.of(mockApprover2));
-            // 5. 참조자 (ID: 13L) 조회 실패 (실패 지점)
+            // 참조자 (ID: 13L) 조회 실패 (실패 지점)
             given(employeeRepository.findById(13L)).willReturn(Optional.empty());
 
             // when & then
@@ -454,17 +454,17 @@ class ApprovalServiceImplTest {
 
             // then
             assertThat(result).isNotNull();
-            // 1. 현재 결재선 상태가 '승인'으로 변경되었는지 검증
+            // 현재 결재선 상태가 '승인'으로 변경되었는지 검증
             verify(mockLine1).updateApprovalStatus(mockLineStatusApproved);
             verify(mockLine1).updateComment("테스트 의견");
-            // 2. 문서 수정자가 '결재자1'로 변경되었는지 검증
+            // 문서 수정자가 '결재자1'로 변경되었는지 검증
             verify(mockDoc).updateUpdater(mockApprover1);
-            // 3. 다음 결재선(mockLine2) 상태가 '대기'로 변경되었는지 검증
+            // 다음 결재선(mockLine2) 상태가 '대기'로 변경되었는지 검증
             verify(mockLine2).updateApprovalStatus(mockLineStatusAwaiting);
-            // 4. 문서(Doc) 상태는 변경되지 않아야 함
+            // 문서(Doc) 상태는 변경되지 않아야 함
             verify(mockDoc, never()).updateDocStatus(any(CommonCode.class));
 
-            // 5. 알림 서비스 호출 검증 (로그에 따라 2회 -> 1회로 수정)
+            // 알림 서비스 호출 검증 (로그에 따라 2회 -> 1회로 수정)
             verify(notificationService, times(1)).create(any());
         }
 
@@ -500,14 +500,14 @@ class ApprovalServiceImplTest {
             approvalService.decideApproval(decideRequest, approverUsername);
 
             // then
-            // 1. 현재 결재선 상태 '승인' 변경
+            // 현재 결재선 상태 '승인' 변경
             verify(mockLine1).updateApprovalStatus(mockLineStatusApproved);
-            // 2. 다음 결재선이 없으므로 상태 변경 시도 X
+            // 다음 결재선이 없으므로 상태 변경 시도 X
             verify(mockLine2, never()).updateApprovalStatus(any(CommonCode.class));
-            // 3. 문서(Doc) 상태가 '최종 승인'으로 변경되어야 함
+            // 문서(Doc) 상태가 '최종 승인'으로 변경되어야 함
             verify(mockDoc).updateDocStatus(mockDocStatusApproved);
 
-            // 4. 알림 서비스 호출 검증 (기안자 1회)
+            // 알림 서비스 호출 검증 (기안자 1회)
             verify(notificationService, times(1)).create(any());
         }
 
@@ -540,14 +540,14 @@ class ApprovalServiceImplTest {
             approvalService.decideApproval(decideRequest, approverUsername);
 
             // then
-            // 1. 현재 결재선 상태 '반려' 변경
+            // 현재 결재선 상태 '반려' 변경
             verify(mockLine1).updateApprovalStatus(mockLineStatusRejected);
-            // 2. 문서(Doc) 상태가 '최종 반려'로 변경되어야 함
+            // 문서(Doc) 상태가 '최종 반려'로 변경되어야 함
             verify(mockDoc).updateDocStatus(mockDocStatusRejected);
-            // 3. (중요) 반려 시에는 다음 결재선을 찾지 않아야 함
+            // (중요) 반려 시에는 다음 결재선을 찾지 않아야 함
             verify(approvalLineRepository, never()).findByDocAndApprovalOrder(any(), any());
 
-            // 4. 알림 서비스 호출 검증 (기안자 1회)
+            // 알림 서비스 호출 검증 (기안자 1회)
             verify(notificationService, times(1)).create(any());
         }
 
@@ -558,9 +558,9 @@ class ApprovalServiceImplTest {
             decideRequest.setStatusCodeId(approvedCodeId);
 
             // 이 테스트에 필요한 Mocking만 설정
-            // 1. 사용자 조회 통과
+            // 사용자 조회 통과
             given(employeeRepository.findByUsername(approverUsername)).willReturn(Optional.of(mockApprover1));
-            // 2. 상태 코드 조회 실패 (실패 지점)
+            // 상태 코드 조회 실패 (실패 지점)
             given(commonCodeRepository.findById(approvedCodeId)).willReturn(Optional.empty());
 
             // "OT", "APPROVAL" 호출은 setUp()에서 이미 lenient()로 처리됨
@@ -579,11 +579,11 @@ class ApprovalServiceImplTest {
             decideRequest.setStatusCodeId(approvedCodeId);
 
             // 이 테스트에 필요한 Mocking만 설정
-            // 1. 사용자 조회 통과
+            // 사용자 조회 통과
             given(employeeRepository.findByUsername(approverUsername)).willReturn(Optional.of(mockApprover1));
-            // 2. 상태 코드 조회 통과 (서비스 로직 순서상 이게 먼저)
+            // 상태 코드 조회 통과 (서비스 로직 순서상 이게 먼저)
             given(commonCodeRepository.findById(approvedCodeId)).willReturn(Optional.of(mockLineStatusApproved));
-            // 3. 결재선 조회 실패 (실패 지점)
+            // 결재선 조회 실패 (실패 지점)
             given(approvalLineRepository.findById(lineId)).willReturn(Optional.empty());
 
             // "OT", "APPROVAL" 호출은 setUp()에서 이미 lenient()로 처리됨
@@ -601,15 +601,15 @@ class ApprovalServiceImplTest {
             decideRequest.setStatusCodeId(approvedCodeId);
 
             // 이 테스트에 필요한 Mocking만 설정
-            // 1. 로그인 사용자를 '결재자2'(mockApprover2)로 설정
+            // 로그인 사용자를 '결재자2'(mockApprover2)로 설정
             given(employeeRepository.findByUsername(approverUsername)).willReturn(Optional.of(mockApprover2));
-            // 2. 상태 코드 조회 통과
+            // 상태 코드 조회 통과
             given(commonCodeRepository.findById(approvedCodeId)).willReturn(Optional.of(mockLineStatusApproved));
-            // 3. 결재선 조회 통과
+            // 결재선 조회 통과
             given(approvalLineRepository.findById(lineId)).willReturn(Optional.of(mockLine1));
-            // 4. 결재선(mockLine1)의 실제 주인은 '결재자1'(mockApprover1)로 설정 (실패 지점)
+            // 결재선(mockLine1)의 실제 주인은 '결재자1'(mockApprover1)로 설정 (실패 지점)
             given(mockLine1.getEmployee()).willReturn(mockApprover1);
-            // 5. (추가) mockApprover1과 mockApprover2의 ID가 다르도록 stub
+            // (추가) mockApprover1과 mockApprover2의 ID가 다르도록 stub
             //    (setUp()에서 이미 lenient()로 되어있지만 명시적으로)
             lenient().when(mockApprover1.getEmployeeId()).thenReturn(11L);
             lenient().when(mockApprover2.getEmployeeId()).thenReturn(12L);
@@ -629,17 +629,17 @@ class ApprovalServiceImplTest {
             decideRequest.setStatusCodeId(approvedCodeId);
 
             // 이 테스트에 필요한 Mocking만 설정
-            // 1. 사용자 조회 통과
+            // 사용자 조회 통과
             given(employeeRepository.findByUsername(approverUsername)).willReturn(Optional.of(mockApprover1));
-            // 2. 상태 코드 조회 통과
+            // 상태 코드 조회 통과
             given(commonCodeRepository.findById(approvedCodeId)).willReturn(Optional.of(mockLineStatusApproved));
-            // 3. 결재선 조회 통과
+            // 결재선 조회 통과
             given(approvalLineRepository.findById(lineId)).willReturn(Optional.of(mockLine1));
-            // 4. 권한 검증 통과 (본인 맞음)
+            // 권한 검증 통과 (본인 맞음)
             given(mockLine1.getEmployee()).willReturn(mockApprover1);
-            // 5. 결재선의 현재 상태가 'AWAITING'(대기)이 아닌 'APPROVED'(승인)이라고 설정 (실패 지점)
+            // 결재선의 현재 상태가 'AWAITING'(대기)이 아닌 'APPROVED'(승인)이라고 설정 (실패 지점)
             given(mockLine1.getApprovalStatus()).willReturn(mockLineStatusApproved);
-            // 6. (추가) CommonCode의 getValue1() 호출 stub
+            // (추가) CommonCode의 getValue1() 호출 stub
             //    (setUp()에서 이미 lenient()로 되어있지만 명시적으로)
             lenient().when(mockLineStatusAwaiting.getValue1()).thenReturn("AWAITING");
             lenient().when(mockLineStatusApproved.getValue1()).thenReturn("APPROVED");
@@ -681,7 +681,7 @@ class ApprovalServiceImplTest {
             // then
             assertThat(result).isNotNull();
             assertThat(result.getDocId()).isEqualTo(docId);
-            // 1. 참조자(mockRef)의 update()가 호출되지 않았는지 검증
+            // 참조자(mockRef)의 update()가 호출되지 않았는지 검증
             verify(mockRef, never()).update(any(LocalDateTime.class));
         }
 
@@ -698,7 +698,7 @@ class ApprovalServiceImplTest {
             approvalService.getApproval(docId, username);
 
             // then
-            // 1. 참조자(mockRef)의 update()가 1회 호출되었는지 검증
+            // 참조자(mockRef)의 update()가 1회 호출되었는지 검증
             verify(mockRef).update(any(LocalDateTime.class));
         }
 
@@ -715,7 +715,7 @@ class ApprovalServiceImplTest {
             approvalService.getApproval(docId, username);
 
             // then
-            // 1. 이미 열람했으므로 update()가 호출되지 않았는지 검증
+            // 이미 열람했으므로 update()가 호출되지 않았는지 검증
             verify(mockRef, never()).update(any(LocalDateTime.class));
         }
 
@@ -736,13 +736,15 @@ class ApprovalServiceImplTest {
     }
 
 
+    // ***** [수정된 부분] *****
     @Nested
     @DisplayName("get... (문서 목록 조회)")
     class GetDocumentLists {
 
         private Pageable mockPageable;
         private Page<ApprovalDoc> mockDocPage;
-        private final String username = "creator";
+        // '기안자' username, 'getList_Fail_UserNotFound' 에서도 공통 사용
+        private final String creatorUsername = "creator";
 
         @BeforeEach
         void listSetup() {
@@ -750,20 +752,29 @@ class ApprovalServiceImplTest {
             // PageImpl: Page 인터페이스의 실제 구현체
             mockDocPage = new PageImpl<>(List.of(mockDoc));
 
-            // 모든 목록 조회 메서드의 공통 given (사용자 조회)
-            given(employeeRepository.findByUsername(username)).willReturn(Optional.of(mockCreator));
+            // [수정] 공통 사용자 Mocking 제거
+            // 각 테스트 케이스에서 목적에 맞는 사용자를 mocking 하도록 변경
         }
 
         @Test
         @DisplayName("getPendingApprovals (결재 대기 문서 조회)")
         void getPendingApprovals_Success() {
             // given
+            // [수정] 이 테스트는 '결재자'로 조회해야 함
+            String approverUsername = "approver1";
+            given(employeeRepository.findByUsername(approverUsername)).willReturn(Optional.of(mockApprover1));
+
             given(approvalDocRepository.findPendingDocsForEmployeeWithSort(
-                    eq(mockCreator), anyList(), anyString(), anyString(), anyString(), anyString(), eq(mockPageable)
+                    eq(mockApprover1), // [수정] currentUser를 mockApprover1로 변경
+                    anyList(), anyString(), anyString(), anyString(), anyString(), eq(mockPageable)
             )).willReturn(mockDocPage);
 
+            // [수정] mockDoc이 mockApprover1을 결재선(mockLine1)에 포함하도록 setUp()에서 설정됨
+            // mockLine1의 상태는 AWAITING이므로 convertToPendingDTO 로직 통과
+
             // when
-            Page<ApprovalDocResponseDTO> result = approvalService.getPendingApprovals(mockPageable, username);
+            // [수정] '결재자' username으로 서비스 호출
+            Page<ApprovalDocResponseDTO> result = approvalService.getPendingApprovals(mockPageable, approverUsername);
 
             // then
             assertThat(result).isNotNull();
@@ -775,11 +786,14 @@ class ApprovalServiceImplTest {
         @DisplayName("getDraftedDocuments (기안 문서 조회)")
         void getDraftedDocuments_Success() {
             // given
+            // [추가] '기안자' Mocking 설정
+            given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
+
             given(approvalDocRepository.findByCreatorWithDetails(mockCreator, mockPageable))
                     .willReturn(mockDocPage);
 
             // when
-            Page<ApprovalDocResponseDTO> result = approvalService.getDraftedDocuments(mockPageable, username);
+            Page<ApprovalDocResponseDTO> result = approvalService.getDraftedDocuments(mockPageable, creatorUsername);
 
             // then
             assertThat(result).isNotNull();
@@ -791,15 +805,20 @@ class ApprovalServiceImplTest {
         @DisplayName("getReferencedDocuments (참조 문서 조회)")
         void getReferencedDocuments_Success() {
             // given
-            given(approvalDocRepository.findReferencedDocsForEmployee(mockCreator, mockPageable))
+            // [수정] 이 테스트는 '참조자'로 조회하는 것이 더 명확함
+            String referrerUsername = "referrer";
+            given(employeeRepository.findByUsername(referrerUsername)).willReturn(Optional.of(mockReferrer));
+
+            given(approvalDocRepository.findReferencedDocsForEmployee(mockReferrer, mockPageable)) // [수정]
                     .willReturn(mockDocPage);
 
             // when
-            Page<ApprovalDocResponseDTO> result = approvalService.getReferencedDocuments(mockPageable, username);
+            Page<ApprovalDocResponseDTO> result = approvalService.getReferencedDocuments(mockPageable, referrerUsername); // [수정]
 
             // then
             assertThat(result).isNotNull();
             assertThat(result.getTotalElements()).isEqualTo(1);
+            // mockDoc의 참조자가 mockReferrer이므로 검증 통과
             assertThat(result.getContent().get(0).getApprovalReferences().get(0).getReferrer().getUsername()).isEqualTo("referrer");
         }
 
@@ -807,12 +826,15 @@ class ApprovalServiceImplTest {
         @DisplayName("getCompletedDocuments (완료 문서 조회)")
         void getCompletedDocuments_Success() {
             // given
+            // [추가] '기안자' Mocking 설정 (기안자/결재자/참조자 누구나 조회 가능)
+            given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
+
             given(approvalDocRepository.findCompletedDocsForEmployee(
                     eq(mockCreator), anyList(), anyString(), eq(mockPageable)
             )).willReturn(mockDocPage);
 
             // when
-            Page<ApprovalDocResponseDTO> result = approvalService.getCompletedDocuments(mockPageable, username);
+            Page<ApprovalDocResponseDTO> result = approvalService.getCompletedDocuments(mockPageable, creatorUsername);
 
             // then
             assertThat(result).isNotNull();
@@ -824,16 +846,17 @@ class ApprovalServiceImplTest {
         @DisplayName("실패 - 사용자 없음 (모든 목록 조회 공통)")
         void getList_Fail_UserNotFound() {
             // given
-            given(employeeRepository.findByUsername(username)).willReturn(Optional.empty());
+            // [수정] listSetup()에서 제거되었으므로, 여기서 명시적으로 실패 Mocking 설정
+            given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.empty());
 
             // when & then
             // getPendingApprovals 메서드로 대표 검증
-            assertThatThrownBy(() -> approvalService.getPendingApprovals(mockPageable, username))
+            assertThatThrownBy(() -> approvalService.getPendingApprovals(mockPageable, creatorUsername))
                     .isInstanceOf(EntityNotFoundException.class)
-                    .hasMessageContaining("사용자를 찾을 수 없습니다: " + username);
+                    .hasMessageContaining("사용자를 찾을 수 없습니다: " + creatorUsername);
 
             // 다른 메서드들도 동일하게 동작할 것임
-            assertThatThrownBy(() -> approvalService.getDraftedDocuments(mockPageable, username))
+            assertThatThrownBy(() -> approvalService.getDraftedDocuments(mockPageable, creatorUsername))
                     .isInstanceOf(EntityNotFoundException.class);
         }
     }
