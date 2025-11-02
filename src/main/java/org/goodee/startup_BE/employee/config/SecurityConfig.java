@@ -121,7 +121,7 @@ public class SecurityConfig {
         // React App 허용
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
         // HTTP 메소드 허용
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         // 모든 헤더 허용
         configuration.setAllowedHeaders(Arrays.asList("*"));
         // 인증 정보 허용 (JWT 토큰)
