@@ -2,6 +2,7 @@ package org.goodee.startup_BE.employee.service;
 
 
 import org.goodee.startup_BE.common.dto.APIResponseDTO;
+import org.goodee.startup_BE.employee.dto.EmployeePWChangeRequestDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeRequestDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeResponseDTO;
 import org.springframework.security.core.Authentication;
@@ -12,6 +13,9 @@ public interface AuthenticationService {
     APIResponseDTO<EmployeeResponseDTO> signup(Authentication authentication, EmployeeRequestDTO request);
 
     Map<String, Object> login(EmployeeRequestDTO request, String ipAddress, String userAgent);
+
+    // 사용자 비밀번호 변경
+    EmployeeResponseDTO updateEmployeePassword(String username, EmployeePWChangeRequestDTO request);
 
     Map<String, Object> refreshToken(String refreshToken);
 }
