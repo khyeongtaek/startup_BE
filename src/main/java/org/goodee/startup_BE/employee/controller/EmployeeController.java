@@ -103,28 +103,6 @@ public class EmployeeController {
                 .build());
     }
 
-    @Operation(summary = "사용자 비밀번호 변경",
-            description = "로그인한 사용자 본인의 비밀번호를 변경.",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "수정할 사용자 정보.",
-                    required = true,
-                    content = @Content(schema = @Schema(implementation = EmployeeRequestDTO.class))
-            ))
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "개인 정보 수정 성공"),
-            @ApiResponse(responseCode = "401", description = "인증되지 않았거나 수정 권한 없음", content = @Content)
-    })
-    @PatchMapping("/updateEmployeePassword")
-    public ResponseEntity<APIResponseDTO<EmployeeResponseDTO>> updateEmployeePassword(
-            @Parameter(hidden = true) Authentication authentication,
-            @Validated(EmployeeValidationGroup.ChangePassword.class)
-            @RequestBody EmployeeRequestDTO request
-    ) {
-        return ResponseEntity.ok(APIResponseDTO.<EmployeeResponseDTO>builder()
-                .message("비밀번호 변경 성공")
-                .data(employeeService.updateEmployeePassword(authentication.getName(), request))
-                .build());
-    }
 
 
     @Operation(summary = "(관리자) 사원 인사 정보 수정",

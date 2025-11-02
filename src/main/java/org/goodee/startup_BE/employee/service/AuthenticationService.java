@@ -13,5 +13,8 @@ public interface AuthenticationService {
 
     Map<String, Object> login(EmployeeRequestDTO request, String ipAddress, String userAgent);
 
+    // 사용자 비밀번호 변경
+    EmployeeResponseDTO updateEmployeePassword(String username, EmployeeRequestDTO request);
+
     Map<String, Object> refreshToken(String refreshToken);
 }

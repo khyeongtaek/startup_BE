@@ -144,6 +144,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
+    public EmployeeResponseDTO updateEmployeePassword(String username, EmployeeRequestDTO request) {
+        Employee employee = employeeRepository.findByUsername(username)
+                .orElseThrow(()-> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
+
+        employee.updatePassword(passwordEncoder.encode(request.getPassword()),employee);
+        return EmployeeResponseDTO.toDTO(employee);
+    }
+
+    @Override
     public Map<String, Object> refreshToken(String refreshToken) {
 
         final String username;
