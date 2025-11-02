@@ -1,3 +1,4 @@
+//
 package org.goodee.startup_BE.employee.service;
 
 import org.goodee.startup_BE.common.entity.CommonCode;
@@ -184,13 +185,15 @@ class EmployeeServiceImplTest {
         private EmployeeRequestDTO request;
         private String adminUsername = "admin";
         private String targetUsername = "user";
+        private Long targetEmployeeId = 1L; // 대상 직원 ID
 
         @BeforeEach
         void adminSetup() {
             // 관리자 수정 요청 DTO 공통 설정
             // 이 DTO는 Success, Fail 케이스 모두에서 사용됨
             request = new EmployeeRequestDTO();
-            request.setUsername(targetUsername);
+            request.setUsername(targetUsername); // DTO 변환 로직 등에 사용될 수 있음
+            request.setEmployeeId(targetEmployeeId); // [수정] 서비스 로직 변경으로 ID 추가
             request.setStatus(101L);
             request.setRole(901L);
             request.setDepartment(201L);
@@ -205,8 +208,8 @@ class EmployeeServiceImplTest {
             // given
             // 관리자 조회
             given(employeeRepository.findByUsername(adminUsername)).willReturn(Optional.of(mockAdmin));
-            // 대상 직원 조회
-            given(employeeRepository.findByUsername(targetUsername)).willReturn(Optional.of(mockEmployee));
+            // [수정] 대상 직원을 ID로 조회
+            given(employeeRepository.findById(targetEmployeeId)).willReturn(Optional.of(mockEmployee));
             // CommonCode 조회
             given(commonCodeRepository.findById(101L)).willReturn(Optional.of(mockStatus));
             given(commonCodeRepository.findById(901L)).willReturn(Optional.of(mockRole));
@@ -249,8 +252,8 @@ class EmployeeServiceImplTest {
         void updateEmployeeByAdmin_Fail_TargetNotFound() {
             // given
             given(employeeRepository.findByUsername(adminUsername)).willReturn(Optional.of(mockAdmin));
-            // 대상 직원 조회 실패
-            given(employeeRepository.findByUsername(targetUsername)).willReturn(Optional.empty());
+            // [수정] 대상 직원 조회 실패 (ID 기준)
+            given(employeeRepository.findById(targetEmployeeId)).willReturn(Optional.empty());
 
             // when & then
             // ResourceNotFoundException 발생 확인
@@ -266,7 +269,8 @@ class EmployeeServiceImplTest {
         void updateEmployeeByAdmin_Fail_StatusCodeNotFound() {
             // given
             given(employeeRepository.findByUsername(adminUsername)).willReturn(Optional.of(mockAdmin));
-            given(employeeRepository.findByUsername(targetUsername)).willReturn(Optional.of(mockEmployee));
+            // [수정] 대상 직원 조회 성공 (ID 기준)
+            given(employeeRepository.findById(targetEmployeeId)).willReturn(Optional.of(mockEmployee));
             // Status 코드 조회 실패
             given(commonCodeRepository.findById(101L)).willReturn(Optional.empty());
 
@@ -285,12 +289,14 @@ class EmployeeServiceImplTest {
         private EmployeeRequestDTO request;
         private String adminUsername = "admin";
         private String targetUsername = "user";
+        private Long targetEmployeeId = 1L; // 대상 직원 ID
         private String encodedPassword = "encodedPassword";
 
         @BeforeEach
         void initSetup() {
             request = new EmployeeRequestDTO();
-            request.setUsername(targetUsername);
+            request.setUsername(targetUsername); // DTO 변환 로직 등에 사용될 수 있음
+            request.setEmployeeId(targetEmployeeId); // [수정] 서비스 로직 변경으로 ID 추가
 
             // [수정] getUsername() Mocking을 Success 테스트로 이동
             // when(mockEmployee.getUsername()).thenReturn(targetUsername);
@@ -301,7 +307,8 @@ class EmployeeServiceImplTest {
         void initPassword_Success() {
             // given
             given(employeeRepository.findByUsername(adminUsername)).willReturn(Optional.of(mockAdmin));
-            given(employeeRepository.findByUsername(targetUsername)).willReturn(Optional.of(mockEmployee));
+            // [수정] 대상 직원을 ID로 조회
+            given(employeeRepository.findById(targetEmployeeId)).willReturn(Optional.of(mockEmployee));
 
             // [수정] SUT가 employee.getUsername()을 호출하므로 Mocking (Success Case 전용)
             // 1. passwordEncoder.encode(employee.getUsername())
@@ -326,8 +333,8 @@ class EmployeeServiceImplTest {
         void initPassword_Fail_TargetNotFound() {
             // given
             given(employeeRepository.findByUsername(adminUsername)).willReturn(Optional.of(mockAdmin));
-            // 대상 직원 조회 실패
-            given(employeeRepository.findByUsername(targetUsername)).willReturn(Optional.empty());
+            // [수정] 대상 직원 조회 실패 (ID 기준)
+            given(employeeRepository.findById(targetEmployeeId)).willReturn(Optional.empty());
 
             // when & then
             assertThatThrownBy(() -> employeeServiceImpl.initPassword(adminUsername, request))
