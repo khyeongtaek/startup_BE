@@ -1,6 +1,7 @@
 package org.goodee.startup_BE.employee.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -12,16 +13,17 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.common.dto.APIResponseDTO;
+import org.goodee.startup_BE.common.validation.ValidationGroups;
+import org.goodee.startup_BE.employee.dto.EmployeePWChangeRequestDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeRequestDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeResponseDTO;
 import org.goodee.startup_BE.employee.service.AuthenticationService;
+import org.goodee.startup_BE.employee.validation.EmployeeValidationGroup;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
@@ -44,8 +46,9 @@ public class AuthenticationController {
             @ApiResponse(responseCode = "403", description = "권한 없음 (관리자가 아님)")
     })
     public ResponseEntity<APIResponseDTO<EmployeeResponseDTO>> register(
-            Authentication authentication // Spring Security가 주입하는 인증된 사용자 정보
-            , @RequestBody EmployeeRequestDTO employeeRequestDTO // 등록할 직원 정보
+            Authentication authentication, // Spring Security가 주입하는 인증된 사용자 정보
+            @Validated(ValidationGroups.Create.class)
+            @RequestBody EmployeeRequestDTO employeeRequestDTO // 등록할 직원 정보
     ) {
         return ResponseEntity.ok(
                 authenticationService.signup(authentication, employeeRequestDTO));
@@ -81,6 +84,29 @@ public class AuthenticationController {
         return ResponseEntity.ok((EmployeeResponseDTO) loginResult.get("employee"));
 
 
+    }
+
+
+    @Operation(summary = "사용자 비밀번호 변경",
+            description = "로그인한 사용자 본인의 비밀번호를 변경. (현재 비밀번호와 새 비밀번호 필요)",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "현재 비밀번호와 새 비밀번호",
+                    required = true,
+                    content = @Content(schema = @Schema(implementation = EmployeePWChangeRequestDTO.class))
+            ))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "비밀번호 변경 성공"),
+            @ApiResponse(responseCode = "400", description = "인증되지 않았거나 현재 비밀번호가 틀림", content = @Content)
+    })
+    @PatchMapping("/updateEmployeePassword")
+    public ResponseEntity<APIResponseDTO<EmployeeResponseDTO>> updateEmployeePassword(
+            @Parameter(hidden = true) Authentication authentication,
+            @Validated @RequestBody EmployeePWChangeRequestDTO request
+    ) {
+        return ResponseEntity.ok(APIResponseDTO.<EmployeeResponseDTO>builder()
+                .message("비밀번호 변경 성공")
+                .data(authenticationService.updateEmployeePassword(authentication.getName(), request))
+                .build());
     }
 
     // 토큰 갱신
