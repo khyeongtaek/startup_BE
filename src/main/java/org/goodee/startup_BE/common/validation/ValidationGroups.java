@@ -30,4 +30,10 @@ public class ValidationGroups {
         interface List {}
         interface Download {}
     }
+    
+    // 메일
+    public interface Mail {
+        interface Move {}
+        interface Delete {}
+    }
 }

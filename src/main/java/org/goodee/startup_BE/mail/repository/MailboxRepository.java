@@ -1,8 +1,19 @@
 package org.goodee.startup_BE.mail.repository;
 
+import jakarta.validation.constraints.NotEmpty;
 import org.goodee.startup_BE.mail.entity.Mailbox;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
+import java.util.Optional;
+
 public interface MailboxRepository extends JpaRepository<Mailbox, Long> {
-    // INSERT
+	Optional<Mailbox> findByEmployeeEmployeeIdAndMailMailId(Long employeeId, Long mailId);
+	
+	List<Mailbox> findAllByBoxIdInAndEmployeeUsername(List<Long> boxIds, String username);
+	
+	Page<Mailbox> findByEmployeeUsernameAndTypeIdValue1AndDeletedStatusNot(
+		String username, String typeValue1, Byte deletedStatus, Pageable pageable);
 }
