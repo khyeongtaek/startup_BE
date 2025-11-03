@@ -6,7 +6,7 @@ import org.goodee.startup_BE.common.entity.CommonCode;
 import org.hibernate.annotations.Comment;
 
 @Entity
-@Table(name = "tbl_mail_receiver", uniqueConstraints = {@UniqueConstraint(columnNames = {"mail_id", "email", "type"})})
+@Table(name = "tbl_mail_receiver", uniqueConstraints = {@UniqueConstraint(columnNames = {"mail_id", "email", "type_id"})})
 @Getter
 public class MailReceiver {
 	@Id
@@ -25,7 +25,7 @@ public class MailReceiver {
 	private String email;
 	
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(nullable = false)
+	@JoinColumn(name = "type_id", nullable = false)
 	@Comment("수신자 타입")
 	private CommonCode type;
 
