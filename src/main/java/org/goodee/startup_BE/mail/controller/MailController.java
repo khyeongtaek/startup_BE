@@ -3,14 +3,13 @@ package org.goodee.startup_BE.mail.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.common.dto.APIResponseDTO;
-import org.goodee.startup_BE.mail.dto.MailDetailResponseDTO;
-import org.goodee.startup_BE.mail.dto.MailSendRequestDTO;
-import org.goodee.startup_BE.mail.dto.MailSendResponseDTO;
-import org.goodee.startup_BE.mail.dto.MailUpdateRequestDTO;
+import org.goodee.startup_BE.common.validation.ValidationGroups;
+import org.goodee.startup_BE.mail.dto.*;
 import org.goodee.startup_BE.mail.service.MailService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -60,5 +59,26 @@ public class MailController {
 			                                                 .data(responseDTO)
 			                                                 .build();
 		return ResponseEntity.ok(response);
+	}
+	
+	// 메일함 이동 (개인보관함, 휴지통)
+	@PostMapping("/mailboxes/{mailboxId}/{mailboxType}")
+	public ResponseEntity<APIResponseDTO<Void>> moveMail(
+		@PathVariable @Validated(ValidationGroups.Mail.Move.class) MailMoveRequestDTO requestDTO,
+		Authentication auth) {
+		String username = auth.getName();
+		
+		mailService.moveMails(requestDTO, username);
+		
+		APIResponseDTO<Void> response = APIResponseDTO.<Void>builder()
+			                                .message("메일함 이동 성공")
+			                                .build();
+		
+		return ResponseEntity.ok(response) ;
+	}
+	
+	@DeleteMapping("/mailboxes/{mailboxId}")
+	public ResponseEntity<APIResponseDTO<Void>> deleteMail(@PathVariable Long mailboxId, Authentication auth) {
+		return null;
 	}
 }

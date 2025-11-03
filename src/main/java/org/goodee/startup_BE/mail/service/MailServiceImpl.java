@@ -10,10 +10,7 @@ import org.goodee.startup_BE.common.service.AttachmentFileService;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.exception.ResourceNotFoundException;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
-import org.goodee.startup_BE.mail.dto.MailDetailResponseDTO;
-import org.goodee.startup_BE.mail.dto.MailSendRequestDTO;
-import org.goodee.startup_BE.mail.dto.MailSendResponseDTO;
-import org.goodee.startup_BE.mail.dto.MailUpdateRequestDTO;
+import org.goodee.startup_BE.mail.dto.*;
 import org.goodee.startup_BE.mail.entity.Mail;
 import org.goodee.startup_BE.mail.entity.MailReceiver;
 import org.goodee.startup_BE.mail.entity.Mailbox;
@@ -155,38 +152,25 @@ public class MailServiceImpl implements MailService{
 	// 메일 작성
 	@Override
 	public MailSendResponseDTO sendMail(MailSendRequestDTO mailSendRequestDTO , String username) {
-		// 0. 직원 조회 / 수신자 타입 (CommonCode) / 메일함 타입 (CommonCode) / 분류 타입(CommonCode)
+		// 0. 직원 조회
 		Employee employee = employeeRepository.findByUsername(username)
 			                    .orElseThrow(() -> new ResourceNotFoundException("직원이 존재하지 않습니다"));
 		
-		List<CommonCode> receiverTypeTo = commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(ReceiverType.PREFIX, ReceiverType.TO.name());
-		List<CommonCode> receiverTypeCc = commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(ReceiverType.PREFIX, ReceiverType.CC.name());
-		List<CommonCode> receiverTypeBcc = commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(ReceiverType.PREFIX, ReceiverType.BCC.name());
-		
-		if(receiverTypeTo.isEmpty() || receiverTypeCc.isEmpty() || receiverTypeBcc.isEmpty()) throw new ResourceNotFoundException("수신자 타입이 존재하지 않습니다.");
-		
-		List<CommonCode> mailboxTypeInbox = commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(MailboxType.PREFIX, MailboxType.INBOX.name());
-		List<CommonCode> mailboxTypeSent = commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(MailboxType.PREFIX, MailboxType.SENT.name());
-		
-		if(mailboxTypeInbox.isEmpty() || mailboxTypeSent.isEmpty()) throw new ResourceNotFoundException("메일함 타입이 존재하지 않습니다.");
-		
-		List<CommonCode> ownerTypeCode = commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.MAIL.name());
-		if(ownerTypeCode.isEmpty()) throw new ResourceNotFoundException("분류 코드가 존재하지 않습니다.");
-		CommonCode ownerType = ownerTypeCode.get(0);
-		
+		CommonCode ownerTypeCode = firstOrNotFound(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.MAIL.name()),"뷴류 타입 코드 없음");
+
 		
 		// 1. 메일 insert
 		Mail mail = mailRepository.save(mailSendRequestDTO.toEntity(employee, LocalDateTime.now()));
 		
 		
 		// 2. 수신자 메일함 insert
-		CommonCode to = receiverTypeTo.get(0);
-		CommonCode cc = receiverTypeCc.get(0);
-		CommonCode bcc = receiverTypeBcc.get(0);
+		CommonCode toCode = firstOrNotFound(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(ReceiverType.PREFIX, ReceiverType.TO.name()),"TO 코드 없음");
+		CommonCode ccCode = firstOrNotFound(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(ReceiverType.PREFIX, ReceiverType.CC.name()),"CC 코드 없음");
+		CommonCode bccCode = firstOrNotFound(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(ReceiverType.PREFIX, ReceiverType.BCC.name()),"BCC 코드 없음");
 		
-		int toCount = insertReceivers(mail, mailSendRequestDTO.getTo(), to);
-		int ccCount = insertReceivers(mail, mailSendRequestDTO.getCc(), cc);
-		int bccCount = insertReceivers(mail, mailSendRequestDTO.getBcc(), bcc);
+		int toCount = insertReceivers(mail, mailSendRequestDTO.getTo(), toCode);
+		int ccCount = insertReceivers(mail, mailSendRequestDTO.getCc(), ccCode);
+		int bccCount = insertReceivers(mail, mailSendRequestDTO.getBcc(), bccCode);
 		
 		if(toCount + ccCount + bccCount == 0) {
 			throw new IllegalArgumentException("수신자(to/cc/bcc) 중 최소 1명은 필요합니다.");
@@ -194,10 +178,10 @@ public class MailServiceImpl implements MailService{
 		
 		
 		// 3. 발신자 보낸편지함 생성 (보낸편지함은 항상 읽음 처리 false - UI read 클래스 추가 x)
-		CommonCode inbox = mailboxTypeInbox.get(0);
-		CommonCode sent = mailboxTypeSent.get(0);
+		CommonCode inboxCode = firstOrNotFound(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(MailboxType.PREFIX, MailboxType.INBOX.name()),"INBOX 코드 없음");
+		CommonCode sentCode = firstOrNotFound(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(MailboxType.PREFIX, MailboxType.SENT.name()),"SENT 코드 없음");
 		
-		Mailbox sentBox = mailboxRepository.save(Mailbox.createMailbox(employee, mail, sent, false, (byte) 0));
+		Mailbox sentBox = mailboxRepository.save(Mailbox.createMailbox(employee, mail, sentCode, false, (byte) 0));
 		
 		
 		// 4. 수신자 받은편지함 생성
@@ -230,7 +214,7 @@ public class MailServiceImpl implements MailService{
 		// 받은메일함 생성
 		for(String email : allEmails) {
 			Employee receiver = byEmail.get(email.trim().toLowerCase());
-			mailboxRepository.save(Mailbox.createMailbox(receiver, mail, inbox, false, (byte) 0));
+			mailboxRepository.save(Mailbox.createMailbox(receiver, mail, inboxCode, false, (byte) 0));
 		}
 		
 		
@@ -240,7 +224,7 @@ public class MailServiceImpl implements MailService{
 			AttachmentFileRequestDTO fileDTO = AttachmentFileRequestDTO.builder()
 				                            .files(mailSendRequestDTO.getAttachmentFiles())
 																		.build();
-			uploadFiles = attachmentFileService.uploadFiles(fileDTO, ownerType.getCommonCodeId(), mail.getMailId());
+			uploadFiles = attachmentFileService.uploadFiles(fileDTO, ownerTypeCode.getCommonCodeId(), mail.getMailId());
 		}
 		
 		
@@ -371,6 +355,35 @@ public class MailServiceImpl implements MailService{
 		
 		List<AttachmentFileResponseDTO> files = attachmentFileService.listFiles(ownerType.getCommonCodeId(), mail.getMailId());
 		
-		return MailDetailResponseDTO.toDTO(Mail mail, toList, ccList, bccList, mailbox);
+		return MailDetailResponseDTO.toDTO(mail, toList, ccList, bccList, mailbox, files);
 	}
+	
+	
+	// 메일 이동
+	@Override
+	public void moveMails(MailMoveRequestDTO requestDTO, String username) {
+		List<Mailbox> mailboxes = mailboxRepository.findAllByBoxIdInAndEmployeeUsername(requestDTO.getMailIds(), username);
+		
+		if(mailboxes.size() != requestDTO.getMailIds().size()) {
+			throw new AccessDeniedException("권한이 없거나 존재하지 않는 항목이 포함되어 있습니다.");
+		}
+		
+		CommonCode targetType;
+		
+		switch(requestDTO.getTargetType().toUpperCase()) {
+			case "MYBOX" :
+				targetType = firstOrNotFound(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(MailboxType.PREFIX, MailboxType.MYBOX.name()), "분류 타입 코드 없음");
+				break;
+			case "TRASH" :
+				targetType = firstOrNotFound(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(MailboxType.PREFIX, MailboxType.TRASH.name()), "분류 타입 코드 없음");
+				break;
+			default :
+				throw new IllegalArgumentException("해당 타입은 존재하지 않습니다.");
+		}
+		
+		mailboxes.forEach(mail -> mail.moveMail(targetType));
+	}
+	
+	
+
 }

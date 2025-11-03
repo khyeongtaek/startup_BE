@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Builder
+@ToString
 public class MailSendResponseDTO {
 	private Long mailId;            // 메일 ID
 	private String title;           // 메일 제목
