@@ -17,5 +17,5 @@ public interface MailService {
 	void moveMails(MailMoveRequestDTO requestDTO, String username);
 	
 	// 메일 삭제 (휴지통에서 삭제 (소프트삭제))
-	void deleteMails(Long mailboxId, String username);
+	void deleteMails(MailMoveRequestDTO requestDTO, String username);
 }

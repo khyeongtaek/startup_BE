@@ -385,5 +385,20 @@ public class MailServiceImpl implements MailService{
 	}
 	
 	
-
+	// 메일 삭제
+	@Override
+	public void deleteMails(MailMoveRequestDTO requestDTO, String username) {
+		List<Mailbox> mailboxes = mailboxRepository.findAllByBoxIdInAndEmployeeUsername(requestDTO.getMailIds(), username);
+		
+		if(mailboxes.size() != requestDTO.getMailIds().size()) {
+			throw new AccessDeniedException("권한이 없거나 존재하지 않는 항목이 포함되어 있습니다.");
+		}
+		
+		boolean checkInTrash = mailboxes.stream().allMatch(mail -> "TRASH".equals(mail.getTypeId().getValue1()));
+		if(!checkInTrash) {
+			throw new IllegalStateException("메일이 휴지통에 존재하지 않습니다.");
+		}
+		
+		mailboxes.forEach(mail -> mail.deleteFromTrash());
+	}
 }

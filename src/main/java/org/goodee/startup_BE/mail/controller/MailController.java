@@ -64,8 +64,8 @@ public class MailController {
 	// 메일함 이동 (개인보관함, 휴지통)
 	@PostMapping("/mailboxes/{mailboxId}/{mailboxType}")
 	public ResponseEntity<APIResponseDTO<Void>> moveMail(
-		@PathVariable @Validated(ValidationGroups.Mail.Move.class) MailMoveRequestDTO requestDTO,
-		Authentication auth) {
+		@PathVariable @Validated(ValidationGroups.Mail.Move.class) MailMoveRequestDTO requestDTO, Authentication auth
+	) {
 		String username = auth.getName();
 		
 		mailService.moveMails(requestDTO, username);
@@ -78,7 +78,17 @@ public class MailController {
 	}
 	
 	@DeleteMapping("/mailboxes/{mailboxId}")
-	public ResponseEntity<APIResponseDTO<Void>> deleteMail(@PathVariable Long mailboxId, Authentication auth) {
-		return null;
+	public ResponseEntity<APIResponseDTO<Void>> deleteMail(
+		@PathVariable @Validated(ValidationGroups.Mail.Delete.class) MailMoveRequestDTO requestDTO, Authentication auth
+	) {
+		String username = auth.getName();
+		
+		mailService.deleteMails(requestDTO, username);
+		
+		APIResponseDTO<Void> response = APIResponseDTO.<Void>builder()
+			                                .message("메일 삭제 성공")
+			                                .build();
+		
+		return ResponseEntity.ok(response);
 	}
 }
