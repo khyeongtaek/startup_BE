@@ -28,4 +28,7 @@ public interface NotificationService {
     /* 모든 알림 삭제 */
     void softDeleteAll(String username);
 
+    /* 삭제 되지 않은 전체 알림 조회 */
+    long countUndeletedAll(String username);
+
 }

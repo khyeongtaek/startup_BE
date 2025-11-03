@@ -105,7 +105,18 @@ public class NotificationServiceImpl implements NotificationService{
     // 읽지 않은 알림 개수
     @Override
     public long getUnreadNotiCount(String username) {
-        return notificationRepository.countByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(username);
+        // 유효성 검사
+        Employee employee = employeeRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("존재하지 않는 사원 입니다.: " + username));
+        return notificationRepository.countByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(employee.getUsername());
+    }
+
+    @Override
+    public long countUndeletedAll(String username) {
+        // 유효성 검사
+        Employee employee = employeeRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("존재하지 않는 사원 입니다.: " + username));
+        return notificationRepository.countByEmployeeUsernameAndIsDeletedFalse(employee.getUsername());
     }
 
     // 모든 알림 읽음 처리

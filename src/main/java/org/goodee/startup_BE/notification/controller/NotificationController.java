@@ -3,6 +3,7 @@ package org.goodee.startup_BE.notification.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.goodee.startup_BE.notification.dto.NotificationPageDTO;
 import org.goodee.startup_BE.notification.dto.NotificationRequestDTO;
 import org.goodee.startup_BE.notification.dto.NotificationResponseDTO;
 import org.goodee.startup_BE.notification.service.NotificationService;
@@ -40,11 +41,17 @@ public class NotificationController {
     // 알림 목록 조회
     @Operation(summary = "알림 목록 조회")
     @GetMapping
-    public ResponseEntity<Page<NotificationResponseDTO>> getNotificationList(
+    public ResponseEntity<NotificationPageDTO> getNotificationList(
             Authentication authentication,
             @PageableDefault(size = 5, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<NotificationResponseDTO> list = notificationService.list(authentication.getName(), pageable);
-        return ResponseEntity.ok(list);
+        Page<NotificationResponseDTO> pageData = notificationService.list(authentication.getName(), pageable);
+
+        NotificationPageDTO responseDTO = new NotificationPageDTO(
+                pageData.getContent(),
+                pageData.isLast()
+        );
+
+        return ResponseEntity.ok(responseDTO);
     }
 
     // 읽지 않은 알림 개수 조회
@@ -52,6 +59,14 @@ public class NotificationController {
     @GetMapping("/unread-count")
     public ResponseEntity<Long> getUnreadNotiCount(Authentication authentication) {
         Long count = notificationService.getUnreadNotiCount(authentication.getName());
+        return ResponseEntity.ok(count);
+    }
+
+    // 전체 알림 개수 조회
+    @Operation(summary = "전체 알림 개수 조회")
+    @GetMapping("/total-count")
+    public ResponseEntity<Long> getTotalNotiCount(Authentication authentication) {
+        Long count = notificationService.countUndeletedAll(authentication.getName());
         return ResponseEntity.ok(count);
     }
 
@@ -73,7 +88,7 @@ public class NotificationController {
 
     // 단일 알림 삭제 (소프트 삭제)
     @Operation(summary = "단일 알림 삭제 (소프트 삭제)")
-    @DeleteMapping("/{notificationId}")
+    @PatchMapping("/{notificationId}/delete")
     public ResponseEntity<Void> softDelete(@PathVariable Long notificationId, Authentication authentication) {
         notificationService.softDelete(notificationId, authentication.getName());
         return ResponseEntity.noContent().build();
@@ -81,7 +96,7 @@ public class NotificationController {
 
     // 전체 알림 삭제 (소프트 삭제)
     @Operation(summary = "전체 알림 삭제 (소프트 삭제)")
-    @DeleteMapping("/delete_all")
+    @PatchMapping("/delete_all")
     public ResponseEntity<Void> softDeleteAll(Authentication authentication) {
         notificationService.softDeleteAll(authentication.getName());
         return ResponseEntity.noContent().build();
