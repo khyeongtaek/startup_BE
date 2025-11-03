@@ -19,6 +19,10 @@ import org.goodee.startup_BE.mail.enums.ReceiverType;
 import org.goodee.startup_BE.mail.repository.MailReceiverRepository;
 import org.goodee.startup_BE.mail.repository.MailRepository;
 import org.goodee.startup_BE.mail.repository.MailboxRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -400,5 +404,27 @@ public class MailServiceImpl implements MailService{
 		}
 		
 		mailboxes.forEach(mail -> mail.deleteFromTrash());
+	}
+	
+	
+	// 메일함 리스트 조회
+	@Override
+	@Transactional(readOnly = true)
+	public Page<MailboxListDTO> getMailboxList(String username, String boxType, int page, int size) {
+		Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "mail.sendAt"));
+		
+		Page<Mailbox> mailboxList = mailboxRepository
+			                       .findByEmployeeUsernameAndTypeIdValue1AndDeletedStatusNot(
+				                       username, boxType.toUpperCase(), boxType.toUpperCase().equals("TRASH") ? 1 : 0, pageable);
+		
+		return mailboxList.map(mb -> MailboxListDTO.builder()
+			                             .boxId(mb.getBoxId())
+			                             .mailId(mb.getMail().getMailId())
+			                             .senderName(mb.getEmployee().getName())
+			                             .title(mb.getMail().getTitle())
+			                             .receivedAt(mb.getMail().getSendAt())
+			                             .isRead(Boolean.TRUE.equals(mb.getIsRead()))
+			                             .build()
+			                      );
 	}
 }

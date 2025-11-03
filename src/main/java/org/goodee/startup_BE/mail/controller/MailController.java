@@ -6,6 +6,7 @@ import org.goodee.startup_BE.common.dto.APIResponseDTO;
 import org.goodee.startup_BE.common.validation.ValidationGroups;
 import org.goodee.startup_BE.mail.dto.*;
 import org.goodee.startup_BE.mail.service.MailService;
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -88,6 +89,25 @@ public class MailController {
 		APIResponseDTO<Void> response = APIResponseDTO.<Void>builder()
 			                                .message("메일 삭제 성공")
 			                                .build();
+		
+		return ResponseEntity.ok(response);
+	}
+	
+	@GetMapping
+	public ResponseEntity<APIResponseDTO<Page<MailboxListDTO>>> getMailboxList(
+		@RequestParam String type,
+		@RequestParam(defaultValue = "0") int page,
+		@RequestParam(defaultValue = "20") int size,
+		Authentication auth
+	) {
+		String username = auth.getName();
+		
+		Page<MailboxListDTO> mailboxList = mailService.getMailboxList(username, type, page, size);
+		
+		APIResponseDTO<Page<MailboxListDTO>> response = APIResponseDTO.<Page<MailboxListDTO>>builder()
+			                                                .message("메일함 리스트 조회 성공")
+			                                                .data(mailboxList)
+			                                                .build();
 		
 		return ResponseEntity.ok(response);
 	}
