@@ -20,4 +20,9 @@ public interface ScheduleService {
 
     // 기간별 일정 조회
     List<ScheduleResponseDTO> getAllScheduleByPeriod(LocalDate start, LocalDate end);
+
+    // 일정 삭제
+    public void deleteSchedule(Long scheduleId);
+
+    ScheduleResponseDTO updateSchedule(Long scheduleId, ScheduleRequestDTO request);
 }

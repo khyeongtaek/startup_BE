@@ -2,9 +2,7 @@ package org.goodee.startup_BE.schedule.entity;
 
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
 
@@ -13,6 +11,8 @@ import java.time.LocalDateTime;
 @Table(name="tbl_schedule_participant")
 
 @Getter
+@AllArgsConstructor
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 public class ScheduleParticipant {
@@ -28,10 +28,12 @@ public class ScheduleParticipant {
     @JoinColumn(name="schedule_id", referencedColumnName = "schedule_id" , nullable = false)
     private Schedule schedule;
 
+    // 참석자
     @ManyToOne(fetch=FetchType.LAZY)
     @JoinColumn(name="participant", referencedColumnName = "employee_id" , nullable = false)
     private Employee participant;
 
+    // 참석 상태 (참석 / 거절 / 보류)
     @ManyToOne(fetch=FetchType.LAZY)
     @JoinColumn(name="participant_status_code_id", referencedColumnName = "common_code_id", nullable = false)
     private CommonCode participantStatus;
@@ -58,6 +60,8 @@ public class ScheduleParticipant {
         sp.is_deleted = false;
         sp.createdAt = LocalDateTime.now();
         sp.updatedAt = LocalDateTime.now();
+
+        schedule.addParticipant(sp);
         return sp;
     }
 
