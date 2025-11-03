@@ -1,5 +1,7 @@
 package org.goodee.startup_BE.schedule.service;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
@@ -22,6 +24,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Builder
 public class ScheduleServiceImpl implements  ScheduleService{
 
     private final CommonCodeRepository commonCodeRepository;

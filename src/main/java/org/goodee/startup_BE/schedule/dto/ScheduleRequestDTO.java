@@ -42,15 +42,14 @@ public class ScheduleRequestDTO {
     private boolean isDeleted;
 
     public Schedule toEntity(Employee employee, CommonCode category, CommonCode color) {
-        return Schedule.builder()
-                .title(title)
-                .content(content)
-                .category(category)
-                .color(color)
-                .employee(employee)
-                .startTime(startTime)
-                .endTime(endTime)
-                .isDeleted(isDeleted)
-                .build();
+        return Schedule.createSchedule(
+                employee,
+                title,
+                content,
+                category,
+                color,
+                startTime,
+                endTime
+        );
     }
 }
