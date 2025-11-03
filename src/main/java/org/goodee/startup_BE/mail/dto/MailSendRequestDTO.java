@@ -1,5 +1,7 @@
 package org.goodee.startup_BE.mail.dto;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.*;
@@ -16,15 +18,27 @@ import java.util.List;
 @Setter
 @Builder
 @ToString(exclude = "attachmentFiles")
+@Schema(name = "MailSendRequestDTO", description = "메일 작성 요청 DTO (multipart/form-data)")
 public class MailSendRequestDTO {
 	@NotBlank
+	@Schema(description = "제목", example = "회의 자료 공유드립니다")
 	private String title;       // 메일 제목
+	
+	@Schema(description = "내용(HTML 가능)", example = "<p>안녕하세요.</p><p>자료 공유드립니다.</p>")
 	private String content;     // 메일 내용
 	
 	@NotEmpty
+	@Schema(description = "수신자 이메일 목록")
 	private List<String> to;    // 수신자 리스트
+	
+	@Schema(description = "참조자 이메일 목록")
 	private List<String> cc;    // 참조 리스트
+	
+	@Schema(description = "숨은참조자 이메일 목록")
 	private List<String> bcc;   // 숨은 참조 리스트
+	
+	@ArraySchema(schema = @Schema(type = "string", format = "binary"))
+	@Schema(description = "첨부파일 리스트 (복수 업로드 가능)")
 	private List<MultipartFile> attachmentFiles;    // 첨부파일
 	
 	public Mail toEntity(Employee employee, LocalDateTime sendAt) {

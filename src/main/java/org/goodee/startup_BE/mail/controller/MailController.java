@@ -1,5 +1,9 @@
 package org.goodee.startup_BE.mail.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.common.dto.APIResponseDTO;
@@ -20,6 +24,15 @@ public class MailController {
 	private final MailService mailService;
 	
 	// 메일 작성
+	@Operation(
+		summary = "메일 작성",
+		description = "로그인한 사용자가 내부메일을 작성/발송합니다."
+	)
+	@ApiResponse(
+		responseCode = "200",
+		description = "발송 성공",
+		content = @Content(schema = @Schema(implementation = MailSendResponseDTO.class))
+	)
 	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<APIResponseDTO<MailSendResponseDTO>> sendMail(@Valid @ModelAttribute MailSendRequestDTO requestDTO, Authentication auth) {
 		String username = auth.getName();
@@ -34,6 +47,15 @@ public class MailController {
 	}
 	
 	// 메일 수정
+	@Operation(
+		summary = "메일 수정 후 재발송",
+		description = "기존 메일을 수정 후 다시 발송합니다."
+	)
+	@ApiResponse(
+		responseCode = "200",
+		description = "수정/재발송 성공",
+		content = @Content(schema = @Schema(implementation = MailSendResponseDTO.class))
+	)
 	@PutMapping(value = "/{mailId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<APIResponseDTO<MailSendResponseDTO>> updateMail(@PathVariable Long mailId, @Valid @ModelAttribute MailUpdateRequestDTO requestDTO, Authentication auth) {
 		String username = auth.getName();
@@ -48,6 +70,15 @@ public class MailController {
 	}
 	
 	// 메일 상세 조회
+	@Operation(
+		summary = "메일 상세 조회",
+		description = "메일 상세를 조회합니다. isRead=true로 호출 시 읽음 처리합니다."
+	)
+	@ApiResponse(
+		responseCode = "200",
+		description = "조회 성공",
+		content = @Content(schema = @Schema(implementation = MailDetailResponseDTO.class))
+	)
 	@GetMapping("/{mailId}")
 	public ResponseEntity<APIResponseDTO<MailDetailResponseDTO>> getMailDetail(
 		@PathVariable Long mailId, @RequestParam(required = false, defaultValue = "false") boolean isRead, Authentication auth
@@ -63,6 +94,11 @@ public class MailController {
 	}
 	
 	// 메일함 이동 (개인보관함, 휴지통)
+	@Operation(
+		summary = "메일함 이동(개인보관함/휴지통)",
+		description = "선택한 메일함 항목을 지정한 타입으로 이동합니다."
+	)
+	@ApiResponse(responseCode = "200", description = "이동 성공")
 	@PostMapping("/mailboxes/move")
 	public ResponseEntity<APIResponseDTO<Void>> moveMail(
 		@PathVariable @Validated(ValidationGroups.Mail.Move.class) MailMoveRequestDTO requestDTO, Authentication auth
@@ -79,6 +115,11 @@ public class MailController {
 	}
 	
 	// 메일 삭제
+	@Operation(
+		summary = "메일 삭제",
+		description = "선택한 메일함 항목을 삭제(소프트 삭제 또는 상태 변경)합니다."
+	)
+	@ApiResponse(responseCode = "200", description = "삭제 성공")
 	@DeleteMapping("/mailboxes")
 	public ResponseEntity<APIResponseDTO<Void>> deleteMail(
 		@PathVariable @Validated(ValidationGroups.Mail.Delete.class) MailMoveRequestDTO requestDTO, Authentication auth
@@ -95,6 +136,14 @@ public class MailController {
 	}
 	
 	// 메일함 리스트 조회
+	@Operation(
+		summary = "메일함 리스트 조회",
+		description = "INBOX/SENT/MYBOX/TRASH 등 메일함 목록을 페이지네이션으로 조회합니다."
+	)
+	@ApiResponse(
+		responseCode = "200",
+		description = "목록 조회 성공"
+	)
 	@GetMapping
 	public ResponseEntity<APIResponseDTO<Page<MailboxListDTO>>> getMailboxList(
 		@RequestParam String type,
