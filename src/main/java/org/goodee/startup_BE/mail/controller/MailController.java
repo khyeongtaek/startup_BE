@@ -63,7 +63,7 @@ public class MailController {
 	}
 	
 	// 메일함 이동 (개인보관함, 휴지통)
-	@PostMapping("/mailboxes/{mailboxId}/{mailboxType}")
+	@PostMapping("/mailboxes/move")
 	public ResponseEntity<APIResponseDTO<Void>> moveMail(
 		@PathVariable @Validated(ValidationGroups.Mail.Move.class) MailMoveRequestDTO requestDTO, Authentication auth
 	) {
@@ -78,7 +78,8 @@ public class MailController {
 		return ResponseEntity.ok(response) ;
 	}
 	
-	@DeleteMapping("/mailboxes/{mailboxId}")
+	// 메일 삭제
+	@DeleteMapping("/mailboxes")
 	public ResponseEntity<APIResponseDTO<Void>> deleteMail(
 		@PathVariable @Validated(ValidationGroups.Mail.Delete.class) MailMoveRequestDTO requestDTO, Authentication auth
 	) {
@@ -93,6 +94,7 @@ public class MailController {
 		return ResponseEntity.ok(response);
 	}
 	
+	// 메일함 리스트 조회
 	@GetMapping
 	public ResponseEntity<APIResponseDTO<Page<MailboxListDTO>>> getMailboxList(
 		@RequestParam String type,

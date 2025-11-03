@@ -25,7 +25,7 @@ public class MailReceiver {
 	private String email;
 	
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(nullable = false)
+	@JoinColumn(name = "type_id", nullable = false)
 	@Comment("수신자 타입")
 	private CommonCode type;
 

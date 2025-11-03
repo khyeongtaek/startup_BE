@@ -412,15 +412,17 @@ public class MailServiceImpl implements MailService{
 	@Transactional(readOnly = true)
 	public Page<MailboxListDTO> getMailboxList(String username, String boxType, int page, int size) {
 		Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "mail.sendAt"));
+		String type = boxType.toUpperCase();
+		byte deleted = (byte) ("TRASH".equals(type) ? 1 : 0);
 		
 		Page<Mailbox> mailboxList = mailboxRepository
 			                       .findByEmployeeUsernameAndTypeIdValue1AndDeletedStatusNot(
-				                       username, boxType.toUpperCase(), boxType.toUpperCase().equals("TRASH") ? 1 : 0, pageable);
+				                       username, boxType.toUpperCase(), deleted, pageable);
 		
 		return mailboxList.map(mb -> MailboxListDTO.builder()
 			                             .boxId(mb.getBoxId())
 			                             .mailId(mb.getMail().getMailId())
-			                             .senderName(mb.getEmployee().getName())
+			                             .senderName(mb.getMail().getEmployee().getName())
 			                             .title(mb.getMail().getTitle())
 			                             .receivedAt(mb.getMail().getSendAt())
 			                             .isRead(Boolean.TRUE.equals(mb.getIsRead()))

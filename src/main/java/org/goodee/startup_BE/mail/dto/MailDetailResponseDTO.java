@@ -50,6 +50,11 @@ public class MailDetailResponseDTO {
 		Mail mail, List<String> toList, List<String> ccList, List<String> bccList,
 		Mailbox mailbox, List<AttachmentFileResponseDTO> attachmentFiles
 	) {
+		List<String> safeTo  = (toList  == null) ? java.util.Collections.emptyList() : toList;
+		List<String> safeCc  = (ccList  == null) ? java.util.Collections.emptyList() : ccList;
+		List<String> safeBcc = (bccList == null) ? java.util.Collections.emptyList() : bccList;
+		List<AttachmentFileResponseDTO> safeFiles = (attachmentFiles == null) ? java.util.Collections.emptyList() : attachmentFiles;
+		
 		return MailDetailResponseDTO.builder()
 			       .mailId(mail.getMailId())
 			       .title(mail.getTitle())
@@ -59,14 +64,14 @@ public class MailDetailResponseDTO {
 			       .senderId(mail.getEmployee().getEmployeeId())
 			       .senderName(mail.getEmployee().getName())
 			       .senderEmail(mail.getEmployee().getEmail())
-			       .to(toList)
-			       .cc(ccList)
-			       .bcc(bccList)
+			       .to(safeTo)
+			       .cc(safeCc)
+			       .bcc(safeBcc)
 			       .boxId(mailbox.getBoxId())
 			       .mailboxType(mailbox.getTypeId().getValue1())
 			       .isRead(mailbox.getIsRead())
 			       .deletedStatus(mailbox.getDeletedStatus())
-			       .attachments(attachmentFiles)
+			       .attachments(safeFiles)
 			       .toCount(toList.size())
 			       .ccCount(ccList.size())
 			       .bccCount(bccList.size())

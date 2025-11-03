@@ -1,7 +1,6 @@
 package org.goodee.startup_BE.mail.dto;
 
 import lombok.*;
-import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -9,7 +8,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
-@Service
+@Setter
 @Builder
 @ToString(exclude = "attachmentFiles")
 public class MailUpdateRequestDTO {

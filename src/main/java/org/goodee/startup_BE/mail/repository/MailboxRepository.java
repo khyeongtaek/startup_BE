@@ -15,5 +15,5 @@ public interface MailboxRepository extends JpaRepository<Mailbox, Long> {
 	List<Mailbox> findAllByBoxIdInAndEmployeeUsername(List<Long> boxIds, String username);
 	
 	Page<Mailbox> findByEmployeeUsernameAndTypeIdValue1AndDeletedStatusNot(
-		String username, String typeValue1, Integer deletedStatus, Pageable pageable);
+		String username, String typeValue1, Byte deletedStatus, Pageable pageable);
 }
