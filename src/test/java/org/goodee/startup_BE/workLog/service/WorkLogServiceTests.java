@@ -1,4 +1,4 @@
-package org.goodee.startup_BE.workLog;
+package org.goodee.startup_BE.workLog.service;
 
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;

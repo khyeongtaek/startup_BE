@@ -101,13 +101,17 @@ public class MailServiceImpl implements MailService{
 		// 변경 없음
 		if (newList == null) return;
 		
-		// 목표 집합(소문자)
-		Set<String> next = new LinkedHashSet<>();
+		// 목표 집합: key(lower) -> original(trim) (첫 등장 원본 유지)
+		Map<String, String> desired = new LinkedHashMap<>();
 		for (String raw : newList) {
 			if (raw == null) continue;
-			String s = raw.trim().toLowerCase();
-			if (!s.isEmpty()) next.add(s);
+			String trimmed = raw.trim();
+			if (trimmed.isEmpty()) continue;
+			String key = trimmed.toLowerCase();
+			desired.putIfAbsent(key, trimmed);
 		}
+		
+		Set<String> next = desired.keySet();
 		
 		// 제거 대상 = curr - next
 		Set<String> toRemove = new LinkedHashSet<>(curr);
@@ -117,7 +121,7 @@ public class MailServiceImpl implements MailService{
 		Set<String> toAdd = new LinkedHashSet<>(next);
 		toAdd.removeAll(curr);
 		
-		// 제거 실행
+		// 제거
 		if (!toRemove.isEmpty()) {
 			List<MailReceiver> del = new ArrayList<>();
 			for (MailReceiver r : currentList) {
@@ -127,17 +131,14 @@ public class MailServiceImpl implements MailService{
 			if (!del.isEmpty()) mailReceiverRepository.deleteAll(del);
 		}
 		
-		// 추가 실행 (원본 케이스 유지 위해 newList 원소 사용)
+		// 추가 (키 기준으로 1회만)
 		if (!toAdd.isEmpty()) {
 			List<MailReceiver> ins = new ArrayList<>();
-			for (String raw : newList) {
-				if (raw == null) continue;
-				String key = raw.trim().toLowerCase();
-				if (!key.isEmpty() && toAdd.contains(key)) {
-					ins.add(MailReceiver.createMailReceiver(mail, raw.trim(), typeCode));
-				}
+			for (String key : toAdd) {
+				String original = desired.get(key); // 첫 등장 원본 보존
+				ins.add(MailReceiver.createMailReceiver(mail, original, typeCode));
 			}
-			if (!ins.isEmpty()) mailReceiverRepository.saveAll(ins);
+			mailReceiverRepository.saveAll(ins);
 		}
 	}
 	
@@ -278,36 +279,36 @@ public class MailServiceImpl implements MailService{
 		receiverChange(mail, bccCode, currentBcc, requestDTO.getBcc());
 		
 		// 4. 첨부 삭제 -> 추가
-		if(requestDTO.getDeleteAttachmentFileIds() != null && !requestDTO.getDeleteAttachmentFileIds().isEmpty()) {
-			for(Long id : requestDTO.getDeleteAttachmentFileIds()) {
-				if(id == null) continue;
-				AttachmentFileRequestDTO delFile = new AttachmentFileRequestDTO();
-				delFile.setFileId(id);
-				attachmentFileService.deleteFile(delFile);
+		if (requestDTO.getDeleteAttachmentFileIds() != null && !requestDTO.getDeleteAttachmentFileIds().isEmpty()) {
+			for (Long id : requestDTO.getDeleteAttachmentFileIds()) {
+				if (id == null) continue;
+				attachmentFileService.deleteFile(
+					AttachmentFileRequestDTO.builder().fileId(id).build()
+				);
 			}
 		}
-		List<AttachmentFileResponseDTO> upload = Collections.emptyList();
-		if(requestDTO.getAttachmentFiles() != null && !requestDTO.getAttachmentFiles().isEmpty()) {
-			AttachmentFileRequestDTO uploadFiles = AttachmentFileRequestDTO.builder()
-				                                      .files(requestDTO.getAttachmentFiles())
-				                                      .build();
-			upload = attachmentFileService.uploadFiles(uploadFiles, ownerType.getCommonCodeId(), mail.getMailId());
+		if (requestDTO.getAttachmentFiles() != null && !requestDTO.getAttachmentFiles().isEmpty()) {
+			attachmentFileService.uploadFiles(
+				AttachmentFileRequestDTO.builder().files(requestDTO.getAttachmentFiles()).build(),
+				ownerType.getCommonCodeId(),
+				mail.getMailId()
+			);
 		}
 		
 		// 5. 최신 수신자 목록 재조회
-		List<MailReceiver> newTo = mailReceiverRepository.findAllByMailAndType(mail, toCode);
-		List<MailReceiver> newCc = mailReceiverRepository.findAllByMailAndType(mail, ccCode);
-		List<MailReceiver> newBcc = mailReceiverRepository.findAllByMailAndType(mail, bccCode);
-		List<String> toList = mapEmails(newTo);
-		List<String> ccList = mapEmails(newCc);
-		List<String> bccList = mapEmails(newBcc);
+		List<String> toList  = mapEmails(mailReceiverRepository.findAllByMailAndType(mail, toCode));
+		List<String> ccList  = mapEmails(mailReceiverRepository.findAllByMailAndType(mail, ccCode));
+		List<String> bccList = mapEmails(mailReceiverRepository.findAllByMailAndType(mail, bccCode));
+		int attachmentCount = attachmentFileService
+			                      .listFiles(ownerType.getCommonCodeId(), mail.getMailId()).size();
 		
 		// 6. EML 생성
-		List<AttachmentFileResponseDTO> currentFiles = attachmentFileService.listFiles(ownerType.getCommonCodeId(), mail.getMailId());
-		String emlPath = emlService.generate(mail, toList, ccList, bccList, currentFiles, employee);
+		String emlPath = emlService.generate(mail, toList, ccList, bccList,
+			attachmentFileService.listFiles(ownerType.getCommonCodeId(), mail.getMailId()), // 최신 목록 전달
+			employee);
 		mail.updateEmlPath(emlPath);
 		
-		return MailSendResponseDTO.toDTO(mail, newTo.size(), newCc.size(), newBcc.size(), currentFiles.size());
+		return MailSendResponseDTO.toDTO(mail, toList.size(), ccList.size(), bccList.size(), attachmentCount);
 	}
 	
 	

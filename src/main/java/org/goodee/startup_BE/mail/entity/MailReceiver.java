@@ -6,7 +6,7 @@ import org.goodee.startup_BE.common.entity.CommonCode;
 import org.hibernate.annotations.Comment;
 
 @Entity
-@Table(name = "tbl_mail_receiver", uniqueConstraints = {@UniqueConstraint(columnNames = {"mail_id", "email", "type"})})
+@Table(name = "tbl_mail_receiver", uniqueConstraints = {@UniqueConstraint(columnNames = {"mail_id", "email", "type_id"})})
 @Getter
 public class MailReceiver {
 	@Id
