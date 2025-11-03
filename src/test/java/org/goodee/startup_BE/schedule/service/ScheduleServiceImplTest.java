@@ -46,7 +46,6 @@ class ScheduleServiceImplTest {
 
     private Employee mockEmployee;
     private CommonCode mockCategoryWork;
-    private CommonCode mockColorBlue;
     private Schedule mockSchedule;
 
     @BeforeEach
@@ -58,7 +57,6 @@ class ScheduleServiceImplTest {
         mockEmployee.updateInitPassword("1234", null);
 
         mockCategoryWork = CommonCode.createCommonCode("SC_WORK", "업무", "WORK", null, null, 1L, mockEmployee);
-        mockColorBlue = CommonCode.createCommonCode("CL_BLUE", "파란색", "BLUE", null, null, 1L, mockEmployee);
 
         mockSchedule = Schedule.createSchedule(
                 mockEmployee, "회의", "오전 회의", mockCategoryWork,
@@ -87,8 +85,6 @@ class ScheduleServiceImplTest {
             given(employeeRepository.findById(1L)).willReturn(Optional.of(mockEmployee));
             given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("SC", "WORK"))
                     .willReturn(List.of(mockCategoryWork));
-            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("CL", "BLUE"))
-                    .willReturn(List.of(mockColorBlue));
             given(scheduleRepository.save(any(Schedule.class))).willAnswer(inv -> inv.getArgument(0));
 
             // when
