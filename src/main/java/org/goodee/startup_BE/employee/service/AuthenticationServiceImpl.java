@@ -5,6 +5,7 @@ import org.goodee.startup_BE.common.dto.APIResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
+import org.goodee.startup_BE.employee.dto.EmployeePWChangeRequestDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeRequestDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeResponseDTO;
 import org.goodee.startup_BE.employee.entity.Employee;
@@ -38,10 +39,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     // 회원가입
     @Override
     public APIResponseDTO<EmployeeResponseDTO> signup(Authentication authentication, EmployeeRequestDTO request) {
-        // 이메일 중복 체크
-        if (employeeRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateEmailException(request.getEmail() + "은(는) 이미 존재하는 이메일입니다.");
-        }
+        // 이메일은 로그인 아이디를 이용해 만듬.
+        request.setEmail(request.getUsername()+"@startup.com");
 
 
         // 새로운 사용자 생성을 위한 코드 entity 생성
@@ -143,6 +142,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 "refreshToken", refreshToken,
                 "employee", EmployeeResponseDTO.toDTO(employee)
         );
+    }
+
+    @Override
+    public EmployeeResponseDTO updateEmployeePassword(String username, EmployeePWChangeRequestDTO request) {
+        Employee employee = employeeRepository.findByUsername(username)
+                .orElseThrow(()-> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
+
+        // 현재 비밀번호 검증
+        if (!passwordEncoder.matches(request.getCurrentPassword(), employee.getPassword())) {
+            throw new BadCredentialsException("현재 비밀번호가 올바르지 않습니다.");
+        }
+
+        // 새 비밀번호로 업데이트
+        employee.updatePassword(passwordEncoder.encode(request.getNewPassword()), employee);
+
+        return EmployeeResponseDTO.toDTO(employee);
     }
 
     @Override
