@@ -46,15 +46,9 @@ public class ScheduleServiceImpl implements  ScheduleService{
         }
         CommonCode category = categoryList.get(0);
 
-        // 색상 조회
-        List<CommonCode> colorList = commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("CL", request.getColorCode());
-        if (colorList.isEmpty()){
-            throw new InvalidScheduleArgumentException("유효하지 않은 색상 코드입니다");
-        }
-        CommonCode color = colorList.get(0);
 
         // DTO -> Entity
-        Schedule schedule = request.toEntity(employee, category, color);
+        Schedule schedule = request.toEntity(employee, category);
 
         // 저장
         Schedule saved = scheduleRepository.save(schedule);
@@ -100,5 +94,33 @@ public class ScheduleServiceImpl implements  ScheduleService{
                 .stream()
                 .map(ScheduleResponseDTO::toDTO)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public ScheduleResponseDTO updateSchedule(Long scheduleId, ScheduleRequestDTO request) {
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new ScheduleNotFoundException("해당 일정을 찾을 수 없습니다."));
+
+        schedule.update(
+                request.getTitle(),
+                request.getContent(),
+                request.getStartTime(),
+                request.getEndTime()
+        );
+
+        scheduleRepository.save(schedule);
+        return ScheduleResponseDTO.toDTO(schedule);
+    }
+
+    //  일정 삭제
+    @Override
+    @Transactional
+    public void deleteSchedule(Long scheduleId) {
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 일정을 찾을 수 없습니다."));
+
+        schedule.delete(); // soft delete
+        scheduleRepository.save(schedule);
     }
 }

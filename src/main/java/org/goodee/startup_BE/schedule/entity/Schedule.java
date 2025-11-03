@@ -41,10 +41,6 @@ public class Schedule {
     @Column(columnDefinition = "LONGTEXT")
     private String place;
 
-    // CommonCode Table  M : 1
-    @ManyToOne(fetch=FetchType.LAZY)
-    @JoinColumn(name = "color_code_id", referencedColumnName = "common_code_id", nullable = false)
-    private CommonCode color;
 
     @Column(name="start_time")
     private LocalDateTime startTime;
@@ -71,7 +67,6 @@ public class Schedule {
             String title,
             String content,
             CommonCode category,
-            CommonCode color,
             LocalDateTime startTime,
             LocalDateTime endTime
     ) {
@@ -80,7 +75,6 @@ public class Schedule {
         schedule.title = title;
         schedule.content = content;
         schedule.category = category;
-        schedule.color = color;
         schedule.startTime = startTime;
         schedule.endTime = endTime;
         schedule.isDeleted = false;

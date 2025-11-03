@@ -80,7 +80,7 @@ class ScheduleRepositoryTest {
         // given
         LocalDateTime start = LocalDateTime.now();
         LocalDateTime end = start.plusHours(1);
-        Schedule schedule = Schedule.createSchedule(employee, "테스트 일정", "테스트 내용", categoryWork, colorBlue, start, end);
+        Schedule schedule = Schedule.createSchedule(employee, "테스트 일정", "테스트 내용", categoryWork,  start, end);
 
         // when
         Schedule saved = scheduleRepository.save(schedule);
@@ -90,7 +90,6 @@ class ScheduleRepositoryTest {
         assertThat(saved.getScheduleId()).isNotNull();
         assertThat(saved.getEmployee()).isEqualTo(employee);
         assertThat(saved.getCategory()).isEqualTo(categoryWork);
-        assertThat(saved.getColor()).isEqualTo(colorBlue);
         assertThat(saved.getIsDeleted()).isFalse();
     }
 
@@ -100,8 +99,8 @@ class ScheduleRepositoryTest {
     @DisplayName("R: 삭제되지 않은 전체 일정 조회(findByIsDeletedFalse) 테스트")
     void findByIsDeletedFalseTest() {
         // given
-        Schedule s1 = Schedule.createSchedule(employee, "회의", "회의 내용", categoryWork, colorBlue, LocalDateTime.now(), LocalDateTime.now().plusHours(1));
-        Schedule s2 = Schedule.createSchedule(employee, "보고서", "보고서 작성", categoryWork, colorBlue, LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(1).plusHours(2));
+        Schedule s1 = Schedule.createSchedule(employee, "회의", "회의 내용", categoryWork, LocalDateTime.now(), LocalDateTime.now().plusHours(1));
+        Schedule s2 = Schedule.createSchedule(employee, "보고서", "보고서 작성", categoryWork, LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(1).plusHours(2));
         s2.delete(); // soft delete
         scheduleRepository.saveAll(List.of(s1, s2));
 
@@ -119,9 +118,9 @@ class ScheduleRepositoryTest {
     void findByStartTimeBetweenAndIsDeletedFalseTest() {
         // given
         LocalDateTime now = LocalDateTime.now();
-        Schedule s1 = Schedule.createSchedule(employee, "업무1", "내용1", categoryWork, colorBlue, now.minusDays(2), now.minusDays(2).plusHours(1));
-        Schedule s2 = Schedule.createSchedule(employee, "업무2", "내용2", categoryWork, colorBlue, now.minusDays(1), now.minusDays(1).plusHours(1));
-        Schedule s3 = Schedule.createSchedule(employee, "업무3", "내용3", categoryWork, colorBlue, now.plusDays(1), now.plusDays(1).plusHours(1));
+        Schedule s1 = Schedule.createSchedule(employee, "업무1", "내용1", categoryWork,  now.minusDays(2), now.minusDays(2).plusHours(1));
+        Schedule s2 = Schedule.createSchedule(employee, "업무2", "내용2", categoryWork,  now.minusDays(1), now.minusDays(1).plusHours(1));
+        Schedule s3 = Schedule.createSchedule(employee, "업무3", "내용3", categoryWork, now.plusDays(1), now.plusDays(1).plusHours(1));
         scheduleRepository.saveAll(List.of(s1, s2, s3));
 
         // when
@@ -139,7 +138,7 @@ class ScheduleRepositoryTest {
     @DisplayName("R: 단일 일정 조회(findById) 테스트")
     void findByIdTest() {
         // given
-        Schedule schedule = Schedule.createSchedule(employee, "단일 일정", "상세 내용", categoryWork, colorBlue, LocalDateTime.now(), LocalDateTime.now().plusHours(1));
+        Schedule schedule = Schedule.createSchedule(employee, "단일 일정", "상세 내용", categoryWork, LocalDateTime.now(), LocalDateTime.now().plusHours(1));
         Schedule saved = scheduleRepository.save(schedule);
 
         // when

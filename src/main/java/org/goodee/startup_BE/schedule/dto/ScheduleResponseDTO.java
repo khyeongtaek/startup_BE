@@ -1,5 +1,6 @@
 package org.goodee.startup_BE.schedule.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import org.goodee.startup_BE.schedule.entity.Schedule;
@@ -27,8 +28,6 @@ public class ScheduleResponseDTO {
     @Schema(description = "카테고리명 (CommonCode)", example = "연차")
     private String categoryName;
 
-    @Schema(description = "색상 코드명 (CommonCode)", example = "HX-100")
-    private String colorName;
 
     @Schema(description = "작성자 ID", example = "1")
     private Long employeeId;
@@ -43,9 +42,11 @@ public class ScheduleResponseDTO {
     private LocalDateTime endTime;
 
     @Schema(description = "생성일시", example = "2025-10-27T09:00:00")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
     private LocalDateTime createdAt;
 
     @Schema(description = "수정일시", example = "2025-10-27T10:00:00")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
     private LocalDateTime updatedAt;
 
 
@@ -55,7 +56,6 @@ public class ScheduleResponseDTO {
                 .title(schedule.getTitle())
                 .content(schedule.getContent())
                 .categoryName(schedule.getCategory().getCodeDescription())
-                .colorName(schedule.getColor().getCodeDescription())
                 .employeeId(schedule.getEmployee().getEmployeeId())
                 .employeeName(schedule.getEmployee().getName())
                 .startTime(schedule.getStartTime())
