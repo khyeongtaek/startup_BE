@@ -32,7 +32,6 @@ public class Mail {
 	@Comment("메일 본문")
 	private String content;
 	
-	@Column(nullable = false)
 	@Comment("메일 발송 시각")
 	private LocalDateTime sendAt;
 	
@@ -76,21 +75,32 @@ public class Mail {
 	protected Mail() {}
 
 	// 기본 메일 작성
-	public static Mail createBasicMail(Employee employee, String title, String content, LocalDateTime sendAt, String emlPath) {
+	public static Mail createBasicMail(Employee employee, String title, String content, LocalDateTime sendAt) {
 		Mail mail = new Mail();
 		mail.employee = employee;
 		mail.title = title;
 		mail.content = content;
 		mail.sendAt = sendAt;
-		mail.emlPath = emlPath;
 		return mail;
 	}
 
 	// 회신 메일 작성
-	public static Mail createReplyMail(Employee sender, String title, String content, LocalDateTime sendAt, Mail parentMail, Long threadId, String emlPath) {
-		Mail mail = createBasicMail(sender, title, content, sendAt, emlPath);
+	public static Mail createReplyMail(Employee sender, String title, String content, LocalDateTime sendAt, Mail parentMail, Long threadId) {
+		Mail mail = createBasicMail(sender, title, content, sendAt);
 		mail.parentMail = parentMail;
 		mail.threadId = threadId;
 		return mail;
+	}
+	
+	public void updateEmlPath(String emlPath) {
+		this.emlPath = emlPath;
+	}
+	
+	public void updateTitle(String title) {
+		this.title = title;
+	}
+	
+	public void updateContent(String content) {
+		this.content = content;
 	}
 }
