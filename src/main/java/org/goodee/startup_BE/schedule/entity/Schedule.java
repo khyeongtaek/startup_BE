@@ -7,12 +7,12 @@ import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Table(name="tbl_schedule")
 @Entity
 @Getter
-@Builder
-@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Schedule {
 
@@ -41,10 +41,6 @@ public class Schedule {
     @Column(columnDefinition = "LONGTEXT")
     private String place;
 
-    // CommonCode Table  M : 1
-    @ManyToOne(fetch=FetchType.LAZY)
-    @JoinColumn(name = "color_code_id", referencedColumnName = "common_code_id", nullable = false)
-    private CommonCode color;
 
     @Column(name="start_time")
     private LocalDateTime startTime;
@@ -63,13 +59,14 @@ public class Schedule {
     @Column(name = "is_deleted")
     private Boolean isDeleted;
 
+    @OneToMany(mappedBy = "schedule", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ScheduleParticipant> participants = new ArrayList<>();
 
     public static Schedule createSchedule(
             Employee employee,
             String title,
             String content,
             CommonCode category,
-            CommonCode color,
             LocalDateTime startTime,
             LocalDateTime endTime
     ) {
@@ -78,7 +75,6 @@ public class Schedule {
         schedule.title = title;
         schedule.content = content;
         schedule.category = category;
-        schedule.color = color;
         schedule.startTime = startTime;
         schedule.endTime = endTime;
         schedule.isDeleted = false;
@@ -87,9 +83,14 @@ public class Schedule {
         return schedule;
     }
 
+    public void addParticipant(ScheduleParticipant participant){
+        this.participants.add(participant);
+    }
+
     public void delete() {
         this.isDeleted = true;
         this.updatedAt = LocalDateTime.now();
+        this.participants.forEach(ScheduleParticipant::delete);
     }
 
 

@@ -46,7 +46,6 @@ class ScheduleServiceImplTest {
 
     private Employee mockEmployee;
     private CommonCode mockCategoryWork;
-    private CommonCode mockColorBlue;
     private Schedule mockSchedule;
 
     @BeforeEach
@@ -58,10 +57,9 @@ class ScheduleServiceImplTest {
         mockEmployee.updateInitPassword("1234", null);
 
         mockCategoryWork = CommonCode.createCommonCode("SC_WORK", "업무", "WORK", null, null, 1L, mockEmployee);
-        mockColorBlue = CommonCode.createCommonCode("CL_BLUE", "파란색", "BLUE", null, null, 1L, mockEmployee);
 
         mockSchedule = Schedule.createSchedule(
-                mockEmployee, "회의", "오전 회의", mockCategoryWork, mockColorBlue,
+                mockEmployee, "회의", "오전 회의", mockCategoryWork,
                 LocalDateTime.now(), LocalDateTime.now().plusHours(1)
         );
     }
@@ -80,7 +78,6 @@ class ScheduleServiceImplTest {
                     .title("회의")
                     .content("오전 회의")
                     .categoryCode("WORK")
-                    .colorCode("BLUE")
                     .startTime(LocalDateTime.now())
                     .endTime(LocalDateTime.now().plusHours(1))
                     .build();
@@ -88,8 +85,6 @@ class ScheduleServiceImplTest {
             given(employeeRepository.findById(1L)).willReturn(Optional.of(mockEmployee));
             given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("SC", "WORK"))
                     .willReturn(List.of(mockCategoryWork));
-            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("CL", "BLUE"))
-                    .willReturn(List.of(mockColorBlue));
             given(scheduleRepository.save(any(Schedule.class))).willAnswer(inv -> inv.getArgument(0));
 
             // when
@@ -109,7 +104,6 @@ class ScheduleServiceImplTest {
             ScheduleRequestDTO dto = ScheduleRequestDTO.builder()
                     .employeeId(1L)
                     .categoryCode("WORK")
-                    .colorCode("BLUE")
                     .build();
 
             given(employeeRepository.findById(1L)).willReturn(Optional.empty());
@@ -127,7 +121,6 @@ class ScheduleServiceImplTest {
             ScheduleRequestDTO dto = ScheduleRequestDTO.builder()
                     .employeeId(1L)
                     .categoryCode("INVALID")
-                    .colorCode("BLUE")
                     .build();
 
             given(employeeRepository.findById(1L)).willReturn(Optional.of(mockEmployee));
@@ -140,145 +133,124 @@ class ScheduleServiceImplTest {
                     .hasMessageContaining("유효하지 않은 일정 카테고리 코드입니다");
         }
 
-        @Test
-        @DisplayName("실패 - 색상 코드 없음")
-        void createSchedule_Fail_NoColor() {
-            // given
-            ScheduleRequestDTO dto = ScheduleRequestDTO.builder()
-                    .employeeId(1L)
-                    .categoryCode("WORK")
-                    .colorCode("RED")
-                    .build();
 
-            given(employeeRepository.findById(1L)).willReturn(Optional.of(mockEmployee));
-            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("SC", "WORK"))
-                    .willReturn(List.of(mockCategoryWork));
-            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("CL", "RED"))
-                    .willReturn(List.of());
+        // ======================= READ (단일 조회) =======================
+        @Nested
+        @DisplayName("getSchedule() 단일 일정 조회")
+        class GetSchedule {
 
-            // when & then
-            assertThatThrownBy(() -> scheduleService.createSchedule(dto))
-                    .isInstanceOf(InvalidScheduleArgumentException.class)
-                    .hasMessageContaining("유효하지 않은 색상 코드입니다");
-        }
-    }
+            @Test
+            @DisplayName("성공 - 일정 존재")
+            void getSchedule_Success() {
+                // given
+                given(scheduleRepository.findById(1L)).willReturn(Optional.of(mockSchedule));
 
-    // ======================= READ (단일 조회) =======================
-    @Nested
-    @DisplayName("getSchedule() 단일 일정 조회")
-    class GetSchedule {
+                // when
+                ScheduleResponseDTO result = scheduleService.getSchedule(1L);
 
-        @Test
-        @DisplayName("성공 - 일정 존재")
-        void getSchedule_Success() {
-            // given
-            given(scheduleRepository.findById(1L)).willReturn(Optional.of(mockSchedule));
+                // then
+                assertThat(result).isNotNull();
+                assertThat(result.getTitle()).isEqualTo("회의");
+            }
 
-            // when
-            ScheduleResponseDTO result = scheduleService.getSchedule(1L);
+            @Test
+            @DisplayName("실패 - 일정 없음")
+            void getSchedule_Fail_NotFound() {
+                // given
+                given(scheduleRepository.findById(1L)).willReturn(Optional.empty());
 
-            // then
-            assertThat(result).isNotNull();
-            assertThat(result.getTitle()).isEqualTo("회의");
+                // when & then
+                assertThatThrownBy(() -> scheduleService.getSchedule(1L))
+                        .isInstanceOf(ScheduleNotFoundException.class)
+                        .hasMessageContaining("해당 일정을 찾을 수 없습니다");
+            }
         }
 
-        @Test
-        @DisplayName("실패 - 일정 없음")
-        void getSchedule_Fail_NotFound() {
-            // given
-            given(scheduleRepository.findById(1L)).willReturn(Optional.empty());
+        // ======================= READ (전체 조회) =======================
+        @Nested
+        @DisplayName("getAllSchedule() 전체 일정 조회")
+        class GetAllSchedule {
 
-            // when & then
-            assertThatThrownBy(() -> scheduleService.getSchedule(1L))
-                    .isInstanceOf(ScheduleNotFoundException.class)
-                    .hasMessageContaining("해당 일정을 찾을 수 없습니다");
-        }
-    }
+            @Test
+            @DisplayName("성공 - 데이터 존재")
+            void getAllSchedule_Success() {
+                // given
+                given(scheduleRepository.findByIsDeletedFalse()).willReturn(List.of(mockSchedule));
 
-    // ======================= READ (전체 조회) =======================
-    @Nested
-    @DisplayName("getAllSchedule() 전체 일정 조회")
-    class GetAllSchedule {
+                // when
+                List<ScheduleResponseDTO> result = scheduleService.getAllSchedule();
 
-        @Test
-        @DisplayName("성공 - 데이터 존재")
-        void getAllSchedule_Success() {
-            // given
-            given(scheduleRepository.findByIsDeletedFalse()).willReturn(List.of(mockSchedule));
+                // then
+                assertThat(result).hasSize(1);
+                assertThat(result.get(0).getTitle()).isEqualTo("회의");
+            }
 
-            // when
-            List<ScheduleResponseDTO> result = scheduleService.getAllSchedule();
+            @Test
+            @DisplayName("성공 - 데이터 없음")
+            void getAllSchedule_Empty() {
+                // given
+                given(scheduleRepository.findByIsDeletedFalse()).willReturn(List.of());
 
-            // then
-            assertThat(result).hasSize(1);
-            assertThat(result.get(0).getTitle()).isEqualTo("회의");
-        }
+                // when
+                List<ScheduleResponseDTO> result = scheduleService.getAllSchedule();
 
-        @Test
-        @DisplayName("성공 - 데이터 없음")
-        void getAllSchedule_Empty() {
-            // given
-            given(scheduleRepository.findByIsDeletedFalse()).willReturn(List.of());
-
-            // when
-            List<ScheduleResponseDTO> result = scheduleService.getAllSchedule();
-
-            // then
-            assertThat(result).isEmpty();
-        }
-    }
-
-    // ======================= READ (기간별 조회) =======================
-    @Nested
-    @DisplayName("getAllScheduleByPeriod() 기간별 일정 조회")
-    class GetAllScheduleByPeriod {
-
-        @Test
-        @DisplayName("성공 - 기간 내 일정 존재")
-        void getAllScheduleByPeriod_Success() {
-            // given
-            LocalDate start = LocalDate.now().minusDays(1);
-            LocalDate end = LocalDate.now().plusDays(1);
-
-            given(scheduleRepository.findByStartTimeBetweenAndIsDeletedFalse(any(), any()))
-                    .willReturn(List.of(mockSchedule));
-
-            // when
-            List<ScheduleResponseDTO> result = scheduleService.getAllScheduleByPeriod(start, end);
-
-            // then
-            assertThat(result).hasSize(1);
-            assertThat(result.get(0).getTitle()).isEqualTo("회의");
+                // then
+                assertThat(result).isEmpty();
+            }
         }
 
-        @Test
-        @DisplayName("성공 - 기간 내 일정 없음")
-        void getAllScheduleByPeriod_Empty() {
-            // given
-            LocalDate start = LocalDate.now().minusDays(1);
-            LocalDate end = LocalDate.now().plusDays(1);
+        // ======================= READ (기간별 조회) =======================
+        @Nested
+        @DisplayName("getAllScheduleByPeriod() 기간별 일정 조회")
+        class GetAllScheduleByPeriod {
 
-            given(scheduleRepository.findByStartTimeBetweenAndIsDeletedFalse(any(), any()))
-                    .willReturn(List.of());
+            @Test
+            @DisplayName("성공 - 기간 내 일정 존재")
+            void getAllScheduleByPeriod_Success() {
+                // given
+                LocalDate start = LocalDate.now().minusDays(1);
+                LocalDate end = LocalDate.now().plusDays(1);
 
-            // when
-            List<ScheduleResponseDTO> result = scheduleService.getAllScheduleByPeriod(start, end);
+                given(scheduleRepository.findByStartTimeBetweenAndIsDeletedFalse(any(), any()))
+                        .willReturn(List.of(mockSchedule));
 
-            // then
-            assertThat(result).isEmpty();
-        }
+                // when
+                List<ScheduleResponseDTO> result = scheduleService.getAllScheduleByPeriod(start, end);
 
-        @Test
-        @DisplayName("실패 - 종료일이 시작일보다 빠름")
-        void getAllScheduleByPeriod_Fail_InvalidPeriod() {
-            // given
-            LocalDate start = LocalDate.now();
-            LocalDate end = LocalDate.now().minusDays(1);
+                // then
+                assertThat(result).hasSize(1);
+                assertThat(result.get(0).getTitle()).isEqualTo("회의");
+            }
 
-            // when & then
-            assertThatThrownBy(() -> scheduleService.getAllScheduleByPeriod(start, end))
-                    .isInstanceOf(InvalidScheduleArgumentException.class)
-                    .hasMessageContaining("종료일은 시작일보다 이후여야 합니다");
+            @Test
+            @DisplayName("성공 - 기간 내 일정 없음")
+            void getAllScheduleByPeriod_Empty() {
+                // given
+                LocalDate start = LocalDate.now().minusDays(1);
+                LocalDate end = LocalDate.now().plusDays(1);
+
+                given(scheduleRepository.findByStartTimeBetweenAndIsDeletedFalse(any(), any()))
+                        .willReturn(List.of());
+
+                // when
+                List<ScheduleResponseDTO> result = scheduleService.getAllScheduleByPeriod(start, end);
+
+                // then
+                assertThat(result).isEmpty();
+            }
+
+            @Test
+            @DisplayName("실패 - 종료일이 시작일보다 빠름")
+            void getAllScheduleByPeriod_Fail_InvalidPeriod() {
+                // given
+                LocalDate start = LocalDate.now();
+                LocalDate end = LocalDate.now().minusDays(1);
+
+                // when & then
+                assertThatThrownBy(() -> scheduleService.getAllScheduleByPeriod(start, end))
+                        .isInstanceOf(InvalidScheduleArgumentException.class)
+                        .hasMessageContaining("종료일은 시작일보다 이후여야 합니다");
+            }
         }
     }
 }

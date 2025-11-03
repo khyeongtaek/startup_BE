@@ -24,4 +24,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     List<Attendance> findByEmployeeEmployeeIdAndAttendanceDateBetween(Long employeeEmployeeId, LocalDate attendanceDateAfter, LocalDate attendanceDateBefore);
 
     List<Attendance> findByIsDeletedIsFalse();
+
+    @Query("SELECT COUNT(a) FROM Attendance a WHERE a.employee.employeeId = :employeeId AND a.isDeleted = false")
+    Integer countByEmployeeEmployeeId(Long employeeId);
 }
