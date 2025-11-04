@@ -96,7 +96,7 @@ public class NotificationController {
 
     // 전체 알림 삭제 (소프트 삭제)
     @Operation(summary = "전체 알림 삭제 (소프트 삭제)")
-    @PatchMapping("/delete_all")
+    @PatchMapping("/delete-all")
     public ResponseEntity<Void> softDeleteAll(Authentication authentication) {
         notificationService.softDeleteAll(authentication.getName());
         return ResponseEntity.noContent().build();
