@@ -8,8 +8,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.common.dto.APIResponseDTO;
+import org.goodee.startup_BE.schedule.dto.ScheduleParticipantResponseDTO;
 import org.goodee.startup_BE.schedule.dto.ScheduleRequestDTO;
 import org.goodee.startup_BE.schedule.dto.ScheduleResponseDTO;
+import org.goodee.startup_BE.schedule.entity.Schedule;
 import org.goodee.startup_BE.schedule.service.ScheduleService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -135,6 +137,70 @@ public class ScheduleController {
 
         return ResponseEntity.ok(APIResponseDTO.<Void>builder()
                 .message("일정이 성공적으로 삭제되었습니다.")
+                .build());
+    }
+
+    //  일정 참여자 초대
+    @Operation(summary = "일정에 참여자 초대", description = "일정 ID를 기준으로 여러 사원을 초대합니다. 초대된 참여자는 기본적으로 '미응답(PENDING)' 상태로 등록됩니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "참여자 초대 성공"),
+            @ApiResponse(responseCode = "404", description = "일정을 찾을 수 없음", content = @Content)
+    })
+    @PostMapping("/{scheduleId}/participants")
+    public ResponseEntity<APIResponseDTO<Void>> inviteParticipants(
+            @Parameter(description = "참여자를 초대할 일정 ID", required = true, example = "1")
+            @PathVariable Long scheduleId,
+            @Parameter(description = "참여할 사원 ID 리스트", required = true, example = "[2, 3, 4]")
+            @RequestBody List<Long> employeeIds
+    ) {
+        scheduleService.inviteParticipants(scheduleId, employeeIds);
+
+        return ResponseEntity.ok(APIResponseDTO.<Void>builder()
+                .message("참여자 초대 완료 (기본 상태: 미응답)")
+                .build());
+    }
+
+
+    //  로그인한 사용자의 보이는 일정 조회 (작성자 + 초대받은 일정)
+
+    @Operation(
+            summary = "로그인한 사용자의 일정 목록 조회",
+            description = "해당 사용자가 작성한 일정 또는 초대받은 일정만 조회합니다. 삭제된 일정은 제외됩니다."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "일정 조회 성공"),
+            @ApiResponse(responseCode = "404", description = "해당 사원 ID로 조회된 일정이 없음", content = @Content)
+    })
+    @GetMapping("/visible/{employeeId}")
+    public ResponseEntity<APIResponseDTO<List<ScheduleResponseDTO>>> getVisibleSchedules(
+            @Parameter(description = "조회할 사원의 ID", required = true, example = "1")
+            @PathVariable Long employeeId
+    ) {
+        List<ScheduleResponseDTO> schedules = scheduleService.getVisibleSchedules(employeeId);
+        return ResponseEntity.ok(
+                APIResponseDTO.<List<ScheduleResponseDTO>>builder()
+                        .message("작성자 또는 초대된 일정만 조회 완료")
+                        .data(schedules)
+                        .build()
+        );
+    }
+
+    //  일정 참여자 조회
+    @Operation(summary = "일정 참여자 조회", description = "해당 일정에 초대된 모든 참여자 목록을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "참여자 조회 성공"),
+            @ApiResponse(responseCode = "404", description = "일정을 찾을 수 없음", content = @Content)
+    })
+    @GetMapping("/{scheduleId}/participants")
+    public ResponseEntity<APIResponseDTO<List<ScheduleParticipantResponseDTO>>> getParticipants(
+            @Parameter(description = "참여자 목록을 조회할 일정 ID", required = true, example = "1")
+            @PathVariable Long scheduleId
+    ) {
+        List<ScheduleParticipantResponseDTO> participants = scheduleService.getParticipants(scheduleId);
+
+        return ResponseEntity.ok(APIResponseDTO.<List<ScheduleParticipantResponseDTO>>builder()
+                .message("참여자 조회 성공")
+                .data(participants)
                 .build());
     }
 }
