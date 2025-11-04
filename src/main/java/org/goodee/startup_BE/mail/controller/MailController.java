@@ -7,6 +7,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.common.dto.APIResponseDTO;
+import org.goodee.startup_BE.common.dto.AttachmentFileRequestDTO;
+import org.goodee.startup_BE.common.dto.AttachmentFileResponseDTO;
+import org.goodee.startup_BE.common.service.AttachmentFileService;
 import org.goodee.startup_BE.common.validation.ValidationGroups;
 import org.goodee.startup_BE.mail.dto.*;
 import org.goodee.startup_BE.mail.service.MailService;
@@ -16,6 +19,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -34,10 +40,10 @@ public class MailController {
 		content = @Content(schema = @Schema(implementation = MailSendResponseDTO.class))
 	)
 	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<APIResponseDTO<MailSendResponseDTO>> sendMail(@Valid @ModelAttribute MailSendRequestDTO requestDTO, Authentication auth) {
+	public ResponseEntity<APIResponseDTO<MailSendResponseDTO>> sendMail(@Valid @ModelAttribute MailSendRequestDTO requestDTO, Authentication auth, List<MultipartFile> multipartFile) {
 		String username = auth.getName();
 
-		MailSendResponseDTO responseDTO = mailService.sendMail(requestDTO, username);
+		MailSendResponseDTO responseDTO = mailService.sendMail(requestDTO, username, multipartFile);
 
 		APIResponseDTO<MailSendResponseDTO> response = APIResponseDTO.<MailSendResponseDTO>builder()
 			                                               .message("메일 발송 성공")
@@ -57,10 +63,10 @@ public class MailController {
 		content = @Content(schema = @Schema(implementation = MailSendResponseDTO.class))
 	)
 	@PutMapping(value = "/{mailId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<APIResponseDTO<MailSendResponseDTO>> updateMail(@PathVariable Long mailId, @Valid @ModelAttribute MailUpdateRequestDTO requestDTO, Authentication auth) {
+	public ResponseEntity<APIResponseDTO<MailSendResponseDTO>> updateMail(@PathVariable Long mailId, @Valid @ModelAttribute MailUpdateRequestDTO requestDTO, Authentication auth, List<MultipartFile> multipartFile) {
 		String username = auth.getName();
 		
-		MailSendResponseDTO responseDTO = mailService.updateMail(mailId, requestDTO, username);
+		MailSendResponseDTO responseDTO = mailService.updateMail(mailId, requestDTO, username, multipartFile);
 		
 		APIResponseDTO<MailSendResponseDTO> response = APIResponseDTO.<MailSendResponseDTO>builder()
 			                                               .message("수정 메일 발송 성공")
@@ -160,6 +166,19 @@ public class MailController {
 			                                                .data(mailboxList)
 			                                                .build();
 		
+		return ResponseEntity.ok(response);
+	}
+	
+	// 파일 첨부 업로드 테스트 컨트롤러
+	private final AttachmentFileService attachmentFileService;
+	
+	@PostMapping(value = "/attachments/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public ResponseEntity<APIResponseDTO<Void>> uploadTest(List<MultipartFile> multipartFile) {
+		attachmentFileService.uploadFiles(multipartFile, 68L, 1L);
+		
+		APIResponseDTO<Void> response = APIResponseDTO.<Void>builder()
+			                                .message("업로드 성공")
+			                                .build();
 		return ResponseEntity.ok(response);
 	}
 }

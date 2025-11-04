@@ -54,8 +54,8 @@ public class AttachmentFileServiceImpl implements AttachmentFileService{
 	
 	// 파일 업로드
 	@Override
-	public List<AttachmentFileResponseDTO> uploadFiles(AttachmentFileRequestDTO fileDTO, Long ownerTypeId, Long ownerId) {
-		if (fileDTO == null || fileDTO.getFiles() == null || fileDTO.getFiles().isEmpty()) {
+	public List<AttachmentFileResponseDTO> uploadFiles(List<MultipartFile> multipartFile, Long ownerTypeId, Long ownerId) {
+		if (multipartFile == null || multipartFile.isEmpty()) {
 			throw new IllegalArgumentException("업로드할 파일이 없습니다.");
 		}
 		
@@ -66,7 +66,7 @@ public class AttachmentFileServiceImpl implements AttachmentFileService{
 		List<AttachmentFile> entities = new ArrayList<>();
 		
 		try {
-			for(MultipartFile file : fileDTO.getFiles()) {
+			for(MultipartFile file : multipartFile) {
 				if(file == null || file.isEmpty()) continue;
 				
 				// 파일 데이터 저장

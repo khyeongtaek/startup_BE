@@ -20,7 +20,4 @@ public class AttachmentFileRequestDTO {
 	@NotNull(groups = {ValidationGroups.Attachment.Download.class})
 	@Positive(groups = {ValidationGroups.Attachment.Download.class})
 	private Long fileId;
-	
-	@NotEmpty(groups = {ValidationGroups.Attachment.Upload.class})
-	private List<MultipartFile> files;
 }
