@@ -40,7 +40,7 @@ public class MailController {
 		content = @Content(schema = @Schema(implementation = MailSendResponseDTO.class))
 	)
 	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<APIResponseDTO<MailSendResponseDTO>> sendMail(@Valid @ModelAttribute MailSendRequestDTO requestDTO, Authentication auth, List<MultipartFile> multipartFile) {
+	public ResponseEntity<APIResponseDTO<MailSendResponseDTO>> sendMail(@Valid @ModelAttribute MailSendRequestDTO requestDTO, Authentication auth, @RequestParam(value = "files", required = false) List<MultipartFile> multipartFile) {
 		String username = auth.getName();
 
 		MailSendResponseDTO responseDTO = mailService.sendMail(requestDTO, username, multipartFile);
@@ -173,12 +173,23 @@ public class MailController {
 	private final AttachmentFileService attachmentFileService;
 	
 	@PostMapping(value = "/attachments/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<APIResponseDTO<Void>> uploadTest(List<MultipartFile> multipartFile) {
-		attachmentFileService.uploadFiles(multipartFile, 68L, 1L);
+	public ResponseEntity<APIResponseDTO<Void>> uploadTest(@RequestParam(value = "files", required = false) List<MultipartFile> multipartFile) {
+		attachmentFileService.uploadFiles(multipartFile, 68L, 3L);
 		
 		APIResponseDTO<Void> response = APIResponseDTO.<Void>builder()
 			                                .message("업로드 성공")
 			                                .build();
+		return ResponseEntity.ok(response);
+	}
+	
+	// 파일 첨부 리스트 조회 테스트 컨트롤러
+	@GetMapping("/list")
+	public ResponseEntity<APIResponseDTO<List<AttachmentFileResponseDTO>>> getAttachmentFileList() {
+		List<AttachmentFileResponseDTO> fileList = attachmentFileService.listFiles(68L, 1L);
+		APIResponseDTO<List<AttachmentFileResponseDTO>> response = APIResponseDTO.<List<AttachmentFileResponseDTO>>builder()
+			                                                     .message("파일 리스트 조회 성공")
+			                                                     .data(fileList)
+			                                                     .build();
 		return ResponseEntity.ok(response);
 	}
 }

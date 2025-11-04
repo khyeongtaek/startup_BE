@@ -226,7 +226,7 @@ public class MailServiceImpl implements MailService{
 		
 		// 5. 파일첨부 업로드
 		List<AttachmentFileResponseDTO> uploadFiles = Collections.emptyList();
-		if(multipartFile != null && multipartFile.isEmpty()) {
+		if(multipartFile != null && !multipartFile.isEmpty()) {
 			uploadFiles = attachmentFileService.uploadFiles(multipartFile, ownerTypeCode.getCommonCodeId(), mail.getMailId());
 		}
 		
@@ -285,7 +285,7 @@ public class MailServiceImpl implements MailService{
 				);
 			}
 		}
-		if (multipartFile != null && multipartFile.isEmpty()) {
+		if (multipartFile != null && !multipartFile.isEmpty()) {
 			attachmentFileService.uploadFiles(multipartFile, ownerType.getCommonCodeId(), mail.getMailId());
 		}
 		
