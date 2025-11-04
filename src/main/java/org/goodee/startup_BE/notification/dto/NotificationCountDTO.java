@@ -10,5 +10,4 @@ import lombok.NoArgsConstructor;
 public class NotificationCountDTO {
 
     private long unreadCount;
-    private long totalCount;
 }

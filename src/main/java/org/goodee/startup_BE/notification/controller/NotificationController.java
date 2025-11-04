@@ -22,11 +22,11 @@ import org.springframework.web.bind.annotation.*;
  * 주요 역할 : Pull 방식 데이터 조회 및 단발성 상태 변경
  * 주요 어노테이션 : @PostMapping, @GetMapping, @DeleteMapping
  * 주요 기능  - 알림 목록 로딩
- *           - 읽지 않은 개수 조회
- *           - 클릭 후 URL 이동
- *           - 모든 알림 읽기
- *           - 단일 알림 삭제 (소프트 삭제)
- *           - 전체 알림 삭제 (소프트 삭제)
+ * - 읽지 않은 개수 조회
+ * - 클릭 후 URL 이동
+ * - 모든 알림 읽기
+ * - 단일 알림 삭제 (소프트 삭제)
+ * - 전체 알림 삭제 (소프트 삭제)
  */
 
 @Tag(name = "Notification API", description = "알림 관련 API")
@@ -59,14 +59,6 @@ public class NotificationController {
     @GetMapping("/unread-count")
     public ResponseEntity<Long> getUnreadNotiCount(Authentication authentication) {
         Long count = notificationService.getUnreadNotiCount(authentication.getName());
-        return ResponseEntity.ok(count);
-    }
-
-    // 전체 알림 개수 조회
-    @Operation(summary = "전체 알림 개수 조회")
-    @GetMapping("/total-count")
-    public ResponseEntity<Long> getTotalNotiCount(Authentication authentication) {
-        Long count = notificationService.countUndeletedAll(authentication.getName());
         return ResponseEntity.ok(count);
     }
 

@@ -24,7 +24,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class NotificationServiceImpl implements NotificationService{
+public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final EmployeeRepository employeeRepository;
@@ -101,7 +101,7 @@ public class NotificationServiceImpl implements NotificationService{
 
         // 알림 조회 및 권한 확인
         Notification notification = checkRole(notificationId, username);
-        
+
         // 엔티티 삭제 메소드 호출
         notification.deleteNotification();
 
@@ -116,14 +116,6 @@ public class NotificationServiceImpl implements NotificationService{
         Employee employee = employeeRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("존재하지 않는 사원 입니다.: " + username));
         return notificationRepository.countByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(employee.getUsername());
-    }
-
-    @Override
-    public long countUndeletedAll(String username) {
-        // 유효성 검사
-        Employee employee = employeeRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("존재하지 않는 사원 입니다.: " + username));
-        return notificationRepository.countByEmployeeUsernameAndIsDeletedFalse(employee.getUsername());
     }
 
     // 모든 알림 읽음 처리
@@ -154,6 +146,7 @@ public class NotificationServiceImpl implements NotificationService{
 
     /**
      * [공통 메서드] 알림 조회 및 권한 확인
+     *
      * @return 조회된 Notification 엔티티
      */
     private Notification checkRole(Long notificationId, String username) {
@@ -175,6 +168,7 @@ public class NotificationServiceImpl implements NotificationService{
 
     /**
      * [공통 메서드] 최신 알림 개수 전송
+     *
      * @param username
      * @return CountDTO
      */
@@ -182,14 +176,13 @@ public class NotificationServiceImpl implements NotificationService{
     public void sendNotificationCounts(String username) {
 
         long unreadCount = getUnreadNotiCount(username);
-        long totalCount = countUndeletedAll(username);
 
-        NotificationCountDTO countDTO = new NotificationCountDTO(unreadCount, totalCount);
+        NotificationCountDTO countDTO = new NotificationCountDTO(unreadCount);
 
         simpMessagingTemplate.convertAndSendToUser(
                 username,
                 "/queue/notifications",
                 countDTO
-                );
+        );
     }
 }
