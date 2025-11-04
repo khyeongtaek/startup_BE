@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         "spring.datasource.password=",
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect"
 })
-@EntityScan(basePackages = "org.goodee.startup_BE")
+@EntityScan(basePackages = "org.goodee.startup_BE") // Entity 스캔 범위 설정
 class NotificationRepositoryTest {
 
     @Autowired
@@ -79,7 +79,7 @@ class NotificationRepositoryTest {
     }
 
     /**
-     * 테스트용 직원 생성 헬퍼 메서드 (EmployeeRepositoryTest에서 가져옴)
+     * 테스트용 직원 생성 헬퍼 메서드 (Employee 엔티티의 createEmployee 활용)
      */
     private Employee createPersistableEmployee(String username, String email, CommonCode role, CommonCode dept, CommonCode pos, Employee creator) {
         Employee employee = Employee.createEmployee(
@@ -92,7 +92,7 @@ class NotificationRepositoryTest {
     }
 
     /**
-     * 테스트용 알림 생성 헬퍼 메서드
+     * 테스트용 알림 생성 헬퍼 메서드 (Notification 엔티티의 createNotification 활용)
      */
     private Notification createPersistableNotification(Employee recipient, CommonCode ownerType, String title) {
         return Notification.createNotification(
@@ -121,7 +121,7 @@ class NotificationRepositoryTest {
     }
 
     @Test
-    @DisplayName("Custom: findByEmployeeEmployeeIdAndIsDeletedFalse... (목록 조회 - Paging)")
+    @DisplayName("R: findByEmployeeEmployeeId... (목록 조회 - Paging, 삭제 제외, 최신순)")
     void findByEmployeeEmployeeIdTest() throws InterruptedException {
         // given: user1에게 알림 3개, user2에게 알림 1개 생성
         notificationRepository.save(createPersistableNotification(user1, ownerMail, "user1-메일1"));
@@ -151,7 +151,7 @@ class NotificationRepositoryTest {
     }
 
     @Test
-    @DisplayName("Custom: countByEmployeeUsernameAndReadAtIsNull... (읽지 않은 개수)")
+    @DisplayName("R: countByEmployeeUsernameAndReadAtIsNull... (읽지 않은 개수)")
     void countUnreadTest() {
         // given: user1에게 읽지 않은 알림 2개, 읽은 알림 1개, user2에게 읽지 않은 알림 1개
         notificationRepository.save(createPersistableNotification(user1, ownerMail, "user1-unread1"));
@@ -171,11 +171,11 @@ class NotificationRepositoryTest {
     }
 
     @Test
-    @DisplayName("Custom: findByEmployeeUsernameAndReadAtIsNull... (읽지 않은 알림 목록)")
+    @DisplayName("R: findByEmployeeUsernameAndReadAtIsNull... (읽지 않은 알림 목록)")
     void findUnreadListTest() {
         // given: (위와 동일)
         notificationRepository.save(createPersistableNotification(user1, ownerMail, "user1-unread1"));
-        Notification noti2 = notificationRepository.save(createPersistableNotification(user1, ownerMail, "user1-unread2"));
+        notificationRepository.save(createPersistableNotification(user1, ownerMail, "user1-unread2"));
 
         Notification readNoti = createPersistableNotification(user1, ownerMail, "user1-read");
         readNoti.readNotification();
@@ -195,7 +195,7 @@ class NotificationRepositoryTest {
     }
 
     @Test
-    @DisplayName("Custom: findByEmployeeUsernameAndIsDeletedFalse (삭제되지 않은 모든 알림)")
+    @DisplayName("R: findByEmployeeUsernameAndIsDeletedFalse (삭제되지 않은 모든 알림 목록)")
     void findNotDeletedTest() {
         // given
         notificationRepository.save(createPersistableNotification(user1, ownerMail, "user1-noti1"));
