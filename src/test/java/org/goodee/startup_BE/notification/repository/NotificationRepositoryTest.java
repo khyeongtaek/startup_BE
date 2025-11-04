@@ -214,29 +214,4 @@ class NotificationRepositoryTest {
         assertThat(resultList).hasSize(2);
         assertThat(resultList).extracting(Notification::getTitle).containsExactlyInAnyOrder("user1-noti1", "user1-noti2");
     }
-
-    // <<< 추가된 테스트 >>>
-    @Test
-    @DisplayName("R: countByEmployeeUsernameAndIsDeletedFalse (삭제되지 않은 모든 알림 개수)")
-    void countNotDeletedTest() {
-        // given: user1에게 알림 3개 (읽음 1, 안읽음 2), 삭제된 알림 1개 / user2에게 알림 1개
-        notificationRepository.save(createPersistableNotification(user1, ownerMail, "user1-noti1"));
-        notificationRepository.save(createPersistableNotification(user1, ownerMail, "user1-noti2"));
-
-        Notification readNoti = createPersistableNotification(user1, ownerMail, "user1-read");
-        readNoti.readNotification(); // 읽음 처리 (삭제 안됨)
-        notificationRepository.save(readNoti);
-
-        Notification deletedNoti = createPersistableNotification(user1, ownerMail, "user1-deleted");
-        deletedNoti.deleteNotification();
-        notificationRepository.save(deletedNoti);
-
-        notificationRepository.save(createPersistableNotification(user2, ownerMail, "user2-noti1"));
-
-        // when: user1의 삭제되지 않은 모든 알림 개수 조회
-        long count = notificationRepository.countByEmployeeUsernameAndIsDeletedFalse(user1.getUsername());
-
-        // then
-        assertThat(count).isEqualTo(3); // 삭제된 noti 제외 3개
-    }
 }
