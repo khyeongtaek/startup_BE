@@ -122,6 +122,32 @@ public class AttendanceController {
                 .build());
     }
 
-    //
+    //  외근 시작
+    @PutMapping("/{employeeId}/out-on-business")
+    @Operation(summary = "외근 시작", description = "사원의 근무상태를 외근(OUT_ON_BUSINESS)으로 변경합니다.")
+    public ResponseEntity<APIResponseDTO<String>> startOutOnBusiness(
+            @Parameter(description = "사원 ID", required = true, example = "1")
+            @PathVariable Long employeeId
+    ) {
+        attendanceService.updateWorkStatus(employeeId, "OUT_ON_BUSINESS");
+        return ResponseEntity.ok(APIResponseDTO.<String>builder()
+                .message("외근 상태로 변경되었습니다.")
+                .data("OUT_ON_BUSINESS")
+                .build());
+    }
+
+    //  사내 복귀
+    @PutMapping("/{employeeId}/return-to-office")
+    @Operation(summary = "사내 복귀", description = "외근 중인 사원의 근무상태를 정상근무(NORMAL)로 변경합니다.")
+    public ResponseEntity<APIResponseDTO<String>> returnToOffice(
+            @Parameter(description = "사원 ID", required = true, example = "1")
+            @PathVariable Long employeeId
+    ) {
+        attendanceService.updateWorkStatus(employeeId, "NORMAL");
+        return ResponseEntity.ok(APIResponseDTO.<String>builder()
+                .message("사내 복귀 완료 (정상근무 상태).")
+                .data("NORMAL")
+                .build());
+    }
 
 }

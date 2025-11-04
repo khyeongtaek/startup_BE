@@ -24,7 +24,8 @@ public interface AttendanceService {
     // 관리자 전체 근태 조회
     List<AttendanceResponseDTO> getAllAttendances();
 
-
+    // 근무 상태 변경
+    void updateWorkStatus(Long employeeId, String statusCode);
 
 
 }

@@ -228,7 +228,24 @@ public class AttendanceServiceImpl implements AttendanceService {
     }
 
 
+    @Override
+    @Transactional
+    public void updateWorkStatus(Long employeeId, String statusCode) {
+        LocalDate today = LocalDate.now();
 
+        Attendance attendance = attendanceRepository
+                .findByEmployeeEmployeeIdAndAttendanceDate(employeeId, today)
+                .orElseThrow(() -> new ResourceNotFoundException("오늘 출근 기록이 존재하지 않습니다."));
+
+        // CommonCode 조회 (WS + statusCode)
+        CommonCode newStatus = commonCodeRepository
+                .findByCodeStartsWithAndKeywordExactMatchInValues("WS", statusCode)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new AttendanceException("해당 근무 상태 코드를 찾을 수 없습니다."));
+
+        attendance.changeWorkStatus(newStatus);
+    }
     /**
      * 공통 코드 조회
      *
