@@ -29,11 +29,6 @@ public class MailUpdateRequestDTO {
 	@Schema(description = "숨은참조자 이메일 목록(전체 대체)")
 	private List<String> bcc;
 	
-	// 업로드할 첨부파일
-	@ArraySchema(schema = @Schema(type = "string", format = "binary"))
-	@Schema(description = "신규 첨부파일 목록")
-	private List<MultipartFile> attachmentFiles;
-	
 	// 삭제할 첨부파일
 	@Schema(description = "제거할 첨부파일 ID 목록")
 	private List<Long> deleteAttachmentFileIds;
