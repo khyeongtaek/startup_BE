@@ -123,7 +123,8 @@ public class SecurityConfig {
         // HTTP 메소드 허용
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         // 모든 헤더 허용
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With",
+                "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
         // 인증 정보 허용 (JWT 토큰)
         configuration.setAllowCredentials(true); // ← 쿠키 허용
         // 모든 경로에 configuration 적용
