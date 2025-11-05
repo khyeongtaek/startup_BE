@@ -667,3 +667,18 @@ VALUES
     ('외근 신청서', 1, NOW(), NOW(), false),
     ('조퇴 보고서', 1, NOW(), NOW(), false),
     ('휴가 신청서', 1 , NOW(),NOW(), false);
+
+/*
+* =============================================
+* Approval Type (결재 양식)
+* code: AT + 번호 (Approval Type)
+* value1: 타입 값 (영문 Enum 값)
+* value2: 타입 명 (한글)
+* =============================================
+*/
+
+INSERT INTO tbl_common_code
+(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+VALUES
+    ('AT1', '결재 양식 - 휴가', 'VACATION', '휴가', NULL, 1, NULL, NOW(), NOW(), false),
+    ('AT2', '결재 양식 - 출장', 'BUSINESS_TRIP', '출장', NULL, 2, NULL, NOW(), NOW(), false);
