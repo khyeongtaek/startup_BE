@@ -28,4 +28,7 @@ public interface NotificationService {
     /* 모든 알림 삭제 */
     void softDeleteAll(String username);
 
+    /* 사용자에게 최신 알림 개수를 WebSocket으로 전송하는 공통 메소드 */
+    void sendNotificationCounts(String username);
+
 }

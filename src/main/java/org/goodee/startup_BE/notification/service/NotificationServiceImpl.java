@@ -6,6 +6,7 @@ import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
+import org.goodee.startup_BE.notification.dto.NotificationCountDTO;
 import org.goodee.startup_BE.notification.dto.NotificationRequestDTO;
 import org.goodee.startup_BE.notification.dto.NotificationResponseDTO;
 import org.goodee.startup_BE.notification.entity.Notification;
@@ -23,7 +24,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class NotificationServiceImpl implements NotificationService{
+public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final EmployeeRepository employeeRepository;
@@ -59,8 +60,8 @@ public class NotificationServiceImpl implements NotificationService{
         NotificationResponseDTO dto = NotificationResponseDTO.toDTO(notificationRepository.save(notification));
 
         // Websocket 푸쉬
-        // pring Security Principal.getName()과 일치하는 username(recipientUsername)으로 메시지 전송
-        simpMessagingTemplate.convertAndSendToUser(employee.getUsername(), "/queue/noti", dto);
+        // 공통 메소드 호출
+        sendNotificationCounts(employee.getUsername());
 
         return dto;
     }
@@ -87,6 +88,9 @@ public class NotificationServiceImpl implements NotificationService{
         // 알림 읽음 처리
         notification.readNotification();
 
+        // WebSocket 푸쉬
+        sendNotificationCounts(username);
+
         // 링크 반환
         return notification.getUrl();
     }
@@ -97,15 +101,21 @@ public class NotificationServiceImpl implements NotificationService{
 
         // 알림 조회 및 권한 확인
         Notification notification = checkRole(notificationId, username);
-        
+
         // 엔티티 삭제 메소드 호출
         notification.deleteNotification();
+
+        // WebSocket 푸쉬
+        sendNotificationCounts(username);
     }
 
     // 읽지 않은 알림 개수
     @Override
     public long getUnreadNotiCount(String username) {
-        return notificationRepository.countByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(username);
+        // 유효성 검사
+        Employee employee = employeeRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("존재하지 않는 사원 입니다.: " + username));
+        return notificationRepository.countByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(employee.getUsername());
     }
 
     // 모든 알림 읽음 처리
@@ -115,6 +125,9 @@ public class NotificationServiceImpl implements NotificationService{
         // 해당 사용자의 읽지 않은 알림만 조회 후 모든 알림 읽음 처리
         List<Notification> notifications = notificationRepository.findByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(username);
         notifications.forEach(Notification::readNotification);
+
+        // WebSocket 푸쉬
+        sendNotificationCounts(username);
 
     }
 
@@ -126,10 +139,14 @@ public class NotificationServiceImpl implements NotificationService{
         List<Notification> notifications = notificationRepository.findByEmployeeUsernameAndIsDeletedFalse(username);
         notifications.forEach(Notification::deleteNotification);
 
+        // WebSocket 푸쉬
+        sendNotificationCounts(username);
+
     }
 
     /**
      * [공통 메서드] 알림 조회 및 권한 확인
+     *
      * @return 조회된 Notification 엔티티
      */
     private Notification checkRole(Long notificationId, String username) {
@@ -147,5 +164,25 @@ public class NotificationServiceImpl implements NotificationService{
             throw new IllegalStateException("이미 삭제된 알림입니다.");
         }
         return notification;
+    }
+
+    /**
+     * [공통 메서드] 최신 알림 개수 전송
+     *
+     * @param username
+     * @return CountDTO
+     */
+    @Override
+    public void sendNotificationCounts(String username) {
+
+        long unreadCount = getUnreadNotiCount(username);
+
+        NotificationCountDTO countDTO = new NotificationCountDTO(unreadCount);
+
+        simpMessagingTemplate.convertAndSendToUser(
+                username,
+                "/queue/notifications",
+                countDTO
+        );
     }
 }

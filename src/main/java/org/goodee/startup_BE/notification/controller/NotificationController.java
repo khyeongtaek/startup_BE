@@ -3,6 +3,7 @@ package org.goodee.startup_BE.notification.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.goodee.startup_BE.notification.dto.NotificationPageDTO;
 import org.goodee.startup_BE.notification.dto.NotificationRequestDTO;
 import org.goodee.startup_BE.notification.dto.NotificationResponseDTO;
 import org.goodee.startup_BE.notification.service.NotificationService;
@@ -21,16 +22,16 @@ import org.springframework.web.bind.annotation.*;
  * 주요 역할 : Pull 방식 데이터 조회 및 단발성 상태 변경
  * 주요 어노테이션 : @PostMapping, @GetMapping, @DeleteMapping
  * 주요 기능  - 알림 목록 로딩
- *           - 읽지 않은 개수 조회
- *           - 클릭 후 URL 이동
- *           - 모든 알림 읽기
- *           - 단일 알림 삭제 (소프트 삭제)
- *           - 전체 알림 삭제 (소프트 삭제)
+ * - 읽지 않은 개수 조회
+ * - 클릭 후 URL 이동
+ * - 모든 알림 읽기
+ * - 단일 알림 삭제 (소프트 삭제)
+ * - 전체 알림 삭제 (소프트 삭제)
  */
 
 @Tag(name = "Notification API", description = "알림 관련 API")
 @RestController
-@RequestMapping("/notifications")
+@RequestMapping("/api/notifications")
 @RequiredArgsConstructor
 public class NotificationController {
 
@@ -40,11 +41,17 @@ public class NotificationController {
     // 알림 목록 조회
     @Operation(summary = "알림 목록 조회")
     @GetMapping
-    public ResponseEntity<Page<NotificationResponseDTO>> getNotificationList(
+    public ResponseEntity<NotificationPageDTO> getNotificationList(
             Authentication authentication,
             @PageableDefault(size = 5, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<NotificationResponseDTO> list = notificationService.list(authentication.getName(), pageable);
-        return ResponseEntity.ok(list);
+        Page<NotificationResponseDTO> pageData = notificationService.list(authentication.getName(), pageable);
+
+        NotificationPageDTO responseDTO = new NotificationPageDTO(
+                pageData.getContent(),
+                pageData.isLast()
+        );
+
+        return ResponseEntity.ok(responseDTO);
     }
 
     // 읽지 않은 알림 개수 조회
@@ -57,7 +64,7 @@ public class NotificationController {
 
     // 알림을 읽음 처리 하고 URL 반환
     @Operation(summary = "알림을 읽음 처리 하고 URL 반환")
-    @GetMapping("/{notificationId}/read")
+    @PatchMapping("/{notificationId}/read")
     public ResponseEntity<String> readNotification(@PathVariable Long notificationId, Authentication authentication) {
         String url = notificationService.getUrl(notificationId, authentication.getName());
         return ResponseEntity.ok(url);
@@ -65,7 +72,7 @@ public class NotificationController {
 
     // 모든 알림 읽음 처리
     @Operation(summary = "모든 알림 읽음 처리")
-    @PutMapping("/read-all")  // 상태 변경이므로 PUT/PATCH 사용
+    @PatchMapping("/read-all")  // 상태 변경이므로 PUT/PATCH 사용
     public ResponseEntity<Void> readAll(Authentication authentication) {
         notificationService.readAll(authentication.getName());
         return ResponseEntity.noContent().build();
@@ -73,7 +80,7 @@ public class NotificationController {
 
     // 단일 알림 삭제 (소프트 삭제)
     @Operation(summary = "단일 알림 삭제 (소프트 삭제)")
-    @DeleteMapping("/{notificationId}")
+    @PatchMapping("/{notificationId}/delete")
     public ResponseEntity<Void> softDelete(@PathVariable Long notificationId, Authentication authentication) {
         notificationService.softDelete(notificationId, authentication.getName());
         return ResponseEntity.noContent().build();
@@ -81,7 +88,7 @@ public class NotificationController {
 
     // 전체 알림 삭제 (소프트 삭제)
     @Operation(summary = "전체 알림 삭제 (소프트 삭제)")
-    @DeleteMapping("/delete_all")
+    @PatchMapping("/delete-all")
     public ResponseEntity<Void> softDeleteAll(Authentication authentication) {
         notificationService.softDeleteAll(authentication.getName());
         return ResponseEntity.noContent().build();

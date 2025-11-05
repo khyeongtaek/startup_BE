@@ -5,6 +5,7 @@ import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
+import org.goodee.startup_BE.notification.dto.NotificationCountDTO;
 import org.goodee.startup_BE.notification.dto.NotificationRequestDTO;
 import org.goodee.startup_BE.notification.dto.NotificationResponseDTO;
 import org.goodee.startup_BE.notification.entity.Notification;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -22,6 +24,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -57,17 +60,22 @@ class NotificationServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // Mock 객체 초기화 (lenient: 모든 테스트에서 사용되지 않아도 경고 미발생)
+        // Mock 객체 초기화
         mockEmployee = mock(Employee.class);
         mockOwnerType = mock(CommonCode.class);
         mockNotification = mock(Notification.class);
 
-        // 공통 Mocking 설정
+        // 공통 Mocking 설정 - lenient()를 적용하여 테스트 간 충돌 방지
         lenient().when(mockEmployee.getUsername()).thenReturn(testUsername);
         lenient().when(mockEmployee.getEmployeeId()).thenReturn(testEmployeeId);
+
+        // DTO 변환(toDTO) 시 사용되는 핵심 Mocking
+        lenient().when(mockNotification.getOwnerType()).thenReturn(mockOwnerType);
+        // DTO가 getValue1()을 사용하므로 "MAIL"(영어)을 반환하도록 설정
+        lenient().when(mockOwnerType.getValue1()).thenReturn("MAIL");
     }
 
-    // --- Create Notification 테스트 수정 ---
+
     @Nested
     @DisplayName("create (알림 생성)")
     class CreateNotification {
@@ -77,11 +85,9 @@ class NotificationServiceImplTest {
 
         @BeforeEach
         void createSetup() {
-            // 알림 생성 요청 DTO 준비 (employeeId 사용)
-            // *가정: NotificationRequestDTO에 employeeId 필드가 Long 타입으로 존재*
             requestDTO = new NotificationRequestDTO(
-                    testEmployeeId, // 받는 사람 Employee ID
-                    ownerTypeCodeId, // CommonCode ID
+                    testEmployeeId,
+                    ownerTypeCodeId,
                     "/mail/1",
                     "테스트 제목",
                     "테스트 내용"
@@ -91,61 +97,82 @@ class NotificationServiceImplTest {
         @Test
         @DisplayName("성공")
         void create_Success() {
-            // given: 사원 조회(ID 기준), CommonCode 조회, 알림 저장, DTO 변환 과정 Mocking
-            given(employeeRepository.findById(testEmployeeId)).willReturn(Optional.of(mockEmployee));
-            given(commonCodeRepository.findById(ownerTypeCodeId)).willReturn(Optional.of(mockOwnerType));
-            given(mockOwnerType.getCodeDescription()).willReturn("메일");
-            given(notificationRepository.save(any(Notification.class))).willAnswer(invocation -> invocation.getArgument(0));
-            // WebSocket 푸시에 사용할 username Mocking (findById로 찾은 employee 객체에서 가져옴)
-            given(mockEmployee.getUsername()).willReturn(testUsername);
+            // given: 사원 조회, CommonCode 조회, 알림 저장 Mocking
+            when(employeeRepository.findById(testEmployeeId)).thenReturn(Optional.of(mockEmployee));
+            when(commonCodeRepository.findById(ownerTypeCodeId)).thenReturn(Optional.of(mockOwnerType));
 
+            // DTO 변환(toDTO)에 필요한 Mocking
+            when(mockNotification.getNotificationId()).thenReturn(1L);
+            when(mockNotification.getUrl()).thenReturn(requestDTO.getUrl());
+            when(mockNotification.getTitle()).thenReturn(requestDTO.getTitle());
+            when(mockNotification.getContent()).thenReturn(requestDTO.getContent());
+            when(mockNotification.getCreatedAt()).thenReturn(LocalDateTime.now());
+            when(mockNotification.getReadAt()).thenReturn(null); // toDTO에서 false로 변환됨
 
-            // when: 알림 생성 실행 (파라미터 변경)
+            // save가 호출되면 mockNotification을 반환하도록 설정
+            when(notificationRepository.save(any(Notification.class))).thenReturn(mockNotification);
+
+            // sendNotificationCounts 내부 Mocking (WebSocket 검증용)
+            // lenient: 다른 테스트에서 count만 mocking할 수도 있으므로
+            lenient().when(employeeRepository.findByUsername(testUsername)).thenReturn(Optional.of(mockEmployee));
+            lenient().when(notificationRepository.countByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(testUsername)).thenReturn(1L); // 방금 생성됨
+
+            // ArgumentCaptor 준비
+            ArgumentCaptor<NotificationCountDTO> countDTOCaptor = ArgumentCaptor.forClass(NotificationCountDTO.class);
+
+            // when: 알림 생성 실행
             NotificationResponseDTO resultDTO = notificationService.create(requestDTO);
 
-            // then: 결과 검증
-            // 1. DTO 변환 검증
+            // then: 결과 검증 (NotificationResponseDTO.toDTO의 로직 기반)
             assertThat(resultDTO).isNotNull();
             assertThat(resultDTO.getTitle()).isEqualTo("테스트 제목");
-            assertThat(resultDTO.getOwnerTypeDescription()).isEqualTo("메일");
+            assertThat(resultDTO.getOwnerType()).isEqualTo("MAIL");
+            assertThat(resultDTO.getReadAt()).isFalse(); // toDTO 로직 (null -> false)
 
-            // 2. Repository 및 Template 호출 검증
+            // Repository 호출 검증
             verify(employeeRepository, times(1)).findById(testEmployeeId);
             verify(commonCodeRepository, times(1)).findById(ownerTypeCodeId);
             verify(notificationRepository, times(1)).save(any(Notification.class));
-            // WebSocket 푸시 username 검증 (mockEmployee에서 가져온 값)
+
+            // [수정] WebSocket 호출 검증 (sendNotificationCounts 검증)
             verify(simpMessagingTemplate, times(1)).convertAndSendToUser(
-                    eq(testUsername), eq("/queue/noti"), any(NotificationResponseDTO.class)
+                    eq(testUsername),
+                    eq("/queue/notifications"), // 수정된 경로
+                    countDTOCaptor.capture() // DTO 캡처
             );
+
+            // 캡처된 DTO 내용 검증
+            NotificationCountDTO capturedDTO = countDTOCaptor.getValue();
+            assertThat(capturedDTO.getUnreadCount()).isEqualTo(1L);
         }
 
         @Test
-        @DisplayName("실패 - 사원 없음")
+        @DisplayName("실패 - 사원 없음 (ID 조회)")
         void create_Fail_UserNotFound() {
-            // given: 사원 조회 실패 (ID 기준)
-            given(employeeRepository.findById(testEmployeeId)).willReturn(Optional.empty());
+            // given
+            when(employeeRepository.findById(testEmployeeId)).thenReturn(Optional.empty());
 
-            // when & then: UsernameNotFoundException 발생 확인 (호출 방식 변경)
+            // when & then
             assertThatThrownBy(() -> notificationService.create(requestDTO))
-                    .isInstanceOf(UsernameNotFoundException.class) // Service 내부 Exception 타입 확인 필요 (UsernameNotFoundException or EntityNotFoundException)
+                    .isInstanceOf(UsernameNotFoundException.class)
                     .hasMessageContaining("존재 하지 않는 사원 입니다");
         }
 
         @Test
         @DisplayName("실패 - CommonCode 없음")
         void create_Fail_CommonCodeNotFound() {
-            // given: 사원 조회는 성공 (ID 기준), CommonCode 조회 실패
-            given(employeeRepository.findById(testEmployeeId)).willReturn(Optional.of(mockEmployee));
-            given(commonCodeRepository.findById(ownerTypeCodeId)).willReturn(Optional.empty());
+            // given
+            when(employeeRepository.findById(testEmployeeId)).thenReturn(Optional.of(mockEmployee));
+            when(commonCodeRepository.findById(ownerTypeCodeId)).thenReturn(Optional.empty());
 
-            // when & then: EntityNotFoundException 발생 확인 (호출 방식 변경)
+            // when & then
             assertThatThrownBy(() -> notificationService.create(requestDTO))
                     .isInstanceOf(EntityNotFoundException.class)
                     .hasMessageContaining("유효하지 않은 알림 출처 CommonCode Id 입니다");
         }
     }
 
-    // ... (list, checkRole, getUrl, softDelete, getUnreadNotiCount, readAll, softDeleteAll 테스트는 변경 없음) ...
+
     @Nested
     @DisplayName("list (목록 조회)")
     class ListNotification {
@@ -156,16 +183,19 @@ class NotificationServiceImplTest {
             // given: Pageable 객체 및 Repository 반환값 설정
             Pageable pageable = PageRequest.of(0, 5, Sort.by("createdAt").descending());
 
-            // DTO 변환에 필요한 Mocking
-            given(mockOwnerType.getCodeDescription()).willReturn("메일");
-            given(mockNotification.getOwnerType()).willReturn(mockOwnerType);
+            // DTO 변환에 필요한 Mocking (setUp에서 이미 설정됨)
+            // (mockNotification.getOwnerType(), mockOwnerType.getValue1())
+
+            // 추가 Mocking (toDTO)
+            when(mockNotification.getReadAt()).thenReturn(null); // readAt = false
+            when(mockNotification.getCreatedAt()).thenReturn(LocalDateTime.now());
 
             List<Notification> notificationList = List.of(mockNotification);
             Page<Notification> mockPage = new PageImpl<>(notificationList, pageable, notificationList.size());
 
-            given(employeeRepository.findByUsername(testUsername)).willReturn(Optional.of(mockEmployee));
-            given(notificationRepository.findByEmployeeEmployeeIdAndIsDeletedFalseOrderByCreatedAtDesc(testEmployeeId, pageable))
-                    .willReturn(mockPage);
+            when(employeeRepository.findByUsername(testUsername)).thenReturn(Optional.of(mockEmployee));
+            when(notificationRepository.findByEmployeeEmployeeIdAndIsDeletedFalseOrderByCreatedAtDesc(testEmployeeId, pageable))
+                    .thenReturn(mockPage);
 
             // when: 목록 조회 실행
             Page<NotificationResponseDTO> resultPage = notificationService.list(testUsername, pageable);
@@ -175,7 +205,21 @@ class NotificationServiceImplTest {
             verify(notificationRepository, times(1)).findByEmployeeEmployeeIdAndIsDeletedFalseOrderByCreatedAtDesc(testEmployeeId, pageable);
             assertThat(resultPage).isNotNull();
             assertThat(resultPage.getTotalElements()).isEqualTo(1);
-            assertThat(resultPage.getContent().get(0).getOwnerTypeDescription()).isEqualTo("메일");
+            assertThat(resultPage.getContent().get(0).getOwnerType()).isEqualTo("MAIL");
+            assertThat(resultPage.getContent().get(0).getReadAt()).isFalse();
+        }
+
+        @Test
+        @DisplayName("실패 - 사원 없음 (username 조회)")
+        void list_Fail_UserNotFound() {
+            // given
+            Pageable pageable = PageRequest.of(0, 5);
+            when(employeeRepository.findByUsername(testUsername)).thenReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> notificationService.list(testUsername, pageable))
+                    .isInstanceOf(UsernameNotFoundException.class)
+                    .hasMessageContaining("존재 하지 않는 사원 입니다");
         }
     }
 
@@ -188,10 +232,10 @@ class NotificationServiceImplTest {
         @Test
         @DisplayName("실패 - 알림 없음")
         void checkRole_Fail_NotificationNotFound() {
-            // given: 알림 조회 실패
-            given(notificationRepository.findById(notificationId)).willReturn(Optional.empty());
+            // given
+            when(notificationRepository.findById(notificationId)).thenReturn(Optional.empty());
 
-            // when & then: getUrl 호출 시 EntityNotFoundException 발생 확인
+            // when & then (getUrl로 테스트)
             assertThatThrownBy(() -> notificationService.getUrl(notificationId, testUsername))
                     .isInstanceOf(EntityNotFoundException.class)
                     .hasMessageContaining("존재하지 않는 알림입니다.");
@@ -200,13 +244,15 @@ class NotificationServiceImplTest {
         @Test
         @DisplayName("실패 - 권한 없음 (소유자 불일치)")
         void checkRole_Fail_AccessDenied() {
-            // given: 알림은 찾았으나, 소유자 username이 다름
-            given(notificationRepository.findById(notificationId)).willReturn(Optional.of(mockNotification));
-            given(mockNotification.getEmployee()).willReturn(mockEmployee);
-            given(mockEmployee.getUsername()).willReturn("anotherUser"); // 소유자 username
+            // given
+            Employee anotherEmployee = mock(Employee.class);
+            when(anotherEmployee.getUsername()).thenReturn("anotherUser"); // 다른 소유자
 
-            // when & then: softDelete 호출 시 AccessDeniedException 발생 확인
-            assertThatThrownBy(() -> notificationService.softDelete(notificationId, testUsername)) // 요청자: testUsername
+            when(notificationRepository.findById(notificationId)).thenReturn(Optional.of(mockNotification));
+            when(mockNotification.getEmployee()).thenReturn(anotherEmployee);
+
+            // when & then (softDelete로 테스트)
+            assertThatThrownBy(() -> notificationService.softDelete(notificationId, testUsername))
                     .isInstanceOf(AccessDeniedException.class)
                     .hasMessageContaining("해당 알림에 접근할 권한이 없습니다.");
         }
@@ -214,13 +260,12 @@ class NotificationServiceImplTest {
         @Test
         @DisplayName("실패 - 이미 삭제됨")
         void checkRole_Fail_AlreadyDeleted() {
-            // given: 알림 찾았고, 소유자도 일치하나, isDeleted = true
-            given(notificationRepository.findById(notificationId)).willReturn(Optional.of(mockNotification));
-            given(mockNotification.getEmployee()).willReturn(mockEmployee);
-            given(mockEmployee.getUsername()).willReturn(testUsername); // 소유자 일치
-            given(mockNotification.getIsDeleted()).willReturn(true);    // 이미 삭제됨
+            // given
+            when(notificationRepository.findById(notificationId)).thenReturn(Optional.of(mockNotification));
+            when(mockNotification.getEmployee()).thenReturn(mockEmployee); // 소유자는 맞음
+            when(mockNotification.getIsDeleted()).thenReturn(true);    // 이미 삭제됨
 
-            // when & then: getUrl 호출 시 IllegalStateException 발생 확인
+            // when & then (getUrl로 테스트)
             assertThatThrownBy(() -> notificationService.getUrl(notificationId, testUsername))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("이미 삭제된 알림입니다.");
@@ -236,20 +281,38 @@ class NotificationServiceImplTest {
             // given: checkRole 성공 및 URL 설정
             Long notificationId = 1L;
             String expectedUrl = "/mail/1";
-            given(notificationRepository.findById(notificationId)).willReturn(Optional.of(mockNotification));
-            given(mockNotification.getEmployee()).willReturn(mockEmployee);
-            given(mockEmployee.getUsername()).willReturn(testUsername);
-            given(mockNotification.getIsDeleted()).willReturn(false);
-            given(mockNotification.getUrl()).willReturn(expectedUrl);
+            when(notificationRepository.findById(notificationId)).thenReturn(Optional.of(mockNotification));
+            when(mockNotification.getEmployee()).thenReturn(mockEmployee); // checkRole 통과
+            when(mockNotification.getIsDeleted()).thenReturn(false);      // checkRole 통과
+            when(mockNotification.getUrl()).thenReturn(expectedUrl);
+
+            // [추가] sendNotificationCounts 내부 Mocking
+            // lenient: 다른 테스트와 겹칠 수 있으므로
+            lenient().when(employeeRepository.findByUsername(testUsername)).thenReturn(Optional.of(mockEmployee));
+            lenient().when(notificationRepository.countByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(testUsername)).thenReturn(4L); // 1개 읽음
+
+            // ArgumentCaptor 준비
+            ArgumentCaptor<NotificationCountDTO> countDTOCaptor = ArgumentCaptor.forClass(NotificationCountDTO.class);
 
             // when: getUrl 실행
             String resultUrl = notificationService.getUrl(notificationId, testUsername);
 
-            // then: 결과 검증
-            // 1. 알림 읽음 처리 메서드가 호출되었는지 검증
+            // then:
+            // 1. 엔티티 메서드 호출 검증
             verify(mockNotification, times(1)).readNotification();
-            // 2. 반환된 URL이 일치하는지 검증
+            // 2. URL 반환 검증
             assertThat(resultUrl).isEqualTo(expectedUrl);
+
+            // 3. [추가] WebSocket 호출 검증 (sendNotificationCounts)
+            verify(simpMessagingTemplate, times(1)).convertAndSendToUser(
+                    eq(testUsername),
+                    eq("/queue/notifications"),
+                    countDTOCaptor.capture()
+            );
+
+            // 4. [추가] 캡처된 DTO 내용 검증
+            NotificationCountDTO capturedDTO = countDTOCaptor.getValue();
+            assertThat(capturedDTO.getUnreadCount()).isEqualTo(4L);
         }
     }
 
@@ -261,16 +324,34 @@ class NotificationServiceImplTest {
         void softDelete_Success() {
             // given: checkRole 성공
             Long notificationId = 1L;
-            given(notificationRepository.findById(notificationId)).willReturn(Optional.of(mockNotification));
-            given(mockNotification.getEmployee()).willReturn(mockEmployee);
-            given(mockEmployee.getUsername()).willReturn(testUsername);
-            given(mockNotification.getIsDeleted()).willReturn(false);
+            when(notificationRepository.findById(notificationId)).thenReturn(Optional.of(mockNotification));
+            when(mockNotification.getEmployee()).thenReturn(mockEmployee); // checkRole 통과
+            when(mockNotification.getIsDeleted()).thenReturn(false);      // checkRole 통과
+
+            // [추가] sendNotificationCounts 내부 Mocking
+            lenient().when(employeeRepository.findByUsername(testUsername)).thenReturn(Optional.of(mockEmployee));
+            lenient().when(notificationRepository.countByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(testUsername)).thenReturn(5L);
+
+            // ArgumentCaptor 준비
+            ArgumentCaptor<NotificationCountDTO> countDTOCaptor = ArgumentCaptor.forClass(NotificationCountDTO.class);
 
             // when: softDelete 실행
             notificationService.softDelete(notificationId, testUsername);
 
-            // then: 알림 삭제 처리 메서드가 호출되었는지 검증
+            // then:
+            // 1. 엔티티 메서드 호출 검증
             verify(mockNotification, times(1)).deleteNotification();
+
+            // 2. [추가] WebSocket 호출 검증 (sendNotificationCounts)
+            verify(simpMessagingTemplate, times(1)).convertAndSendToUser(
+                    eq(testUsername),
+                    eq("/queue/notifications"),
+                    countDTOCaptor.capture()
+            );
+
+            // 3. [추가] 캡처된 DTO 내용 검증
+            NotificationCountDTO capturedDTO = countDTOCaptor.getValue();
+            assertThat(capturedDTO.getUnreadCount()).isEqualTo(5L); // (삭제된 알림이 읽지 않은 알림이었는지 여부는 이 테스트의 관심사 X)
         }
     }
 
@@ -280,16 +361,30 @@ class NotificationServiceImplTest {
         @Test
         @DisplayName("성공")
         void getUnreadNotiCount_Success() {
-            // given: Repository가 5L 반환하도록 설정
-            given(notificationRepository.countByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(testUsername))
-                    .willReturn(5L);
+            // given:
+            when(employeeRepository.findByUsername(testUsername)).thenReturn(Optional.of(mockEmployee));
+            when(notificationRepository.countByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(testUsername))
+                    .thenReturn(5L);
 
             // when: 개수 조회 실행
             long count = notificationService.getUnreadNotiCount(testUsername);
 
             // then: 결과 검증
             assertThat(count).isEqualTo(5L);
+            verify(employeeRepository, times(1)).findByUsername(testUsername);
             verify(notificationRepository, times(1)).countByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(testUsername);
+        }
+
+        @Test
+        @DisplayName("실패 - 사원 없음")
+        void getUnreadNotiCount_Fail_UserNotFound() {
+            // given
+            when(employeeRepository.findByUsername(testUsername)).thenReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> notificationService.getUnreadNotiCount(testUsername))
+                    .isInstanceOf(UsernameNotFoundException.class)
+                    .hasMessageContaining("존재하지 않는 사원 입니다.");
         }
     }
 
@@ -299,20 +394,39 @@ class NotificationServiceImplTest {
         @Test
         @DisplayName("성공")
         void readAll_Success() {
-            // given: 읽지 않은 알림 2개 Mocking
+            // given
             Notification noti1 = mock(Notification.class);
             Notification noti2 = mock(Notification.class);
             List<Notification> unreadList = List.of(noti1, noti2);
 
-            given(notificationRepository.findByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(testUsername))
-                    .willReturn(unreadList);
+            when(notificationRepository.findByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(testUsername))
+                    .thenReturn(unreadList);
 
-            // when: 모두 읽음 실행
+            // [추가] sendNotificationCounts 내부 Mocking
+            lenient().when(employeeRepository.findByUsername(testUsername)).thenReturn(Optional.of(mockEmployee));
+            lenient().when(notificationRepository.countByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(testUsername)).thenReturn(0L); // 모두 읽음
+
+            // ArgumentCaptor 준비
+            ArgumentCaptor<NotificationCountDTO> countDTOCaptor = ArgumentCaptor.forClass(NotificationCountDTO.class);
+
+            // when
             notificationService.readAll(testUsername);
 
-            // then: 각 알림의 readNotification()이 호출되었는지 검증
+            // then
+            // 1. 엔티티 메서드 호출 검증
             verify(noti1, times(1)).readNotification();
             verify(noti2, times(1)).readNotification();
+
+            // 2. [추가] WebSocket 호출 검증
+            verify(simpMessagingTemplate, times(1)).convertAndSendToUser(
+                    eq(testUsername),
+                    eq("/queue/notifications"),
+                    countDTOCaptor.capture()
+            );
+
+            // 3. [추가] 캡처된 DTO 내용 검증
+            NotificationCountDTO capturedDTO = countDTOCaptor.getValue();
+            assertThat(capturedDTO.getUnreadCount()).isEqualTo(0L);
         }
     }
 
@@ -322,20 +436,73 @@ class NotificationServiceImplTest {
         @Test
         @DisplayName("성공")
         void softDeleteAll_Success() {
-            // given: 삭제되지 않은 알림 2개 Mocking
+            // given
             Notification noti1 = mock(Notification.class);
             Notification noti2 = mock(Notification.class);
             List<Notification> allList = List.of(noti1, noti2);
 
-            given(notificationRepository.findByEmployeeUsernameAndIsDeletedFalse(testUsername))
-                    .willReturn(allList);
+            when(notificationRepository.findByEmployeeUsernameAndIsDeletedFalse(testUsername))
+                    .thenReturn(allList);
 
-            // when: 모두 삭제 실행
+            // [추가] sendNotificationCounts 내부 Mocking
+            lenient().when(employeeRepository.findByUsername(testUsername)).thenReturn(Optional.of(mockEmployee));
+            lenient().when(notificationRepository.countByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(testUsername)).thenReturn(0L); // 삭제시 읽지않은수 0
+
+            // ArgumentCaptor 준비
+            ArgumentCaptor<NotificationCountDTO> countDTOCaptor = ArgumentCaptor.forClass(NotificationCountDTO.class);
+
+            // when
             notificationService.softDeleteAll(testUsername);
 
-            // then: 각 알림의 deleteNotification()이 호출되었는지 검증
+            // then
+            // 1. 엔티티 메서드 호출 검증
             verify(noti1, times(1)).deleteNotification();
             verify(noti2, times(1)).deleteNotification();
+
+            // 2. [추가] WebSocket 호출 검증
+            verify(simpMessagingTemplate, times(1)).convertAndSendToUser(
+                    eq(testUsername),
+                    eq("/queue/notifications"),
+                    countDTOCaptor.capture()
+            );
+
+            // 3. [추가] 캡처된 DTO 내용 검증
+            NotificationCountDTO capturedDTO = countDTOCaptor.getValue();
+            assertThat(capturedDTO.getUnreadCount()).isEqualTo(0L);
+        }
+    }
+
+    @Nested
+    @DisplayName("sendNotificationCounts (공통 메서드 - WebSocket 전송)")
+    class SendNotificationCounts {
+
+        @Test
+        @DisplayName("성공")
+        void sendNotificationCounts_Success() {
+            // given
+            // 이 메서드가 호출하는 두 count 메서드를 Mocking
+            // lenient() : 다른 테스트에서 @BeforeEach의 Mocking과 충돌 방지
+            lenient().when(employeeRepository.findByUsername(testUsername)).thenReturn(Optional.of(mockEmployee));
+            lenient().when(notificationRepository.countByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(testUsername)).thenReturn(3L);
+
+            // ArgumentCaptor: DTO를 캡처하여 검증하기 위함
+            ArgumentCaptor<NotificationCountDTO> dtoCaptor = ArgumentCaptor.forClass(NotificationCountDTO.class);
+
+            // when
+            notificationService.sendNotificationCounts(testUsername);
+
+            // then
+            // 1. simpMessagingTemplate이 정확한 인자들로 호출되었는지 검증
+            verify(simpMessagingTemplate, times(1)).convertAndSendToUser(
+                    eq(testUsername),           // username
+                    eq("/queue/notifications"), // 경로
+                    dtoCaptor.capture()         // DTO 캡처
+            );
+
+            // 2. 캡처된 DTO의 내용 검증
+            NotificationCountDTO capturedDTO = dtoCaptor.getValue();
+            assertThat(capturedDTO).isNotNull();
+            assertThat(capturedDTO.getUnreadCount()).isEqualTo(3L);
         }
     }
 }

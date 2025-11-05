@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 public class NotificationResponseDTO {
 
     private Long notificationId;
-    private String ownerTypeDescription;
+    private String ownerType;
     private String url;
     private String title;
     private String content;
@@ -31,7 +31,7 @@ public class NotificationResponseDTO {
     public static NotificationResponseDTO toDTO(Notification notification) {
         return NotificationResponseDTO.builder()
                 .notificationId(notification.getNotificationId())
-                .ownerTypeDescription(notification.getOwnerType().getCodeDescription())
+                .ownerType(notification.getOwnerType().getValue1())
                 .url(notification.getUrl())
                 .title(notification.getTitle())
                 .content(notification.getContent())
