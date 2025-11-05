@@ -20,4 +20,5 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     // 읽지 않은 모든 알림 조회 (전체 알림 삭제)
     List<Notification> findByEmployeeUsernameAndReadAtIsNullAndIsDeletedFalse(String username);
+
 }
