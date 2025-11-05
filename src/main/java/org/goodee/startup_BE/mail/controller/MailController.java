@@ -7,8 +7,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.common.dto.APIResponseDTO;
-import org.goodee.startup_BE.common.dto.AttachmentFileResponseDTO;
-import org.goodee.startup_BE.common.service.AttachmentFileService;
 import org.goodee.startup_BE.common.validation.ValidationGroups;
 import org.goodee.startup_BE.mail.dto.*;
 import org.goodee.startup_BE.mail.service.MailService;
