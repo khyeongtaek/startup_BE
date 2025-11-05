@@ -7,11 +7,13 @@ import org.goodee.startup_BE.approval.dto.*;
 import org.goodee.startup_BE.approval.entity.ApprovalDoc;
 import org.goodee.startup_BE.approval.entity.ApprovalLine;
 import org.goodee.startup_BE.approval.entity.ApprovalReference;
+import org.goodee.startup_BE.approval.entity.ApprovalTemplate;
 import org.goodee.startup_BE.approval.enums.ApprovalDocStatus;
 import org.goodee.startup_BE.approval.enums.ApprovalLineStatus;
 import org.goodee.startup_BE.approval.repository.ApprovalDocRepository;
 import org.goodee.startup_BE.approval.repository.ApprovalLineRepository;
 import org.goodee.startup_BE.approval.repository.ApprovalReferenceRepository;
+import org.goodee.startup_BE.approval.repository.ApprovalTemplateRepository;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
@@ -43,6 +45,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     private final EmployeeRepository employeeRepository;
     private final CommonCodeRepository commonCodeRepository;
     private final NotificationService notificationService;
+    private final ApprovalTemplateRepository approvalTemplateRepository;
 
     // --- 공통 코드 Prefix 정의 ---
     private static final String DOC_STATUS_PREFIX = ApprovalDocStatus.PREFIX;
@@ -76,8 +79,13 @@ public class ApprovalServiceImpl implements ApprovalService {
                 .findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.APPROVAL.name())
                 .get(0);
 
+        // 1-2 양식 조회
+        Long templateId = request.getTemplateId();
+        ApprovalTemplate template = approvalTemplateRepository.findById(templateId)
+                .orElseThrow(() -> new EntityNotFoundException("결재 양식을 찾을 수 없습니다."));
+
         // 2. 문서(Doc) 생성 및 저장 (ID 자동 생성)
-        ApprovalDoc doc = approvalDocRepository.save(request.toEntity(creator, docStatus));
+        ApprovalDoc doc = approvalDocRepository.save(request.toEntity(creator,template, docStatus));
 
         // 3. 결재선(Lines) 생성
         List<ApprovalLineRequestDTO> lineRequests = request.getApprovalLines();
@@ -560,7 +568,6 @@ public class ApprovalServiceImpl implements ApprovalService {
                     .findFirst()
                     .ifPresent(filteredLines::add); // AWAITING이 반드시 존재
 
-            System.out.println("이게왜");
         }
 
         // DTO 변환

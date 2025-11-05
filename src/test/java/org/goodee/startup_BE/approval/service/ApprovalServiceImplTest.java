@@ -5,9 +5,11 @@ import org.goodee.startup_BE.approval.dto.*;
 import org.goodee.startup_BE.approval.entity.ApprovalDoc;
 import org.goodee.startup_BE.approval.entity.ApprovalLine;
 import org.goodee.startup_BE.approval.entity.ApprovalReference;
+import org.goodee.startup_BE.approval.entity.ApprovalTemplate;
 import org.goodee.startup_BE.approval.repository.ApprovalDocRepository;
 import org.goodee.startup_BE.approval.repository.ApprovalLineRepository;
 import org.goodee.startup_BE.approval.repository.ApprovalReferenceRepository;
+import org.goodee.startup_BE.approval.repository.ApprovalTemplateRepository;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.employee.entity.Employee;
@@ -56,6 +58,9 @@ class ApprovalServiceImplTest {
     private ApprovalReferenceRepository approvalReferenceRepository;
 
     @Mock // Mock 객체로 생성
+    private ApprovalTemplateRepository approvalTemplateRepository;
+
+    @Mock // Mock 객체로 생성
     private EmployeeRepository employeeRepository;
 
     @Mock // Mock 객체로 생성
@@ -69,6 +74,8 @@ class ApprovalServiceImplTest {
     private Employee mockApprover1;
     private Employee mockApprover2;
     private Employee mockReferrer;
+
+    private ApprovalTemplate mockApprovalTemplate;
 
     private CommonCode mockDocStatusInProgress;
     private CommonCode mockDocStatusApproved;
@@ -100,6 +107,8 @@ class ApprovalServiceImplTest {
         mockApprover1 = mock(Employee.class);
         mockApprover2 = mock(Employee.class);
         mockReferrer = mock(Employee.class);
+
+        mockApprovalTemplate = mock(ApprovalTemplate.class);
 
         mockDocStatusInProgress = mock(CommonCode.class);
         mockDocStatusApproved = mock(CommonCode.class);
@@ -182,6 +191,7 @@ class ApprovalServiceImplTest {
         lenient().when(mockDoc.getDocStatus()).thenReturn(mockDocStatusInProgress);
         lenient().when(mockDoc.getApprovalLineList()).thenReturn(List.of(mockLine1, mockLine2)); // 상세조회 시 사용
         lenient().when(mockDoc.getApprovalReferenceList()).thenReturn(List.of(mockRef)); // 상세조회 시 사용
+        lenient().when(mockDoc.getApprovalTemplate()).thenReturn(mockApprovalTemplate);
 
         lenient().when(mockLine1.getDoc()).thenReturn(mockDoc);
         lenient().when(mockLine1.getLineId()).thenReturn(20L);
@@ -239,6 +249,7 @@ class ApprovalServiceImplTest {
 
         private ApprovalDocRequestDTO requestDto;
         private final String creatorUsername = "creator";
+        private final Long templateId = 99L;
 
         @BeforeEach
         void createSetup() {
@@ -246,6 +257,7 @@ class ApprovalServiceImplTest {
             requestDto = new ApprovalDocRequestDTO();
             requestDto.setTitle("새 기안 문서");
             requestDto.setContent("내용입니다.");
+            requestDto.setTemplateId(templateId);
 
             // 결재선 1 (순서 1, ID 11)
             ApprovalLineRequestDTO lineDto1 = new ApprovalLineRequestDTO();
@@ -274,6 +286,9 @@ class ApprovalServiceImplTest {
             // '성공'에 필요한 Mocking을 이 테스트 내부로 이동
             // (공통 코드는 setUp()에서 lenient()로 이미 stubbing됨)
             given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
+
+            // Template 조회 Mocking
+            given(approvalTemplateRepository.findById(templateId)).willReturn(Optional.of(mockApprovalTemplate));
 
             given(employeeRepository.findById(11L)).willReturn(Optional.of(mockApprover1));
             given(employeeRepository.findById(12L)).willReturn(Optional.of(mockApprover2));
@@ -364,6 +379,9 @@ class ApprovalServiceImplTest {
             // 기안자 조회 통과
             given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
             // 공통 코드 조회 통과 (setUp()에서 lenient()로 처리됨)
+
+            // Template 조회 통과
+            given(approvalTemplateRepository.findById(templateId)).willReturn(Optional.of(mockApprovalTemplate));
             // Doc 저장 통과
             given(approvalDocRepository.save(any(ApprovalDoc.class))).willReturn(mockDoc);
             // 결재자 1 (ID: 11L) 조회 실패 (실패 지점)
@@ -383,6 +401,10 @@ class ApprovalServiceImplTest {
             // 기안자 조회 통과
             given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
             // 공통 코드 조회 통과 (setUp()에서 lenient()로 처리됨)
+
+            // Template 조회 통과
+            given(approvalTemplateRepository.findById(templateId)).willReturn(Optional.of(mockApprovalTemplate));
+
             // Doc 저장 통과
             given(approvalDocRepository.save(any(ApprovalDoc.class))).willReturn(mockDoc);
             // 결재선 조회 통과
