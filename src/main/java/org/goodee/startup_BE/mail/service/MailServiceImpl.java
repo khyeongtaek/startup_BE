@@ -1,7 +1,6 @@
 package org.goodee.startup_BE.mail.service;
 
 import lombok.RequiredArgsConstructor;
-import org.goodee.startup_BE.common.dto.AttachmentFileRequestDTO;
 import org.goodee.startup_BE.common.dto.AttachmentFileResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.enums.OwnerType;
@@ -280,9 +279,7 @@ public class MailServiceImpl implements MailService{
 		if (requestDTO.getDeleteAttachmentFileIds() != null && !requestDTO.getDeleteAttachmentFileIds().isEmpty()) {
 			for (Long id : requestDTO.getDeleteAttachmentFileIds()) {
 				if (id == null) continue;
-				attachmentFileService.deleteFile(
-					AttachmentFileRequestDTO.builder().fileId(id).build()
-				);
+				attachmentFileService.deleteFile(id);
 			}
 		}
 		if (multipartFile != null && !multipartFile.isEmpty()) {
@@ -312,7 +309,7 @@ public class MailServiceImpl implements MailService{
 		// 직원 정보, 메일함, 메일 정보 가져오기
 		Employee employee = employeeRepository.findByUsername(username)
 			                    .orElseThrow(() -> new ResourceNotFoundException("직원이 존재하지 않습니다."));
-		Mailbox mailbox = mailboxRepository.findByEmployeeEmployeeIdAndMailMailId(employee.getEmployeeId(), mailId)
+		Mailbox mailbox = mailboxRepository.findFirstByEmployeeEmployeeIdAndMailMailId(employee.getEmployeeId(), mailId)
 			                  .orElseThrow(() -> new ResourceNotFoundException("해당 메일을 조회할 권한이 없습니다."));
 		Mail mail = mailbox.getMail();
 		
