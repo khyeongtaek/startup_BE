@@ -1,7 +1,6 @@
 package org.goodee.startup_BE.work_log.service;
 
 import lombok.RequiredArgsConstructor;
-import org.goodee.startup_BE.common.dto.AttachmentFileRequestDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;

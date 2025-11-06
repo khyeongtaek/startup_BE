@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MailboxRepository extends JpaRepository<Mailbox, Long> {
-	Optional<Mailbox> findByEmployeeEmployeeIdAndMailMailId(Long employeeId, Long mailId);
+	Optional<Mailbox> findFirstByEmployeeEmployeeIdAndMailMailId(Long employeeId, Long mailId);
 	
 	List<Mailbox> findAllByBoxIdInAndEmployeeUsername(List<Long> boxIds, String username);
 	

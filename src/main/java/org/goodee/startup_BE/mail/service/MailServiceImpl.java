@@ -1,7 +1,6 @@
 package org.goodee.startup_BE.mail.service;
 
 import lombok.RequiredArgsConstructor;
-import org.goodee.startup_BE.common.dto.AttachmentFileRequestDTO;
 import org.goodee.startup_BE.common.dto.AttachmentFileResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.enums.OwnerType;
@@ -26,6 +25,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -156,7 +156,7 @@ public class MailServiceImpl implements MailService{
 	
 	// 메일 작성
 	@Override
-	public MailSendResponseDTO sendMail(MailSendRequestDTO mailSendRequestDTO , String username) {
+	public MailSendResponseDTO sendMail(MailSendRequestDTO mailSendRequestDTO , String username, List<MultipartFile> multipartFile) {
 		// 0. 직원 조회
 		Employee employee = employeeRepository.findByUsername(username)
 			                    .orElseThrow(() -> new ResourceNotFoundException("직원이 존재하지 않습니다"));
@@ -225,11 +225,8 @@ public class MailServiceImpl implements MailService{
 		
 		// 5. 파일첨부 업로드
 		List<AttachmentFileResponseDTO> uploadFiles = Collections.emptyList();
-		if(mailSendRequestDTO.getAttachmentFiles() != null && !mailSendRequestDTO.getAttachmentFiles().isEmpty()) {
-			AttachmentFileRequestDTO fileDTO = AttachmentFileRequestDTO.builder()
-				                            .files(mailSendRequestDTO.getAttachmentFiles())
-																		.build();
-			uploadFiles = attachmentFileService.uploadFiles(fileDTO, ownerTypeCode.getCommonCodeId(), mail.getMailId());
+		if(multipartFile != null && !multipartFile.isEmpty()) {
+			uploadFiles = attachmentFileService.uploadFiles(multipartFile, ownerTypeCode.getCommonCodeId(), mail.getMailId());
 		}
 		
 		
@@ -243,7 +240,7 @@ public class MailServiceImpl implements MailService{
 	
 	// 메일 수정
 	@Override
-	public MailSendResponseDTO updateMail(Long mailId, MailUpdateRequestDTO requestDTO, String username) {
+	public MailSendResponseDTO updateMail(Long mailId, MailUpdateRequestDTO requestDTO, String username, List<MultipartFile> multipartFile) {
 		// 0. 수정 권한 확인 (메일 정보의 직원 ID 와 접속중인 사용자의 ID를 비교)
 		Employee employee = employeeRepository.findByUsername(username).orElseThrow(() -> new ResourceNotFoundException("직원이 존재하지 않습니다."));
 		Mail mail = mailRepository.findById(mailId).orElseThrow(() -> new ResourceNotFoundException("메일이 존재하지 않습니다."));
@@ -282,17 +279,11 @@ public class MailServiceImpl implements MailService{
 		if (requestDTO.getDeleteAttachmentFileIds() != null && !requestDTO.getDeleteAttachmentFileIds().isEmpty()) {
 			for (Long id : requestDTO.getDeleteAttachmentFileIds()) {
 				if (id == null) continue;
-				attachmentFileService.deleteFile(
-					AttachmentFileRequestDTO.builder().fileId(id).build()
-				);
+				attachmentFileService.deleteFile(id);
 			}
 		}
-		if (requestDTO.getAttachmentFiles() != null && !requestDTO.getAttachmentFiles().isEmpty()) {
-			attachmentFileService.uploadFiles(
-				AttachmentFileRequestDTO.builder().files(requestDTO.getAttachmentFiles()).build(),
-				ownerType.getCommonCodeId(),
-				mail.getMailId()
-			);
+		if (multipartFile != null && !multipartFile.isEmpty()) {
+			attachmentFileService.uploadFiles(multipartFile, ownerType.getCommonCodeId(), mail.getMailId());
 		}
 		
 		// 5. 최신 수신자 목록 재조회
@@ -318,7 +309,7 @@ public class MailServiceImpl implements MailService{
 		// 직원 정보, 메일함, 메일 정보 가져오기
 		Employee employee = employeeRepository.findByUsername(username)
 			                    .orElseThrow(() -> new ResourceNotFoundException("직원이 존재하지 않습니다."));
-		Mailbox mailbox = mailboxRepository.findByEmployeeEmployeeIdAndMailMailId(employee.getEmployeeId(), mailId)
+		Mailbox mailbox = mailboxRepository.findFirstByEmployeeEmployeeIdAndMailMailId(employee.getEmployeeId(), mailId)
 			                  .orElseThrow(() -> new ResourceNotFoundException("해당 메일을 조회할 권한이 없습니다."));
 		Mail mail = mailbox.getMail();
 		

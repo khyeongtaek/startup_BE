@@ -3,18 +3,24 @@ package org.goodee.startup_BE.common.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.goodee.startup_BE.common.dto.AttachmentFileResponseDTO;
-import org.goodee.startup_BE.common.dto.AttachmentFileRequestDTO;
 import org.goodee.startup_BE.common.entity.AttachmentFile;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.AttachmentFileRepository;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -54,8 +60,8 @@ public class AttachmentFileServiceImpl implements AttachmentFileService{
 	
 	// 파일 업로드
 	@Override
-	public List<AttachmentFileResponseDTO> uploadFiles(AttachmentFileRequestDTO fileDTO, Long ownerTypeId, Long ownerId) {
-		if (fileDTO == null || fileDTO.getFiles() == null || fileDTO.getFiles().isEmpty()) {
+	public List<AttachmentFileResponseDTO> uploadFiles(List<MultipartFile> multipartFile, Long ownerTypeId, Long ownerId) {
+		if (multipartFile == null || multipartFile.isEmpty()) {
 			throw new IllegalArgumentException("업로드할 파일이 없습니다.");
 		}
 		
@@ -66,7 +72,7 @@ public class AttachmentFileServiceImpl implements AttachmentFileService{
 		List<AttachmentFile> entities = new ArrayList<>();
 		
 		try {
-			for(MultipartFile file : fileDTO.getFiles()) {
+			for(MultipartFile file : multipartFile) {
 				if(file == null || file.isEmpty()) continue;
 				
 				// 파일 데이터 저장
@@ -125,21 +131,41 @@ public class AttachmentFileServiceImpl implements AttachmentFileService{
 	// 파일 다운로드
 	@Override
 	@Transactional(readOnly = true)
-	public AttachmentFileResponseDTO resolveFile(AttachmentFileRequestDTO fileDTO) {
-		AttachmentFile file = attachmentFileRepository.findByFileIdAndIsDeletedFalse(fileDTO.getFileId())
+	public ResponseEntity<Resource> downloadFile(Long fileId) {
+		// 파일 존재 여부 확인
+		AttachmentFile file = attachmentFileRepository.findByFileIdAndIsDeletedFalse(fileId)
 			                      .orElseThrow(() -> new NoSuchElementException("파일이 존재하지 않습니다."));
 		
+		// MIME 타입 지정
 		String mime = file.getMimeType() == null || file.getMimeType().isEmpty()
 			              ? DEFAULT_MIME : file.getMimeType();
-		AttachmentFileResponseDTO attachmentFile = AttachmentFileResponseDTO.toDTO(file);
-		attachmentFile.setMimeType(mime);
-		return attachmentFile;
+		
+		// 물리 경로
+		Path filePath = Paths.get(storageRoot).resolve(file.getStoragePath()).normalize();
+		System.out.println(filePath.toAbsolutePath().toString() );
+		
+		try {
+			Resource resource = new UrlResource(filePath.toUri());
+			if(!resource.exists() || !resource.isReadable()) {
+				throw new NoSuchElementException("파일을 읽을 수 없습니다.");
+			}
+			
+			String encodedName = URLEncoder.encode(file.getOriginalName(), StandardCharsets.UTF_8).replaceAll("\\+", "%20");
+			
+			return ResponseEntity.ok()
+				       .contentType(MediaType.parseMediaType(mime))
+				       .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedName + "\"")
+				       .body(resource);
+			
+		} catch (MalformedURLException e){
+			throw new IllegalStateException("파일 경로가 잘못되었습니다.", e);
+		}
 	}
 	
 	// 파일 삭제
 	@Override
-	public void deleteFile(AttachmentFileRequestDTO fileDTO) {
-		AttachmentFile file = attachmentFileRepository.findByFileIdAndIsDeletedFalse(fileDTO.getFileId())
+	public void deleteFile(Long fileId) {
+		AttachmentFile file = attachmentFileRepository.findByFileIdAndIsDeletedFalse(fileId)
 			                      .orElseThrow(() -> new NoSuchElementException("파일이 존재하지 않습니다."));
 		
 		file.deleteAttachmentFile();
