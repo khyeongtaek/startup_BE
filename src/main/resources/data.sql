@@ -54,9 +54,9 @@ VALUES
 INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
 VALUES
-    ('ES1', '재직 상태 - 재직중', 'ACTIVE', NULL, NULL, 1, NULL, NOW(), NOW(), false),
-    ('ES2', '재직 상태 - 휴직', 'ON_LEAVE', NULL, NULL, 2, NULL, NOW(), NOW(), false),
-    ('ES3', '재직 상태 - 계정 잠김', 'LOCKED', NULL, NULL, 3, NULL, NOW(), NOW(), false);
+    ('ES1', '재직 상태 - 재직중', 'ACTIVE', '재직', NULL, 1, NULL, NOW(), NOW(), false),
+    ('ES2', '재직 상태 - 휴직', 'ON_LEAVE', '휴직', NULL, 2, NULL, NOW(), NOW(), false),
+    ('ES3', '재직 상태 - 계정 잠김', 'LOCKED', '계정 잠김', NULL, 3, NULL, NOW(), NOW(), false);
 
 
 /*
@@ -123,8 +123,8 @@ VALUES
 INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
 VALUES
-    ('AU1', '권한 - 관리자', 'ROLE_ADMIN', NULL, NULL, 1, NULL, NOW(), NOW(), false),
-    ('AU2', '권한 - 일반 사용자', 'ROLE_USER', NULL, NULL, 2, NULL, NOW(), NOW(), false);
+    ('AU1', '권한 - 관리자', 'ROLE_ADMIN', '관리자', NULL, 1, NULL, NOW(), NOW(), false),
+    ('AU2', '권한 - 일반 사용자', 'ROLE_USER', '사용자', NULL, 2, NULL, NOW(), NOW(), false);
 
 
 /*
