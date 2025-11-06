@@ -668,3 +668,9 @@ VALUES
     ('외근 신청서', 1, NOW(), NOW(), false),
     ('조퇴 보고서', 1, NOW(), NOW(), false),
     ('휴가 신청서', 1 , NOW(),NOW(), false);
+
+
+UPDATE tbl_common_code
+SET code = 'SP03'
+WHERE code = 'PS02'
+  AND value1 = 'REJECT';
