@@ -3,7 +3,6 @@ package org.goodee.startup_BE.approval.repository;
 import org.goodee.startup_BE.approval.entity.ApprovalDoc;
 import org.goodee.startup_BE.approval.entity.ApprovalLine;
 import org.goodee.startup_BE.approval.entity.ApprovalReference;
-import org.goodee.startup_BE.approval.entity.ApprovalTemplate;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.employee.entity.Employee;
@@ -19,7 +18,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -49,8 +47,6 @@ class ApprovalRepositoryTest {
     private ApprovalLineRepository approvalLineRepository;
     @Autowired
     private ApprovalReferenceRepository approvalReferenceRepository;
-    @Autowired
-    private ApprovalTemplateRepository approvalTemplateRepository;
 
     // 의존성 리포지토리 (테스트 데이터 생성용)
     @Autowired
@@ -64,7 +60,7 @@ class ApprovalRepositoryTest {
     private Employee approver2; // 결재자2
     private Employee referrer; // 참조자
 
-    private ApprovalTemplate testTemplate;  // 결재 양식
+    private CommonCode testTemplate;  // 결재 양식
 
     private CommonCode statusActive, roleUser, deptDev, posJunior, posSenior;
     private CommonCode docStatusInProgress; // 문서상태: 진행중
@@ -75,7 +71,6 @@ class ApprovalRepositoryTest {
     void setUp() {
         // H2 DB 초기화 (참조 무결성을 위해 의존되는 엔티티부터 삭제)
         approvalReferenceRepository.deleteAll();
-        approvalTemplateRepository.deleteAll();
         approvalLineRepository.deleteAll();
         approvalDocRepository.deleteAll();
         employeeRepository.deleteAll();
@@ -94,7 +89,7 @@ class ApprovalRepositoryTest {
         lineStatusAwaiting = commonCodeRepository.save(CommonCode.createCommonCode("AL_AWAITING", "대기", "AWAITING", "AL", null, 2L, null));
 
         // 테스트용 양식 생성
-        testTemplate = approvalTemplateRepository.save(ApprovalTemplate.create("테스트 양식", "내용"));
+        testTemplate = commonCodeRepository.save(CommonCode.createCommonCode("TPL_001", "결재 양식", "휴가신청서", null, null, 1L, null));
 
         // --- given: 직원 데이터 생성 ---
         creator = createAndSaveEmployee("creator", "creator@test.com", posJunior, null); // 최초 생성자
