@@ -16,6 +16,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -34,10 +37,10 @@ public class MailController {
 		content = @Content(schema = @Schema(implementation = MailSendResponseDTO.class))
 	)
 	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<APIResponseDTO<MailSendResponseDTO>> sendMail(@Valid @ModelAttribute MailSendRequestDTO requestDTO, Authentication auth) {
+	public ResponseEntity<APIResponseDTO<MailSendResponseDTO>> sendMail(@Valid @ModelAttribute MailSendRequestDTO requestDTO, Authentication auth, @RequestParam(value = "files", required = false) List<MultipartFile> multipartFile) {
 		String username = auth.getName();
 
-		MailSendResponseDTO responseDTO = mailService.sendMail(requestDTO, username);
+		MailSendResponseDTO responseDTO = mailService.sendMail(requestDTO, username, multipartFile);
 
 		APIResponseDTO<MailSendResponseDTO> response = APIResponseDTO.<MailSendResponseDTO>builder()
 			                                               .message("메일 발송 성공")
@@ -57,10 +60,10 @@ public class MailController {
 		content = @Content(schema = @Schema(implementation = MailSendResponseDTO.class))
 	)
 	@PutMapping(value = "/{mailId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<APIResponseDTO<MailSendResponseDTO>> updateMail(@PathVariable Long mailId, @Valid @ModelAttribute MailUpdateRequestDTO requestDTO, Authentication auth) {
+	public ResponseEntity<APIResponseDTO<MailSendResponseDTO>> updateMail(@PathVariable Long mailId, @Valid @ModelAttribute MailUpdateRequestDTO requestDTO, Authentication auth, List<MultipartFile> multipartFile) {
 		String username = auth.getName();
 		
-		MailSendResponseDTO responseDTO = mailService.updateMail(mailId, requestDTO, username);
+		MailSendResponseDTO responseDTO = mailService.updateMail(mailId, requestDTO, username, multipartFile);
 		
 		APIResponseDTO<MailSendResponseDTO> response = APIResponseDTO.<MailSendResponseDTO>builder()
 			                                               .message("수정 메일 발송 성공")

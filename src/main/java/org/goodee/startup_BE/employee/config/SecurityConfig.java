@@ -61,7 +61,7 @@ public class SecurityConfig {
                                 // 허용될 주소 배열
                                 .requestMatchers(PERMIT_ALL_PATH)
                                 .permitAll()
-
+                                                 
                                 // /api/auth/signup은 "ROLE_ADMIN" 권한을 가진 사용자만 허용
                                 .requestMatchers("/api/auth/signup")
                                 .hasAuthority(Role.ROLE_ADMIN.name())

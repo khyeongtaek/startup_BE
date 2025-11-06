@@ -36,10 +36,7 @@ public class MailSendRequestDTO {
 	
 	@Schema(description = "숨은참조자 이메일 목록")
 	private List<String> bcc;   // 숨은 참조 리스트
-	
-	@ArraySchema(schema = @Schema(type = "string", format = "binary"))
-	@Schema(description = "첨부파일 리스트 (복수 업로드 가능)")
-	private List<MultipartFile> attachmentFiles;    // 첨부파일
+
 	
 	public Mail toEntity(Employee employee, LocalDateTime sendAt) {
 		return Mail.createBasicMail(employee, this.title, this.content, sendAt);

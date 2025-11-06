@@ -1,20 +1,24 @@
 package org.goodee.startup_BE.attachmentFile;
 
-import org.goodee.startup_BE.common.dto.AttachmentFileRequestDTO;
 import org.goodee.startup_BE.common.dto.AttachmentFileResponseDTO;
+import org.goodee.startup_BE.common.entity.AttachmentFile;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.AttachmentFileRepository;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
-import org.goodee.startup_BE.common.service.AttachmentFileService;
+import org.goodee.startup_BE.common.service.AttachmentFileServiceImpl;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.mock.web.MockMultipartFile;
 
+import jakarta.persistence.EntityManager;
 import java.io.IOException;
 import java.nio.file.*;
 import java.time.LocalDateTime;
@@ -22,222 +26,252 @@ import java.util.*;
 
 import static org.assertj.core.api.Assertions.*;
 
-@SpringBootTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@EntityScan(basePackages = "org.goodee.startup_BE")
-@TestPropertySource(properties = {
-	// H2(메모리) + MySQL 호환 모드 (LONGTEXT 등 DDL 호환성)
+@DataJpaTest(properties = {
 	"spring.jpa.hibernate.ddl-auto=create-drop",
 	"spring.datasource.driver-class-name=org.h2.Driver",
-	"spring.datasource.url=jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1",
+	"spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1",
 	"spring.datasource.username=sa",
 	"spring.datasource.password=",
-	"spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-	// 서비스가 참조하는 물리 저장 루트 (OS 임시 폴더 하위)
-	"file.storage.root=${java.io.tmpdir}/uploads-test"
+	"spring.jpa.database-platform=org.hibernate.dialect.H2Dialect"
 })
-@Transactional
+@Import(AttachmentFileServiceImpl.class)
 class AttachmentFileServiceTests {
 	
 	@Autowired
-	private AttachmentFileService attachmentFileService;
+	AttachmentFileServiceImpl attachmentFileService;
 	
 	@Autowired
-	private AttachmentFileRepository attachmentFileRepository;
+	AttachmentFileRepository attachmentFileRepository;
 	
 	@Autowired
-	private CommonCodeRepository commonCodeRepository;
+	CommonCodeRepository commonCodeRepository;
 	
-	private CommonCode ownerTypeWorklog;
-	private Long ownerTypeId;
-	private final Long ownerId = 1001L;
+	@Autowired
+	EntityManager em;
 	
-	private Path storageRoot;
+	@TempDir
+	Path tempDir;
 	
-	// ===== 공통 헬퍼 =====
-	private MockMultipartFile mock(String filename, String contentType, byte[] data) {
-		// DTO의 필드명이 files 이므로 name="files"로 맞춰둠
-		return new MockMultipartFile("files", filename, contentType, data);
-	}
-	
-	private AttachmentFileRequestDTO uploadReq(MockMultipartFile... files) {
-		return AttachmentFileRequestDTO.builder()
-			       .files(Arrays.asList(files))
-			       .build();
-	}
+	private CommonCode ownerTypeMail;   // value1 = "MAIL"
+	private Long ownerId = 100L;
 	
 	@BeforeEach
-	void setUp() throws IOException {
-		// 물리 경로
-		storageRoot = Paths.get(System.getProperty("java.io.tmpdir")).resolve("uploads-test").normalize();
-		// 깔끔히 초기화
-		if (Files.exists(storageRoot)) {
-			Files.walk(storageRoot)
-				.sorted(Comparator.reverseOrder())
-				.forEach(p -> { try { Files.deleteIfExists(p);} catch (IOException ignored) {} });
-		}
-		Files.createDirectories(storageRoot);
+	void init() {
+		// 서비스의 저장 루트 동적 주입
+		ReflectionTestUtils.setField(attachmentFileService, "storageRoot", tempDir.toString());
 		
-		// DB 초기화
-		attachmentFileRepository.deleteAll();
-		commonCodeRepository.deleteAll();
-		
-		// OWNER 타입(업무일지) 준비
-		ownerTypeWorklog = CommonCode.createCommonCode(
-			"OWNER_WORKLOG", "업무일지", "WORKLOG",
-			null, null, 1L, null
+		// CommonCode 준비 (파일 경로 생성 시 value1 사용됨)
+		ownerTypeMail = CommonCode.createCommonCode(
+			"OT_MAIL", "OwnerType.Mail", "MAIL", null, null, 1L, null
 		);
-		ownerTypeWorklog = commonCodeRepository.save(ownerTypeWorklog);
-		ownerTypeId = ownerTypeWorklog.getCommonCodeId();
+		commonCodeRepository.save(ownerTypeMail);
 	}
 	
-	@AfterEach
-	void tearDown() throws IOException {
-		if (Files.exists(storageRoot)) {
-			Files.walk(storageRoot)
-				.sorted(Comparator.reverseOrder())
-				.forEach(p -> { try { Files.deleteIfExists(p);} catch (IOException ignored) {} });
-		}
+	// ========= Helpers =========
+	
+	private MockMultipartFile mockFile(String name, String contentType, byte[] bytes) {
+		return new MockMultipartFile("files", name, contentType, bytes);
 	}
+	
+	private List<AttachmentFileResponseDTO> doUpload(List<MultipartFile> files) {
+		return attachmentFileService.uploadFiles(files, ownerTypeMail.getCommonCodeId(), ownerId);
+	}
+	
+	// ========= uploadFiles() =========
 	
 	@Test
-	@DisplayName("C: 업로드 성공 - 저장·엔티티 매핑·@PrePersist 동작")
-	void upload_success() {
+	@DisplayName("uploadFiles: 단일/다중 업로드 성공 + 물리파일/DB 저장 + DTO 반환")
+	void uploadFiles_success() throws IOException {
 		// given
-		MockMultipartFile f1 = mock("hello.txt", "text/plain", "HELLO".getBytes());
-		MockMultipartFile f2 = mock("img.png", "image/png", new byte[]{1,2,3,4});
+		MockMultipartFile f1 = mockFile("report a.txt", "text/plain", "hello".getBytes());
+		MockMultipartFile f2 = mockFile("image.png", "image/png", new byte[]{1,2,3,4});
 		
 		// when
-		var result = attachmentFileService.uploadFiles(uploadReq(f1, f2), ownerTypeId, ownerId);
+		List<AttachmentFileResponseDTO> dtos = doUpload(List.of(f1, f2));
 		
 		// then
-		assertThat(result).hasSize(2);
-		for (AttachmentFileResponseDTO dto : result) {
-			assertThat(dto.getFileId()).isNotNull();
-			assertThat(dto.getOriginalName()).isIn("hello.txt", "img.png");
-			assertThat(dto.getStoragePath()).startsWith("WORKLOG/");
-			assertThat(dto.getCreatedAt()).isNotNull();
-			// 실제 파일 존재 확인
-			Path abs = storageRoot.resolve(dto.getStoragePath()).normalize();
+		assertThat(dtos).hasSize(2);
+		List<AttachmentFile> saved = attachmentFileRepository.findAll();
+		assertThat(saved).hasSize(2);
+		
+		for (AttachmentFileResponseDTO dto : dtos) {
+			// 상대경로가 채워지고, 물리 파일이 존재해야 함
+			assertThat(dto.getStoragePath()).isNotBlank();
+			Path abs = tempDir.resolve(dto.getStoragePath()).normalize();
 			assertThat(Files.exists(abs)).isTrue();
+			assertThat(Files.size(abs)).isGreaterThan(0);
+			// createdAt 자동 세팅
+			assertThat(dto.getCreatedAt()).isNotNull();
 		}
 	}
 	
 	@Test
-	@DisplayName("C: 업로드 실패 - 파일 리스트 비어있음")
-	void upload_fail_emptyFiles() {
+	@DisplayName("uploadFiles: 파일 리스트에 null/empty가 섞여 있어도 유효 파일만 저장")
+	void uploadFiles_skipNullOrEmpty() {
 		// given
-		AttachmentFileRequestDTO req = AttachmentFileRequestDTO.builder()
-			                               .files(Collections.emptyList())
-			                               .build();
-		
-		// when & then
-		assertThatThrownBy(() -> attachmentFileService.uploadFiles(req, ownerTypeId, ownerId))
-			.isInstanceOf(IllegalArgumentException.class)
-			.hasMessageContaining("업로드할 파일이 없습니다");
-	}
-	
-	@Test
-	@DisplayName("C: 업로드 실패 - 존재하지 않는 ownerTypeId")
-	void upload_fail_noOwnerType() {
-		// given
-		MockMultipartFile f = mock("a.bin", null, new byte[]{9,9});
-		Long wrongOwnerTypeId = 99999L;
-		
-		// when & then
-		assertThatThrownBy(() -> attachmentFileService.uploadFiles(uploadReq(f), wrongOwnerTypeId, ownerId))
-			.isInstanceOf(NoSuchElementException.class)
-			.hasMessageContaining("분류가 존재하지 않습니다");
-	}
-	
-	@Test
-	@DisplayName("R: 리스트 조회 - createdAt 내림차순 + MIME 기본값 보정")
-	void list_success_desc_and_mimeDefault() {
-		// given (두 파일 업로드: 하나는 contentType=null로 기본값 보정 유도)
-		MockMultipartFile f1 = mock("a.bin", null, new byte[]{1}); // MIME null
-		MockMultipartFile f2 = mock("b.txt", "text/plain", "B".getBytes());
-		attachmentFileService.uploadFiles(uploadReq(f1), ownerTypeId, ownerId);
-		attachmentFileService.uploadFiles(uploadReq(f2), ownerTypeId, ownerId);
+		MockMultipartFile valid = mockFile("v.dat", "application/octet-stream", new byte[]{9});
+		MockMultipartFile empty = new MockMultipartFile("files", "empty.txt", "text/plain", new byte[0]);
 		
 		// when
-		var list = attachmentFileService.listFiles(ownerTypeId, ownerId);
+		List<AttachmentFileResponseDTO> dtos = doUpload(Arrays.asList(valid, null, empty));
 		
 		// then
+		assertThat(dtos).hasSize(1);
+		AttachmentFileResponseDTO dto = dtos.get(0);
+		assertThat(dto.getOriginalName()).isEqualTo("v.dat");
+	}
+	
+	@Test
+	@DisplayName("uploadFiles: contentType null이면 DEFAULT_MIME으로 저장")
+	void uploadFiles_defaultMimeWhenNull() {
+		// given
+		MockMultipartFile f = new MockMultipartFile("files", "raw.bin", null, new byte[]{1,2});
+		
+		// when
+		List<AttachmentFileResponseDTO> dtos = doUpload(List.of(f));
+		
+		// then
+		assertThat(dtos).hasSize(1);
+		assertThat(dtos.get(0).getMimeType()).isEqualTo("application/octet-stream");
+	}
+	
+	@Test
+	@DisplayName("uploadFiles: ownerTypeId 미존재 시 NoSuchElementException")
+	void uploadFiles_ownerTypeNotFound() {
+		// given
+		MockMultipartFile f = mockFile("a.txt", "text/plain", "x".getBytes());
+		
+		// when & then
+		assertThatThrownBy(() ->
+			                   attachmentFileService.uploadFiles(List.of(f), 9999L, ownerId)
+		).isInstanceOf(NoSuchElementException.class)
+			.hasMessageContaining("분류가 존재하지 않습니다.");
+	}
+	
+	@Test
+	@DisplayName("uploadFiles: 업로드 목록이 비어 있으면 IllegalArgumentException")
+	void uploadFiles_emptyFiles() {
+		// when & then
+		assertThatThrownBy(() ->
+			                   attachmentFileService.uploadFiles(Collections.emptyList(), ownerTypeMail.getCommonCodeId(), ownerId)
+		).isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("업로드할 파일이 없습니다.");
+	}
+	
+	// ========= listFiles() =========
+	
+	@Test
+	@DisplayName("listFiles: 생성일시 내림차순으로 반환 + DEFAULT_MIME 보정")
+	void listFiles_sortedDescAndDefaultMime() throws Exception {
+		// given: 업로드 타이밍 차이를 위해 약간 대기
+		MockMultipartFile f1 = mockFile("old.txt", null, "1".getBytes());
+		List<AttachmentFileResponseDTO> d1 = doUpload(List.of(f1));
+		Thread.sleep(5);
+		
+		MockMultipartFile f2 = mockFile("new.txt", "text/plain", "22".getBytes());
+		List<AttachmentFileResponseDTO> d2 = doUpload(List.of(f2));
+		
+		// when
+		List<AttachmentFileResponseDTO> list = attachmentFileService.listFiles(ownerTypeMail.getCommonCodeId(), ownerId);
+		
+		// then: 최신(new.txt) 먼저
 		assertThat(list).hasSize(2);
-		// 최신(createdAt) 우선
-		LocalDateTime first = list.get(0).getCreatedAt();
-		LocalDateTime second = list.get(1).getCreatedAt();
-		assertThat(first).isAfterOrEqualTo(second);
+		assertThat(list.get(0).getOriginalName()).isEqualTo("new.txt");
+		assertThat(list.get(1).getOriginalName()).isEqualTo("old.txt");
 		
-		// MIME 기본값 보정 확인 (null로 업로드한 a.bin이 octet-stream)
-		assertThat(list.stream()
-			           .filter(d -> d.getOriginalName().equals("a.bin"))
-			           .findFirst().orElseThrow().getMimeType())
-			.isEqualTo("application/octet-stream");
+		// old.txt는 contentType null이었으므로 DEFAULT_MIME이어야 함
+		assertThat(list.get(1).getMimeType()).isEqualTo("application/octet-stream");
 	}
 	
 	@Test
-	@DisplayName("R: 리스트 조회 실패 - 잘못된 ownerTypeId")
-	void list_fail_noOwnerType() {
-		// when & then
-		assertThatThrownBy(() -> attachmentFileService.listFiles(123456L, ownerId))
-			.isInstanceOf(NoSuchElementException.class)
-			.hasMessageContaining("분류가 존재하지 않습니다");
+	@DisplayName("listFiles: ownerTypeId 미존재 시 NoSuchElementException")
+	void listFiles_ownerTypeNotFound() {
+		assertThatThrownBy(() ->
+			                   attachmentFileService.listFiles(123456789L, ownerId)
+		).isInstanceOf(NoSuchElementException.class)
+			.hasMessageContaining("분류가 존재하지 않습니다.");
 	}
 	
+	// ========= downloadFile() =========
+	
 	@Test
-	@DisplayName("R: 단일 조회(다운로드) - 기본 MIME 보정 포함")
-	void resolve_success() {
+	@DisplayName("downloadFile: 성공 시 Resource/헤더(Content-Disposition, Content-Type) 정상")
+	void downloadFile_success() throws IOException {
 		// given
-		MockMultipartFile f = mock("raw.bin", null, new byte[]{7,7,7}); // contentType=null
-		var uploaded = attachmentFileService.uploadFiles(uploadReq(f), ownerTypeId, ownerId);
-		Long fileId = uploaded.get(0).getFileId();
-		
-		AttachmentFileRequestDTO req = AttachmentFileRequestDTO.builder()
-			                               .fileId(fileId)
-			                               .build();
+		MockMultipartFile f = mockFile("file A.txt", "text/plain", "hello world".getBytes());
+		List<AttachmentFileResponseDTO> dtos = doUpload(List.of(f));
+		Long fileId = dtos.get(0).getFileId();
 		
 		// when
-		AttachmentFileResponseDTO dto = attachmentFileService.resolveFile(req);
+		ResponseEntity<Resource> resp = attachmentFileService.downloadFile(fileId);
 		
 		// then
-		assertThat(dto.getFileId()).isEqualTo(fileId);
-		assertThat(dto.getOriginalName()).isEqualTo("raw.bin");
-		assertThat(dto.getMimeType()).isEqualTo("application/octet-stream"); // 기본값 보정
+		assertThat(resp.getBody()).isNotNull();
+		assertThat(resp.getHeaders().getFirst("Content-Type")).isEqualTo("text/plain");
+		String cd = resp.getHeaders().getFirst("Content-Disposition");
+		assertThat(cd).contains("attachment;");
+		// 공백이 %20으로 인코딩되어야 함
+		assertThat(cd).contains("filename=\"file%20A.txt\"");
+		assertThat(resp.getBody().exists()).isTrue();
+		assertThat(resp.getBody().isReadable()).isTrue();
 	}
 	
 	@Test
-	@DisplayName("R: 단일 조회 실패 - 존재하지 않는 파일ID")
-	void resolve_fail_notFound() {
+	@DisplayName("downloadFile: 파일 엔티티 미존재 시 NoSuchElementException")
+	void downloadFile_notFoundEntity() {
+		assertThatThrownBy(() -> attachmentFileService.downloadFile(987654321L))
+			.isInstanceOf(NoSuchElementException.class)
+			.hasMessageContaining("파일이 존재하지 않습니다.");
+	}
+	
+	@Test
+	@DisplayName("downloadFile: 물리 파일이 삭제되어 읽을 수 없으면 NoSuchElementException")
+	void downloadFile_notReadablePhysicalFile() throws IOException {
 		// given
-		AttachmentFileRequestDTO req = AttachmentFileRequestDTO.builder()
-			                               .fileId(9999L)
-			                               .build();
+		MockMultipartFile f = mockFile("gone.txt", "text/plain", "bye".getBytes());
+		List<AttachmentFileResponseDTO> dtos = doUpload(List.of(f));
+		AttachmentFileResponseDTO dto = dtos.get(0);
+		
+		// 물리 파일 삭제
+		Files.deleteIfExists(tempDir.resolve(dto.getStoragePath()).normalize());
 		
 		// when & then
-		assertThatThrownBy(() -> attachmentFileService.resolveFile(req))
+		assertThatThrownBy(() -> attachmentFileService.downloadFile(dto.getFileId()))
 			.isInstanceOf(NoSuchElementException.class)
-			.hasMessageContaining("파일이 존재하지 않습니다");
+			.hasMessageContaining("파일을 읽을 수 없습니다.");
 	}
 	
+	// ========= deleteFile() =========
+	
 	@Test
-	@DisplayName("D: 소프트삭제 - isDeleted=true로 전환되어 조회 불가")
-	void deleteFile_success_softDelete() {
+	@DisplayName("deleteFile: 소프트 삭제 - 이후 조회 API에서 제외됨(@Where + 쿼리 조건)")
+	void deleteFile_softDelete() {
 		// given
-		MockMultipartFile f = mock("del.txt", "text/plain", "DEL".getBytes());
-		var uploaded = attachmentFileService.uploadFiles(uploadReq(f), ownerTypeId, ownerId);
-		Long fileId = uploaded.get(0).getFileId();
-		
-		AttachmentFileRequestDTO req = AttachmentFileRequestDTO.builder()
-			                               .fileId(fileId)
-			                               .build();
+		MockMultipartFile f = mockFile("del.txt", "text/plain", "x".getBytes());
+		List<AttachmentFileResponseDTO> dtos = doUpload(List.of(f));
+		Long fileId = dtos.get(0).getFileId();
 		
 		// when
-		attachmentFileService.deleteFile(req);
+		attachmentFileService.deleteFile(fileId);
 		
-		// then
-		// 현재 구현은 deleteFile에 readOnly=true라서 플래그 반영이 안 될 수 있음.
-		// 통과시키려면 서비스의 @Transactional(readOnly=true) 제거/수정 필수.
+		// then: 서비스/리포지토리 조회에서 제외
 		assertThat(attachmentFileRepository.findByFileIdAndIsDeletedFalse(fileId)).isEmpty();
+		List<AttachmentFileResponseDTO> after = attachmentFileService.listFiles(ownerTypeMail.getCommonCodeId(), ownerId);
+		assertThat(after).isEmpty();
+		
+		// native 쿼리로 is_deleted=true 확인 (엔티티 @Where 우회)
+		Object flag = em.createNativeQuery("SELECT is_deleted FROM tbl_file WHERE file_id = :id")
+			              .setParameter("id", fileId)
+			              .getSingleResult();
+		boolean isDeleted = (flag instanceof Boolean) ? (Boolean) flag : Integer.valueOf(flag.toString()) == 1;
+		assertThat(isDeleted).isTrue();
+	}
+	
+	@Test
+	@DisplayName("deleteFile: 엔티티 미존재 시 NoSuchElementException")
+	void deleteFile_notFound() {
+		assertThatThrownBy(() -> attachmentFileService.deleteFile(111111L))
+			.isInstanceOf(NoSuchElementException.class)
+			.hasMessageContaining("파일이 존재하지 않습니다.");
 	}
 }
