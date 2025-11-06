@@ -13,6 +13,7 @@ import org.goodee.startup_BE.approval.dto.ApprovalDocResponseDTO;
 import org.goodee.startup_BE.approval.dto.ApprovalLineRequestDTO;
 import org.goodee.startup_BE.approval.service.ApprovalService;
 import org.goodee.startup_BE.common.dto.APIResponseDTO;
+import org.goodee.startup_BE.common.dto.CommonCodeResponseDTO;
 import org.goodee.startup_BE.common.validation.ValidationGroups;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,12 +24,26 @@ import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Tag(name = "Approval API", description = "결재(전자결재) 관련 API") // 태그 설정
 @RestController
 @RequestMapping("/api/approvals")
 @RequiredArgsConstructor
 public class ApprovalController {
     private final ApprovalService approvalService;
+
+    @Operation(summary = "결재 양식 템플릿 목록 조회", description = "새 결재 작성 시 사용할 수 있는 양식 템플릿 목록을 조회 한다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "결재 양식 목록 조회 성공")
+    })
+    @GetMapping("/templates")
+    public ResponseEntity<APIResponseDTO<List<CommonCodeResponseDTO>>> getApprovalTemplates() {
+        return ResponseEntity.ok(APIResponseDTO.<List<CommonCodeResponseDTO>>builder()
+                .message("결재 양식 목록 조회 성공")
+                .data(approvalService.getAllApprovalTemplates())
+                .build());
+    }
 
     @Operation(summary = "결재 문서 상신 (생성)",
             description = "새로운 결재 문서를 상신(제출). 결재선(approvalLines)과 참조자(approvalReferences) 정보를 포함해야 한다.",

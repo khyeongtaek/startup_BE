@@ -651,35 +651,18 @@ VALUES
         NOW(), NOW(), 1, 1
     );
 
-
-/*
-* =============================================
-* Approval Template (결재 양식 기본 데이터)
-* code: 없음 (별도 테이블)
-* created_by: admin (employee_id = 1)
-* =============================================
-*/
-
-INSERT INTO tbl_approval_template
-(template_name, created_by, created_at, updated_at, is_deleted)
-VALUES
-    ('연차 신청서', 1 , NOW() , NOW(), false),
-    ('출장 신청서', 1, NOW(), NOW(), false),
-    ('외근 신청서', 1, NOW(), NOW(), false),
-    ('조퇴 보고서', 1, NOW(), NOW(), false),
-    ('휴가 신청서', 1 , NOW(),NOW(), false);
-
 /*
 * =============================================
 * Approval Type (결재 양식)
-* code: AT + 번호 (Approval Type)
-* value1: 타입 값 (영문 Enum 값)
-* value2: 타입 명 (한글)
+* code: AT + 번호 (Approval Template)
+* value1: 양식 명 (한글, UI에 노출될 이름)
+* value2: 양식 타입 (영문, Enum 또는 식별자로 사용)
+* value3: 양식 폼 컴포넌트 경로
 * =============================================
 */
 
 INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
 VALUES
-    ('AT1', '결재 양식 - 휴가', 'VACATION', '휴가', NULL, 1, NULL, NOW(), NOW(), false),
-    ('AT2', '결재 양식 - 출장', 'BUSINESS_TRIP', '출장', NULL, 2, NULL, NOW(), NOW(), false);
+    ('AT1', '결재 양식', '휴가 신청서', 'VACATION', '/forms/vacation', 1, NULL, NOW(), NOW(), false),
+    ('AT2', '결재 양식', '출장 계획서', 'BUSINESS_TRIP', '/forms/biztrip', 2, NULL, NOW(), NOW(), false);

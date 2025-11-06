@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import org.goodee.startup_BE.approval.entity.ApprovalDoc;
-import org.goodee.startup_BE.approval.entity.ApprovalTemplate;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.validation.ValidationGroups;
 import org.goodee.startup_BE.employee.entity.Employee;
@@ -30,8 +29,8 @@ public class ApprovalDocRequestDTO {
     @NotNull(message = "문서 ID는 필수입니다.", groups = {ValidationGroups.Update.class})
     private Long docId;
 
-    @NotEmpty(message = "양식 ID는 필수 입니다.", groups = {ValidationGroups.Create.class})
-    private Long templateId;
+    @NotNull(message = "양식 코드는 필수 입니다.", groups = {ValidationGroups.Create.class})
+    private Long templateCode;
 
     @NotEmpty(message = "제목은 필수입니다.", groups = {ValidationGroups.Create.class, ValidationGroups.Update.class})
     private String title;
@@ -58,20 +57,20 @@ public class ApprovalDocRequestDTO {
      * DTO를 ApprovalDoc 엔티티로 변환
      *
      * @param creator        기안자 엔티티 (현재 로그인한 사용자)
-     * @param templateId     ApprovalTemplate 엔티티 (서비스 레이어에서 조회)
+     * @param template       결재 양식 CommonCode 엔티티 (예: '휴가계획서')
      * @param docStatus      문서 상태 CommonCode 엔티티 (예: '결재중' 또는 '임시저장')
      * @return ApprovalDoc 엔티티
      */
     public ApprovalDoc toEntity(
             Employee creator,
-            ApprovalTemplate templateId,
+            CommonCode template,
             CommonCode docStatus
     ) {
         return ApprovalDoc.createApprovalDoc(
                 this.title,
                 this.content,
                 creator,
-                templateId,
+                template,
                 this.startDate,
                 this.endDate,
                 docStatus

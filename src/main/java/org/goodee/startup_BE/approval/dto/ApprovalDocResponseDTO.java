@@ -28,6 +28,9 @@ public class ApprovalDocResponseDTO {
     // 문서 상태
     private CommonCodeResponseDTO docStatus;
 
+    // 결재 양식
+    private CommonCodeResponseDTO approvalTemplate;
+
     // 작성일
     private LocalDateTime createdAt;
 
@@ -71,6 +74,7 @@ public class ApprovalDocResponseDTO {
                 .title(doc.getTitle())
                 .content(doc.getContent())
                 .docStatus(CommonCodeResponseDTO.toDTO(doc.getDocStatus()))
+                .approvalTemplate(CommonCodeResponseDTO.toDTO(doc.getApprovalTemplate()))
                 .createdAt(doc.getCreatedAt())
                 .updatedAt(doc.getUpdatedAt())
                 .startDate(doc.getStartDate())
