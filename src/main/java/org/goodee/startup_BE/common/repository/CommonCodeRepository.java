@@ -28,4 +28,7 @@ public interface CommonCodeRepository extends JpaRepository<CommonCode, Long> {
             "ORDER BY c.sortOrder ASC")
     List<CommonCode> findAllDepartments();
 
+    // code가 codePrefix로 시작되는 전체를 조회
+    List<CommonCode> findByCodeStartsWithAndIsDeletedFalse(String codePrefix);
+
 }
