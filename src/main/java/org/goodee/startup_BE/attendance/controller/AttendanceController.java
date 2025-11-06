@@ -37,6 +37,7 @@ public class AttendanceController {
             @PathVariable Long employeeId
     ) {
         AttendanceResponseDTO getAttendance = attendanceService.getTodayAttendance(employeeId);
+
         return ResponseEntity.ok(APIResponseDTO.<AttendanceResponseDTO>builder()
                 .message("오늘 출근 기록 조회 성공")
                 .data(getAttendance)
@@ -56,6 +57,7 @@ public class AttendanceController {
             @PathVariable Long employeeId
     ) {
         AttendanceResponseDTO clockIn = attendanceService.clockIn(employeeId);
+
         return ResponseEntity.ok(APIResponseDTO.<AttendanceResponseDTO>builder()
                 .message("출근 처리 완료")
                 .data(clockIn)
@@ -75,6 +77,8 @@ public class AttendanceController {
             @PathVariable Long employeeId
     ) {
         AttendanceResponseDTO clockOut = attendanceService.clockOut(employeeId);
+
+
         return ResponseEntity.ok(APIResponseDTO.<AttendanceResponseDTO>builder()
                 .message("퇴근 처리 완료")
                 .data(clockOut)
@@ -117,4 +121,7 @@ public class AttendanceController {
                 .data(allAttendances)
                 .build());
     }
+
+    //
+
 }

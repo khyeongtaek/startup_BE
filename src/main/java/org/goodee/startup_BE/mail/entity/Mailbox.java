@@ -7,7 +7,7 @@ import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
 
 @Entity
-@Table(name = "tbl_mailbox", uniqueConstraints = {@UniqueConstraint(columnNames = {"employee_id", "mail_id", "type"})})
+@Table(name = "tbl_mailbox", uniqueConstraints = {@UniqueConstraint(columnNames = {"employee_id", "mail_id", "type_id"})})
 @Getter
 public class Mailbox {
 	@Id
@@ -22,14 +22,14 @@ public class Mailbox {
 	private Employee employee;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(nullable = false)
+	@JoinColumn(name = "mail_id", nullable = false)
 	@Comment("메일 ID")
 	private Mail mail;
 	
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(nullable = false)
+	@JoinColumn(name = "type_id", nullable = false)
 	@Comment("메일함 타입")
-	private CommonCode type;
+	private CommonCode typeId;
 	
 	@Column(nullable = false)
 	@Comment("읽음 여부")
@@ -51,19 +51,24 @@ public class Mailbox {
 		Mailbox mailbox = new Mailbox();
 		mailbox.employee = employee;
 		mailbox.mail = mail;
-		mailbox.type = type;
+		mailbox.typeId = type;
 		mailbox.isRead = isRead;
 		mailbox.deletedStatus = deletedStatus;
 		return mailbox;
 	}
 
-	// 휴지통 이동
-	public void moveToTrash() {
-		this.deletedStatus = 1;
+	// 메일함 이동
+	public void moveMail(CommonCode type) {
+		this.typeId = type;
+		this.deletedStatus = "TRASH".equals(type.getValue1()) ? (byte) 1 : 0;
 	}
 
 	// 휴지통에서 삭제 (소프트 삭제)
 	public void deleteFromTrash() {
 		this.deletedStatus = 2;
+	}
+	
+	public void markAsRead() {
+		this.isRead = true;
 	}
 }

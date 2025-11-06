@@ -172,7 +172,8 @@ INSERT INTO tbl_common_code
 VALUES
     ('MT1', '수신함', 'INBOX', NULL, NULL, 1, NULL, NOW(), NOW(), false),
     ('MT2', '발신함', 'SENT', NULL, NULL, 2, NULL, NOW(), NOW(), false),
-    ('MT3', '개인 보관함', 'MYBOX', NULL, NULL, 3, NULL, NOW(), NOW(), false);
+    ('MT3', '개인 보관함', 'MYBOX', NULL, NULL, 3, NULL, NOW(), NOW(), false),
+    ('MT4', '휴지통', 'TRASH', NULL, NULL, 4, NULL, NOW(), NOW(), false);
 
 
 /*
