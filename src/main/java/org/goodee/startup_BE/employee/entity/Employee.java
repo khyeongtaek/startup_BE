@@ -165,6 +165,7 @@ public class Employee implements UserDetails {
 
     public void updatePhoneNumber(String phoneNumber, Employee updater) {
         this.phoneNumber = phoneNumber;
+        this.updater = updater;
     }
 
     public void updateStatus(CommonCode status, Employee updater) {
@@ -174,6 +175,7 @@ public class Employee implements UserDetails {
 
     public void updateProfileImg(String profileImg, Employee updater) {
         this.profileImg = profileImg == null ? "default_profile.png" : profileImg;
+        this.updater = updater;
     }
 
 
