@@ -24,7 +24,7 @@ public interface ScheduleService {
     List<ScheduleResponseDTO> getAllScheduleByPeriod(LocalDate start, LocalDate end);
 
     // 일정 삭제
-    public void deleteSchedule(Long scheduleId);
+    void deleteSchedule(Long scheduleId);
 
     // 일정 변경
     ScheduleResponseDTO updateSchedule(Long scheduleId, ScheduleRequestDTO request);
@@ -36,5 +36,8 @@ public interface ScheduleService {
     List<ScheduleParticipantResponseDTO> getParticipants(Long scheduleId);
 
     List<ScheduleResponseDTO> getVisibleSchedules(Long employeeId);
+
+    // 일점 참여자 참여 상태 변경
+    void updateParticipantStatus(Long scheduleId, Long employeeId, String value1);
 
 }

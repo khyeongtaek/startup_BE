@@ -154,7 +154,7 @@ public class ScheduleServiceImpl implements  ScheduleService{
                 .orElseThrow(() -> new ScheduleNotFoundException("해당 일정을 찾을 수 없습니다."));
 
         CommonCode pendingStatus = commonCodeRepository
-                .findByCodeStartsWithAndKeywordExactMatchInValues("PS", "PENDING")
+                .findByCodeStartsWithAndKeywordExactMatchInValues("SP", "PENDING")
                 .stream()
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("기본 참여 상태 코드 'PENDING'을 찾을 수 없습니다."));
@@ -172,6 +172,25 @@ public class ScheduleServiceImpl implements  ScheduleService{
                 scheduleParticipantRepository.save(participant);
             }
         }
+    }
+
+    // 일정 참여 상태 변경 (PENDING, ATTEND, REJECT)
+    @Override
+    public void updateParticipantStatus(Long scheduleId, Long employeeId, String value1) {
+        // 참여자 찾기
+        ScheduleParticipant participant = scheduleParticipantRepository
+                .findBySchedule_ScheduleIdAndParticipant_EmployeeId(scheduleId,employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("참여자 정보를 찾을 수 없습니다."));
+
+        // Common Code 조회
+        CommonCode newStatus = commonCodeRepository
+                .findByCodeStartsWithAndKeywordExactMatchInValues("SP", value1)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("해당 코드가 존재하지 않습니다."));
+
+        participant.updateStatus(newStatus);
+        scheduleParticipantRepository.save(participant);
     }
 
     @Override
@@ -200,7 +219,7 @@ public class ScheduleServiceImpl implements  ScheduleService{
                     .participantId(null) // 작성자는 ScheduleParticipant 엔티티에 없으므로 null
                     .scheduleId(schedule.getScheduleId())
                     .participantEmployeeId(schedule.getEmployee().getEmployeeId())
-                    .participantUserName(schedule.getEmployee().getUsername())
+                    .participantName(schedule.getEmployee().getName())
                     .participantStatusName("주최자")  //  상태명을 직접 지정
                     .createdAt(schedule.getCreatedAt())
                     .updatedAt(schedule.getUpdatedAt())

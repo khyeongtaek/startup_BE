@@ -160,6 +160,31 @@ public class ScheduleController {
                 .build());
     }
 
+    //  일정 참여자 상태 변경
+    @Operation(
+            summary = "일정 참여자 상태 변경",
+            description = "해당 일정의 특정 참여자의 상태(예: 수락, 거절, 미응답)를 변경합니다. " +
+                    "value1 값으로 PS_ATTEND, PS_REJECT, PS_PENDING 등을 전달합니다."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "참여자 상태 변경 성공"),
+            @ApiResponse(responseCode = "404", description = "참여자 또는 코드 정보를 찾을 수 없음", content = @Content)
+    })
+    @PutMapping("/{scheduleId}/participants/{employeeId}")
+    public ResponseEntity<APIResponseDTO<Void>> updateParticipantStatus(
+            @Parameter(description = "상태를 변경할 일정 ID", required = true, example = "1")
+            @PathVariable Long scheduleId,
+            @Parameter(description = "상태를 변경할 사원 ID", required = true, example = "3")
+            @PathVariable Long employeeId,
+            @Parameter(description = "변경할 상태 코드 값 (예: ATTEND, REJECT, PENDING)", required = true, example = "ATTEND")
+            @RequestParam("value1") String value1
+    ){
+        scheduleService.updateParticipantStatus(scheduleId, employeeId, value1);
+
+        return ResponseEntity.ok(APIResponseDTO.<Void>builder()
+                .message("참여자 상태가 성공적으로 변경되었습니다.")
+                .build());
+    }
 
     //  로그인한 사용자의 보이는 일정 조회 (작성자 + 초대받은 일정)
 

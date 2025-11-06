@@ -25,7 +25,7 @@ public class ScheduleParticipantResponseDTO {
     private Long participantEmployeeId;
 
     @Schema(description = "참여자 이름", example = "김철수")
-    private String participantUserName;
+    private String participantName;
 
     @Schema(description = "참여 상태명 (CommonCode)", example = "참석")
     private String participantStatusName;
@@ -41,7 +41,7 @@ public class ScheduleParticipantResponseDTO {
                 .participantId(scheduleParticipant.getParticipantId())
                 .scheduleId(scheduleParticipant.getSchedule().getScheduleId())
                 .participantEmployeeId(scheduleParticipant.getParticipant().getEmployeeId())
-                .participantUserName(scheduleParticipant.getParticipant().getUsername())
+                .participantName(scheduleParticipant.getParticipant().getName())
                 .participantStatusName(scheduleParticipant.getParticipantStatus().getCodeDescription())
                 .createdAt(scheduleParticipant.getCreatedAt())
                 .updatedAt(scheduleParticipant.getUpdatedAt())
