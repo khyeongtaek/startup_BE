@@ -65,9 +65,8 @@ public class ApprovalDoc {
     private Employee updater;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "template_id")
     @Comment("문서 양식 ID")
-    private ApprovalTemplate approvalTemplate;
+    private CommonCode approvalTemplate;
 
     // --- 연관관계 매핑 추가 ---
     // mappedBy는 ApprovalLine 엔티티에 있는 ApprovalDoc 타입의 필드명(doc)
@@ -85,7 +84,7 @@ public class ApprovalDoc {
             String title
             , String content
             , Employee creator
-            , ApprovalTemplate templateId
+            , CommonCode templateId
             , LocalDateTime startDate
             , LocalDateTime endDate
             , CommonCode docStatus
