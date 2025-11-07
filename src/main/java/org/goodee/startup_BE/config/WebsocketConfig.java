@@ -1,6 +1,7 @@
 package org.goodee.startup_BE.config;
 
 import lombok.RequiredArgsConstructor;
+import org.goodee.startup_BE.interceptor.HttpHandshakeInterceptor;
 import org.goodee.startup_BE.interceptor.StompAuthInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
@@ -15,6 +16,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final StompAuthInterceptor stompAuthInterceptor;
+    private final HttpHandshakeInterceptor httpHandshakeInterceptor;
 
     /**
      * 클라이언트가 WebSocket에 연결할 엔드포인트 등록
@@ -22,7 +24,8 @@ public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOrigins("http://localhost:8080", "http://localhost:3000")  // CORS 설정을 대신 해주며, 운영 환경에서는 보안을 위해 정확한 도메인을 지정 해줘야 함
+                .setAllowedOrigins("http://localhost:8080", "http://localhost:3000") // CORS 설정을 대신 해주며, 운영 환경에서는 보안을 위해 정확한 도메인을 지정 해줘야 함
+                .addInterceptors(httpHandshakeInterceptor)  // 핸드셰이크 인터셉터
                 .withSockJS();  // SockJS를 사용하여 Websocket을 지원하지 않는 브라우저를 대비 (공부용 이라서 남겨둠)
     }
 
