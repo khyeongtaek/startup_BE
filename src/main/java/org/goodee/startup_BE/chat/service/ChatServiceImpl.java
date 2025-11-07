@@ -4,6 +4,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.goodee.startup_BE.chat.dto.ChatMessageResponseDTO;
+import org.goodee.startup_BE.chat.dto.ChatRoomListResponseDTO;
 import org.goodee.startup_BE.chat.dto.ChatRoomResponseDTO;
 import org.goodee.startup_BE.chat.entity.ChatEmployee;
 import org.goodee.startup_BE.chat.entity.ChatMessage;
@@ -202,7 +203,7 @@ public class ChatServiceImpl implements ChatService{
                                         .employeeId(target.getEmployeeId())
                                         .ownerTypeCommonCodeId(codeId)
                                         .url("/chat/rooms/" + finalRoomId)
-                                        .title(room.getName() + " 채팅방에 초대되었습니다.")
+                                        .title(room.getName() + "팀 채팅방에 초대되었습니다.")
                                         .content(inviter.getName() + "님이 채팅방에 초대했습니다.")
                                         .build()
                         );
@@ -349,5 +350,72 @@ public class ChatServiceImpl implements ChatService{
                         "readUpToMessageId", message.getChatMessageId()));
             }
         });
+    }
+
+    /**
+     * 사용자가 속한 채팅방 목록 조회
+     */
+    @Override
+    @Transactional(readOnly = true)
+    // 1. 반환 타입 변경
+    public List<ChatRoomListResponseDTO> findRoomsByUsername(String username) {
+
+        Employee user = employeeRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("존재하지 않는 사원 입니다"));
+
+        List<ChatEmployee> memberships = chatEmployeeRepository.findAllByEmployeeAndIsLeftFalse(user);
+
+        // 2. DTO 리스트 타입 변경
+        List<ChatRoomListResponseDTO> dtos = new ArrayList<>();
+
+        for (ChatEmployee membership : memberships) {
+            ChatRoom room = membership.getChatRoom();
+
+            Optional<ChatMessage> optLastMessage = chatMessageRepository
+                    .findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc(room, membership.getJoinedAt());
+
+            long unreadCount = 0;
+            if (membership.getLastReadMessage() != null) {
+                unreadCount = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(
+                        room,
+                        membership.getLastReadMessage().getChatMessageId()
+                );
+            } else {
+                unreadCount = chatMessageRepository.countByChatRoomAndCreatedAtAfter(room, membership.getJoinedAt());
+            }
+
+            // 3. 서비스 로직을 DTO 팩토리 메소드 호출로 대체 (하드코딩 제거)
+            if (Boolean.FALSE.equals(room.getIsTeam())) {
+                // 1:1 채팅방
+                List<ChatEmployee> allMembers = chatEmployeeRepository.findAllByChatRoomChatRoomIdAndIsLeftFalse(room.getChatRoomId());
+
+                Optional<Employee> otherUserOpt = allMembers.stream()
+                        .map(ChatEmployee::getEmployee)
+                        .filter(emp -> !emp.getEmployeeId().equals(user.getEmployeeId()))
+                        .findFirst();
+
+                if (otherUserOpt.isPresent()) {
+                    dtos.add(ChatRoomListResponseDTO.toDTO(
+                            room, otherUserOpt.get(), unreadCount, optLastMessage
+                    ));
+                } else {
+                    // (예외 처리: 상대방이 나갔거나 데이터가 없는 1:1방)
+                    // 필요시 ofLeftUserRoom() 같은 정적 메소드 DTO에 추가
+                }
+            } else {
+                // 팀 채팅방
+                dtos.add(ChatRoomListResponseDTO.toDTO(
+                        room, unreadCount, optLastMessage
+                ));
+            }
+        }
+
+        // 4. 정렬 로직 (DTO 필드명 확인 필요)
+        dtos.sort((dto1, dto2) -> {
+            if (dto1.getLastMessage() == null || dto2.getLastMessage() == null) return 0;
+            return dto2.getLastMessage().compareTo(dto1.getLastMessage());
+        });
+
+        return dtos;
     }
 }

@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.chat.dto.ChatMessageResponseDTO;
+import org.goodee.startup_BE.chat.dto.ChatRoomListResponseDTO;
 import org.goodee.startup_BE.chat.dto.ChatRoomResponseDTO;
 import org.goodee.startup_BE.chat.service.ChatService;
 import org.springframework.data.domain.Page;
@@ -22,6 +23,17 @@ import java.util.List;
 public class ChatRoomApiController {
 
     private final ChatService chatService;
+
+    // 채팅방 목록 조회 (UserList.jsx에서 사용)
+    @Operation(summary = "채팅방 목록 조회")
+    @GetMapping("/rooms")
+    public ResponseEntity<List<ChatRoomListResponseDTO>> getRooms(
+            Authentication authentication
+    ) {
+        String username = authentication.getName();
+        List<ChatRoomListResponseDTO> rooms = chatService.findRoomsByUsername(username);
+        return ResponseEntity.ok(rooms);
+    }
 
     // 채팅방 생성
     @Operation(summary = "채팅방 생성")
