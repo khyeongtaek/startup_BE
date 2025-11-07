@@ -70,7 +70,7 @@ class ChatRoomRepositoryTest {
     private Employee createPersistableEmployee(String username, String email, CommonCode role, CommonCode dept, CommonCode pos, Employee creator) {
         Employee employee = Employee.createEmployee(
                 username, "테스트유저", email, "010-1234-5678",
-                LocalDate.now(), statusActive, "default.png", role, dept, pos,
+                LocalDate.now(), statusActive, role, dept, pos,
                 creator
         );
         employee.updateInitPassword("testPassword123!", creator);

@@ -82,7 +82,7 @@ class WorkLogRepositoryTests {
 		// 직원 생성자(creator)
 		creator = Employee.createEmployee(
 			"admin", "관리자", "admin@test.com", "010-0000-0000",
-			LocalDate.now(), statusActive, "default.png",
+			LocalDate.now(), statusActive, 
 			roleAdmin, deptHr, posSenior, null
 		);
 		creator.updateInitPassword(TEST_PASSWORD, null);
@@ -91,7 +91,7 @@ class WorkLogRepositoryTests {
 		// 직원들
 		devUser1 = Employee.createEmployee(
 			"dev1", "개발1", "dev1@test.com", "010-1111-1111",
-			LocalDate.now(), statusActive, "default.png",
+			LocalDate.now(), statusActive, 
 			roleUser, deptDev, posJunior, creator
 		);
 		devUser1.updateInitPassword(TEST_PASSWORD, creator);
@@ -99,7 +99,7 @@ class WorkLogRepositoryTests {
 		
 		devUser2 = Employee.createEmployee(
 			"dev2", "개발2", "dev2@test.com", "010-2222-2222",
-			LocalDate.now(), statusActive, "default.png",
+			LocalDate.now(), statusActive, 
 			roleUser, deptDev, posSenior, creator
 		);
 		devUser2.updateInitPassword(TEST_PASSWORD, creator);
@@ -107,7 +107,7 @@ class WorkLogRepositoryTests {
 		
 		hrUser = Employee.createEmployee(
 			"hr1", "인사1", "hr1@test.com", "010-3333-3333",
-			LocalDate.now(), statusActive, "default.png",
+			LocalDate.now(), statusActive, 
 			roleUser, deptHr, posJunior, creator
 		);
 		hrUser.updateInitPassword(TEST_PASSWORD, creator);

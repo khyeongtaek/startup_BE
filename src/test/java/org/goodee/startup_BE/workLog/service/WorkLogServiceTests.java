@@ -84,7 +84,7 @@ class WorkLogServiceTests {
 		// 생성자(관리자)
 		creator = Employee.createEmployee(
 			"admin", "관리자", "admin@test.com", "010-0000-0000",
-			LocalDate.now(), statusActive, "default.png", roleAdmin, deptHr, posSenior, null
+			LocalDate.now(), statusActive, roleAdmin, deptHr, posSenior, null
 		);
 		creator.updateInitPassword(TEST_PASSWORD, null);
 		employeeRepository.save(creator);
@@ -100,7 +100,7 @@ class WorkLogServiceTests {
 	private Employee createPersistableEmployee(String username, String email, CommonCode dept, CommonCode pos) {
 		Employee e = Employee.createEmployee(
 			username, "테스터-"+username, email, "010-1111-2222",
-			LocalDate.now(), statusActive, "default.png", roleUser, dept, pos, creator
+			LocalDate.now(), statusActive, roleUser, dept, pos, creator
 		);
 		e.updateInitPassword(TEST_PASSWORD, creator);
 		return employeeRepository.save(e);

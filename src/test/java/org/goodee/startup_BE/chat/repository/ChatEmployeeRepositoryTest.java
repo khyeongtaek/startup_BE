@@ -121,7 +121,7 @@ class ChatEmployeeRepositoryTest {
     private Employee createPersistableEmployee(String username, String email, CommonCode role, CommonCode dept, CommonCode pos, Employee creator) {
         Employee employee = Employee.createEmployee(
                 username, "테스트유저", email, "010-1234-5678",
-                LocalDate.now(), role, "default.png", role, dept, pos,
+                LocalDate.now(), role, role, dept, pos,
                 creator
         );
         employee.updateInitPassword("testPassword123!", creator);
