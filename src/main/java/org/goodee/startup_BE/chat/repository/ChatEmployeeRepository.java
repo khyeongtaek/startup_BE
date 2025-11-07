@@ -1,15 +1,35 @@
 package org.goodee.startup_BE.chat.repository;
 
 import org.goodee.startup_BE.chat.entity.ChatEmployee;
+import org.goodee.startup_BE.employee.entity.Employee;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 public interface ChatEmployeeRepository extends JpaRepository<ChatEmployee, Long> {
+
+    /**
+     * 특정 사용자가 속한 (isLeft=false) 모든 채팅방 정보를 조회합니다.
+     * 채팅방 목록 조회 시 사용됩니다.
+     *
+     * @param employee 사용자 Entity
+     * @return ChatEmployee 목록
+     */
+    List<ChatEmployee> findAllByEmployeeAndIsLeftFalse(Employee employee);
+
+    /**
+     * 특정 채팅방의 (isLeft=false) 모든 정보를 조회합니다.
+     * 1:1 채팅방에서 상대방 정보를 찾을 때 사용됩니다.
+     *
+     * @param roomId 채팅방 ID
+     * @return ChatEmployee 목록
+     */
+    List<ChatEmployee> findAllByChatRoomChatRoomIdAndIsLeftFalse(Long roomId);
 
     /**
      * 특정 채팅방과 특정 사원ID 참여 정보 조회
