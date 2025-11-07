@@ -408,7 +408,7 @@ public class MailServiceImpl implements MailService{
 		byte deleted = (byte) ("TRASH".equals(type) ? 1 : 0);
 		
 		Page<Mailbox> mailboxList = mailboxRepository
-			                       .findByEmployeeUsernameAndTypeIdValue1AndDeletedStatusNot(
+			                       .findByEmployeeUsernameAndTypeIdValue1AndDeletedStatus(
 				                       username, boxType.toUpperCase(), deleted, pageable);
 		
 		return mailboxList.map(mb -> MailboxListDTO.builder()
