@@ -32,8 +32,7 @@ public class Employee implements UserDetails {
     @Schema(description = "직원 고유 ID", example = "1", accessMode = Schema.AccessMode.READ_ONLY)
     private Long employeeId;
 
-    @Lob
-    @Column(nullable = false, unique = true, columnDefinition = "LONGTEXT")
+    @Column(nullable = false, unique = true)
     @Comment("로그인 아이디")
     @Schema(description = "로그인 아이디", example = "user123")
     private String username;
