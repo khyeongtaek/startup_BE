@@ -2,10 +2,8 @@ package org.goodee.startup_BE.attendance.entity;
 
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.goodee.startup_BE.attendance.dto.AttendanceWorkHistoryResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
 
@@ -16,6 +14,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
+@Builder
 public class AttendanceWorkHistory {
 
     @Id
@@ -38,5 +37,15 @@ public class AttendanceWorkHistory {
     @Column(name = "action_time", nullable = false)
     private LocalDateTime actionTime;
 
+
+    //  Entity → ResponseDTO 변환 메서드
+    public AttendanceWorkHistoryResponseDTO toResponseDTO() {
+        return AttendanceWorkHistoryResponseDTO.builder()
+                .historyId(this.historyId)
+                .employeeName(this.employee != null ? this.employee.getName() : null)
+                .actionCode(this.actionCode != null ? this.actionCode.getValue1() : null)
+                .actionTime(this.actionTime)
+                .build();
+    }
 
 }
