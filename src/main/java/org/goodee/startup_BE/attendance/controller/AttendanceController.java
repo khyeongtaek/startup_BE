@@ -8,7 +8,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.attendance.dto.AttendanceResponseDTO;
+import org.goodee.startup_BE.attendance.dto.AttendanceWorkHistoryResponseDTO;
+import org.goodee.startup_BE.attendance.entity.AttendanceWorkHistory;
 import org.goodee.startup_BE.attendance.service.AttendanceService;
+import org.goodee.startup_BE.attendance.service.AttendanceWorkHistoryService;
 import org.goodee.startup_BE.common.dto.APIResponseDTO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +26,7 @@ import java.util.List;
 public class AttendanceController {
 
     private final AttendanceService attendanceService;
+    private final AttendanceWorkHistoryService attendanceWorkHistoryService;
 
     //  오늘 근태 조회
     @Operation(summary = "오늘 출근 기록 조회", description = "사원 ID를 기준으로 오늘의 출근 기록을 조회합니다.")
@@ -123,8 +127,12 @@ public class AttendanceController {
     }
 
     //  외근 시작
+    @Operation(summary = "외근 시작", description = "사원의 근무상태를 외근(OUT_ON_BUSINESS)으로 변경하고 이력을 기록합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "외근 상태로 변경 완료"),
+            @ApiResponse(responseCode = "400", description = "상태 변경 실패", content = @Content)
+    })
     @PutMapping("/{employeeId}/out-on-business")
-    @Operation(summary = "외근 시작", description = "사원의 근무상태를 외근(OUT_ON_BUSINESS)으로 변경합니다.")
     public ResponseEntity<APIResponseDTO<String>> startOutOnBusiness(
             @Parameter(description = "사원 ID", required = true, example = "1")
             @PathVariable Long employeeId
@@ -137,17 +145,43 @@ public class AttendanceController {
     }
 
     //  사내 복귀
+    @Operation(summary = "사내 복귀", description = "외근 중인 사원의 근무상태를 이전 근무 상태 변경하고, 필요 시 이력을 기록합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "사내 복귀 완료"),
+            @ApiResponse(responseCode = "400", description = "복귀 처리 실패", content = @Content)
+    })
     @PutMapping("/{employeeId}/return-to-office")
-    @Operation(summary = "사내 복귀", description = "외근 중인 사원의 근무상태를 정상근무(NORMAL)로 변경합니다.")
     public ResponseEntity<APIResponseDTO<String>> returnToOffice(
             @Parameter(description = "사원 ID", required = true, example = "1")
             @PathVariable Long employeeId
     ) {
-        attendanceService.updateWorkStatus(employeeId, "NORMAL");
+        String finalStatus = attendanceService.updateWorkStatus(employeeId, "NORMAL");
         return ResponseEntity.ok(APIResponseDTO.<String>builder()
-                .message("사내 복귀 완료 (정상근무 상태).")
-                .data("NORMAL")
+                .message("사내 복귀 완료")
+                .data(finalStatus)
                 .build());
     }
 
+    //  근무 이력 조회
+    @Operation(summary = "근무 이력 조회", description = "사원의 근무 상태 변경 이력을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "근무 이력 조회 성공"),
+            @ApiResponse(responseCode = "404", description = "근무 이력이 존재하지 않음", content = @Content)
+    })
+    @GetMapping("/{employeeId}/work-history")
+    public ResponseEntity<APIResponseDTO<List<AttendanceWorkHistoryResponseDTO>>> getWorkHistory(
+            @Parameter(description = "사원 ID", required = true, example = "1")
+            @PathVariable Long employeeId
+    ) {
+        List<AttendanceWorkHistoryResponseDTO> historyList = attendanceWorkHistoryService
+                .getHistoryByEmployee(employeeId)
+                .stream()
+                .map(AttendanceWorkHistory::toResponseDTO)
+                .toList();
+
+        return ResponseEntity.ok(APIResponseDTO.<List<AttendanceWorkHistoryResponseDTO>>builder()
+                .message("근무 이력 조회 성공")
+                .data(historyList)
+                .build());
+    }
 }

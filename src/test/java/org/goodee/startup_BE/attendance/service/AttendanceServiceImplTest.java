@@ -44,6 +44,9 @@ class AttendanceServiceImplTest {
     @Mock
     private AnnualLeaveService annualLeaveService;
 
+    @Mock
+    private AttendanceWorkHistoryService attendanceWorkHistoryService;
+
     private Employee mockEmployee;
     private CommonCode mockWorkStatusNormal;
     private CommonCode mockWorkStatusOut;

@@ -5,10 +5,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.goodee.startup_BE.attendance.dto.AttendanceResponseDTO;
 import org.goodee.startup_BE.attendance.entity.Attendance;
+import org.goodee.startup_BE.attendance.entity.AttendanceWorkHistory;
 import org.goodee.startup_BE.attendance.enums.WorkStatus;
 import org.goodee.startup_BE.attendance.exception.AttendanceException;
 import org.goodee.startup_BE.attendance.exception.DuplicateAttendanceException;
 import org.goodee.startup_BE.attendance.repository.AttendanceRepository;
+import org.goodee.startup_BE.attendance.repository.AttendanceWorkHistoryRepository;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.employee.entity.Employee;
@@ -33,6 +35,8 @@ public class AttendanceServiceImpl implements AttendanceService {
     private final EmployeeRepository employeeRepository;
     private final CommonCodeRepository commonCodeRepository;
     private final AnnualLeaveService annualLeaveService;
+    private final AttendanceWorkHistoryService attendanceWorkHistoryService;
+    private final AttendanceWorkHistoryRepository historyRepository;
 
     // 공통 코드 Prefix 정의
     private static final String WOKR_STATUS_PREFIX = WorkStatus.PREFIX;
@@ -121,6 +125,8 @@ public class AttendanceServiceImpl implements AttendanceService {
         }
         Attendance saved = attendanceRepository.save(attendance);
 
+        attendanceWorkHistoryService.recordHistory(saved, employee, saved.getWorkStatus().getValue1());
+
         return AttendanceResponseDTO.builder()
                 .attendanceId(saved.getAttendanceId())
                 .employeeId(saved.getEmployee().getEmployeeId())
@@ -170,6 +176,8 @@ public class AttendanceServiceImpl implements AttendanceService {
             log.info("[정상 퇴근] {}님이 {}에 퇴근했습니다.", attendance.getEmployee().getName(), endTime.toLocalTime());
         }
         Attendance saved = attendanceRepository.save(attendance);
+
+        attendanceWorkHistoryService.recordHistory(saved, saved.getEmployee(), saved.getWorkStatus().getValue1());
 
         return AttendanceResponseDTO.builder()
                 .attendanceId(saved.getAttendanceId())
@@ -230,21 +238,46 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     @Override
     @Transactional
-    public void updateWorkStatus(Long employeeId, String statusCode) {
+    public String updateWorkStatus(Long employeeId, String statusCode) {
         LocalDate today = LocalDate.now();
 
         Attendance attendance = attendanceRepository
                 .findByEmployeeEmployeeIdAndAttendanceDate(employeeId, today)
                 .orElseThrow(() -> new ResourceNotFoundException("오늘 출근 기록이 존재하지 않습니다."));
 
-        // CommonCode 조회 (WS + statusCode)
+        String finalStatusValue = statusCode;
+
+        // 복귀: OUT_ON_BUSINESS 직전 "같은 Attendance"의 상태로 복원
+        if (WORK_STATUS_NORMAL.equals(statusCode)) {
+            //  오늘 출근건(history는 같은 attendance_id 기준으로만 조회)
+            List<AttendanceWorkHistory> histories =
+                    historyRepository.findByAttendanceAttendanceIdOrderByActionTimeDesc(attendance.getAttendanceId());
+
+            // histories[0] = OUT_ON_BUSINESS 이어야 정상. 그 이전 “비-외근 상태”를 찾는다.
+            finalStatusValue = histories.stream()
+                    .map(h -> h.getActionCode().getValue1())
+                    // 첫 번째 OUT_ON_BUSINESS는 건너뛰고
+                    .skip(1)
+                    // OUT_ON_BUSINESS가 아닌 첫 번째 상태(예: LATE, NORMAL 등)
+                    .filter(v -> !WORK_STATUS_OUT_ON_BUSINESS.equals(v))
+                    .findFirst()
+                    // 못 찾으면 NORMAL로 폴백
+                    .orElse(WORK_STATUS_NORMAL);
+        }
+
+        // 최종 상태 코드로 CommonCode 조회
         CommonCode newStatus = commonCodeRepository
-                .findByCodeStartsWithAndKeywordExactMatchInValues("WS", statusCode)
+                .findByCodeStartsWithAndKeywordExactMatchInValues("WS", finalStatusValue)
                 .stream()
                 .findFirst()
                 .orElseThrow(() -> new AttendanceException("해당 근무 상태 코드를 찾을 수 없습니다."));
 
         attendance.changeWorkStatus(newStatus);
+        attendanceRepository.save(attendance);
+
+        // 이력 기록
+        attendanceWorkHistoryService.recordHistory(attendance, attendance.getEmployee(), newStatus.getValue1());
+        return newStatus.getValue1();
     }
     /**
      * 공통 코드 조회
