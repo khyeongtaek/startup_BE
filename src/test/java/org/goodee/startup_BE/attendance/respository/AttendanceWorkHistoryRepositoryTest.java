@@ -1,7 +1,9 @@
-package org.goodee.startup_BE.attendance.repository;
+package org.goodee.startup_BE.attendance.respository;
 
 import org.goodee.startup_BE.attendance.entity.Attendance;
 import org.goodee.startup_BE.attendance.entity.AttendanceWorkHistory;
+import org.goodee.startup_BE.attendance.repository.AttendanceRepository;
+import org.goodee.startup_BE.attendance.repository.AttendanceWorkHistoryRepository;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.employee.entity.Employee;
