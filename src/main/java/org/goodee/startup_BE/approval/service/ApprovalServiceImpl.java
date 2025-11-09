@@ -7,13 +7,12 @@ import org.goodee.startup_BE.approval.dto.*;
 import org.goodee.startup_BE.approval.entity.ApprovalDoc;
 import org.goodee.startup_BE.approval.entity.ApprovalLine;
 import org.goodee.startup_BE.approval.entity.ApprovalReference;
-import org.goodee.startup_BE.approval.entity.ApprovalTemplate;
 import org.goodee.startup_BE.approval.enums.ApprovalDocStatus;
 import org.goodee.startup_BE.approval.enums.ApprovalLineStatus;
 import org.goodee.startup_BE.approval.repository.ApprovalDocRepository;
 import org.goodee.startup_BE.approval.repository.ApprovalLineRepository;
 import org.goodee.startup_BE.approval.repository.ApprovalReferenceRepository;
-import org.goodee.startup_BE.approval.repository.ApprovalTemplateRepository;
+import org.goodee.startup_BE.common.dto.CommonCodeResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
@@ -45,7 +44,6 @@ public class ApprovalServiceImpl implements ApprovalService {
     private final EmployeeRepository employeeRepository;
     private final CommonCodeRepository commonCodeRepository;
     private final NotificationService notificationService;
-    private final ApprovalTemplateRepository approvalTemplateRepository;
 
     // --- 공통 코드 Prefix 정의 ---
     private static final String DOC_STATUS_PREFIX = ApprovalDocStatus.PREFIX;
@@ -62,6 +60,18 @@ public class ApprovalServiceImpl implements ApprovalService {
     private static final String LINE_STATUS_APPROVED = ApprovalLineStatus.APPROVED.name(); // 승인 (AL3)
     private static final String LINE_STATUS_REJECTED = ApprovalLineStatus.REJECTED.name(); // 반려 (AL4)
 
+    /**
+     * 결재 양식 조회
+     */
+    @Override
+    public List<CommonCodeResponseDTO> getAllApprovalTemplates() {
+        List<CommonCode> templateList = commonCodeRepository
+                .findByCodeDescriptionAndIsDeletedFalseOrderBySortOrderAsc("결재 양식");
+
+        return templateList.stream()
+                .map(CommonCodeResponseDTO::toDTO)
+                .collect(Collectors.toList());
+    }
 
     /**
      * 상신 (결재 문서 생성)
@@ -80,8 +90,8 @@ public class ApprovalServiceImpl implements ApprovalService {
                 .get(0);
 
         // 1-2 양식 조회
-        Long templateId = request.getTemplateId();
-        ApprovalTemplate template = approvalTemplateRepository.findById(templateId)
+        Long templateId = request.getTemplateCode();
+        CommonCode template = commonCodeRepository.findById(templateId)
                 .orElseThrow(() -> new EntityNotFoundException("결재 양식을 찾을 수 없습니다."));
 
         // 2. 문서(Doc) 생성 및 저장 (ID 자동 생성)

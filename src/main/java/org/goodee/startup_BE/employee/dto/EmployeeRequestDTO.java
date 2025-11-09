@@ -2,6 +2,7 @@ package org.goodee.startup_BE.employee.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.goodee.startup_BE.common.entity.CommonCode;
@@ -44,26 +45,26 @@ public class EmployeeRequestDTO {
     private String phoneNumber;
 
     @Schema(description = "입사일", example = "2024-01-01")
-    @NotBlank(message = "입사일은 필수 입력 값입니다.", groups = {ValidationGroups.Create.class})
+    @NotNull(message = "입사일은 필수 입력 값입니다.", groups = {ValidationGroups.Create.class})
     private LocalDate hireDate;
 
     @Schema(description = "재직 상태 (CommonCode ID)", example = "101")
-    @NotBlank(message = "재직상태는 필수 입력 값입니다.", groups = {ValidationGroups.Create.class, EmployeeValidationGroup.AdminUpdate.class})
+    @NotNull(message = "재직상태는 필수 입력 값입니다.", groups = {ValidationGroups.Create.class, EmployeeValidationGroup.AdminUpdate.class})
     private Long status;
 
     @Schema(description = "프로필 이미지 URL", example = "default_profile.png")
     private String profileImg;
 
     @Schema(description = "소속 부서 (CommonCode ID)", example = "201")
-    @NotBlank(message = "소속부서는 필수 입력 값입니다.", groups = {ValidationGroups.Create.class, EmployeeValidationGroup.AdminUpdate.class})
+    @NotNull(message = "소속부서는 필수 입력 값입니다.", groups = {ValidationGroups.Create.class, EmployeeValidationGroup.AdminUpdate.class})
     private Long department;
 
     @Schema(description = "직급 (CommonCode ID)", example = "301")
-    @NotBlank(message = "직급은 필수 입력 값입니다.", groups = {ValidationGroups.Create.class, EmployeeValidationGroup.AdminUpdate.class})
+    @NotNull(message = "직급은 필수 입력 값입니다.", groups = {ValidationGroups.Create.class, EmployeeValidationGroup.AdminUpdate.class})
     private Long position;
 
     @Schema(description = "권한 (CommonCode ID)", example = "901")
-    @NotBlank(message = "권한은 필수 입력 값입니다.", groups = {ValidationGroups.Create.class, EmployeeValidationGroup.AdminUpdate.class})
+    @NotNull(message = "권한은 필수 입력 값입니다.", groups = {ValidationGroups.Create.class, EmployeeValidationGroup.AdminUpdate.class})
     private Long role;
 
     public Employee toEntity(

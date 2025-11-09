@@ -32,8 +32,7 @@ public class Employee implements UserDetails {
     @Schema(description = "직원 고유 ID", example = "1", accessMode = Schema.AccessMode.READ_ONLY)
     private Long employeeId;
 
-    @Lob
-    @Column(nullable = false, unique = true, columnDefinition = "LONGTEXT")
+    @Column(nullable = false, unique = true)
     @Comment("로그인 아이디")
     @Schema(description = "로그인 아이디", example = "user123")
     private String username;
@@ -74,7 +73,7 @@ public class Employee implements UserDetails {
     private CommonCode status;
 
     @Lob
-    @Column(nullable = false, columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "LONGTEXT")
     @Comment("프로필 이미지")
     @Schema(description = "프로필 이미지 URL", example = "default_profile.png")
     private String profileImg;
@@ -142,7 +141,7 @@ public class Employee implements UserDetails {
         employee.phoneNumber = phoneNumber;
         employee.hireDate = hireDate;
         employee.status = status;
-        employee.profileImg = profileImg == null ? "default_profile.png" : profileImg;
+        employee.profileImg = profileImg;
         employee.role = role;
         employee.department = department;
         employee.position = position;
@@ -174,7 +173,7 @@ public class Employee implements UserDetails {
     }
 
     public void updateProfileImg(String profileImg, Employee updater) {
-        this.profileImg = profileImg == null ? "default_profile.png" : profileImg;
+        this.profileImg = profileImg;
         this.updater = updater;
     }
 
