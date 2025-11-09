@@ -18,7 +18,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,6 +60,8 @@ class ApprovalRepositoryTest {
     private Employee approver2; // 결재자2
     private Employee referrer; // 참조자
 
+    private CommonCode testTemplate;  // 결재 양식
+
     private CommonCode statusActive, roleUser, deptDev, posJunior, posSenior;
     private CommonCode docStatusInProgress; // 문서상태: 진행중
     private CommonCode lineStatusPending; // 결재선상태: 미결
@@ -86,6 +87,9 @@ class ApprovalRepositoryTest {
         docStatusInProgress = commonCodeRepository.save(CommonCode.createCommonCode("AD_IN_PROGRESS", "진행중", "IN_PROGRESS", "AD", null, 1L, null));
         lineStatusPending = commonCodeRepository.save(CommonCode.createCommonCode("AL_PENDING", "미결", "PENDING", "AL", null, 1L, null));
         lineStatusAwaiting = commonCodeRepository.save(CommonCode.createCommonCode("AL_AWAITING", "대기", "AWAITING", "AL", null, 2L, null));
+
+        // 테스트용 양식 생성
+        testTemplate = commonCodeRepository.save(CommonCode.createCommonCode("TPL_001", "결재 양식", "휴가신청서", null, null, 1L, null));
 
         // --- given: 직원 데이터 생성 ---
         creator = createAndSaveEmployee("creator", "creator@test.com", posJunior, null); // 최초 생성자
@@ -115,6 +119,7 @@ class ApprovalRepositoryTest {
                 title,
                 "테스트 내용입니다.",
                 creator,
+                testTemplate,
                 LocalDateTime.now().plusDays(1),
                 LocalDateTime.now().plusDays(2),
                 docStatusInProgress
@@ -215,7 +220,7 @@ class ApprovalRepositoryTest {
             // 다른 non-null 필드(e.g., docStatus)로 테스트
 
             ApprovalDoc doc = ApprovalDoc.createApprovalDoc(
-                    "제목", "내용", creator, null, null,
+                    "제목", "내용", creator, testTemplate, null, null,
                     null // docStatus (nullable=false) 를 null로 설정
             );
 
@@ -230,7 +235,7 @@ class ApprovalRepositoryTest {
             // given
             ApprovalDoc doc = ApprovalDoc.createApprovalDoc(
                     null, // title (nullable=false) 를 null로 설정
-                    "내용", creator, null, null, docStatusInProgress
+                    "내용", creator, testTemplate, null, null, docStatusInProgress
             );
 
             // when & then

@@ -14,13 +14,15 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class StompAuthInterceptor implements ChannelInterceptor {
 
-    private final JwtService jwtService; //
-    private final UserDetailsService userDetailsService; // (JwtUserDetailsService가 주입됨)
+    private final JwtService jwtService;
+    private final UserDetailsService userDetailsService;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -28,23 +30,28 @@ public class StompAuthInterceptor implements ChannelInterceptor {
 
         // STOMP 'CONNECT' 명령일 때만 인증 처리
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
-            log.debug("STOMP CONNECT 요청. 헤더에서 JWT 토큰 인증을 시도합니다.");
+            log.debug("STOMP CONNECT 요청. 세션 속성에서 JWT 토큰 인증을 시도합니다.");
 
-            // 프론트엔드에서 보낸 'Authorization' 헤더 추출
-            String authHeader = accessor.getFirstNativeHeader("Authorization");
+            // 핸드셰이크 시 저장된 세션 속성(attributes)에서 토큰 추출
+            Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
+            String jwtToken = null;
 
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                String jwtToken = authHeader.substring(7);
+            if (sessionAttributes != null) {
+                jwtToken = (String) sessionAttributes.get("accessToken");
+            }
+
+            // 토큰 존재 여부 검사
+            if (jwtToken != null) {
                 try {
                     // JwtService를 사용해 사용자 이름 추출
-                    String username = jwtService.extractUsername(jwtToken); //
+                    String username = jwtService.extractUsername(jwtToken);
 
                     if (username != null) {
                         // JwtUserDetailsService를 사용해 UserDetails 로드
-                        UserDetails userDetails = this.userDetailsService.loadUserByUsername(username); //
+                        UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
                         // JwtService로 토큰 유효성 검증
-                        if (jwtService.isValidToken(jwtToken, userDetails)) { //
+                        if (jwtService.isValidToken(jwtToken, userDetails)) {
 
                             // Spring Security Authentication 객체 생성
                             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
@@ -64,7 +71,7 @@ public class StompAuthInterceptor implements ChannelInterceptor {
                     log.warn("STOMP 인증 중 예외 발생: {}", e.getMessage());
                 }
             } else {
-                log.warn("STOMP 인증 실패: Authorization 헤더가 없거나 Bearer 타입이 아닙니다.");
+                log.warn("STOMP 인증 실패: 세션에서 accessToken을 찾을 수 없습니다. (쿠키 누락)");
             }
         }
         return message;

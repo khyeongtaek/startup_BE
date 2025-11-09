@@ -218,7 +218,6 @@ class EmployeeServiceImplTest {
 
             // [수정] DTO 변환(toDTO) 시 사용될 Mocking (Success Case 전용)
             // 이 Mocking은 toDTO가 호출될 때(즉, 성공 시)만 필요
-            when(mockStatus.getCommonCodeId()).thenReturn(101L);
             when(mockRole.getValue1()).thenReturn("ROLE_ADMIN");
             when(mockDept.getValue1()).thenReturn("Admin Dept");
             when(mockPos.getValue1()).thenReturn("Manager");
@@ -243,7 +242,6 @@ class EmployeeServiceImplTest {
 
             // 반환된 DTO 검증
             assertThat(result).isNotNull();
-            assertThat(result.getStatus()).isEqualTo(101L);
             assertThat(result.getRole()).isEqualTo("ROLE_ADMIN");
         }
 

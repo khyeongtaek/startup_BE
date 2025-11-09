@@ -3,6 +3,7 @@ package org.goodee.startup_BE.approval.service;
 import org.goodee.startup_BE.approval.dto.ApprovalDocRequestDTO;
 import org.goodee.startup_BE.approval.dto.ApprovalDocResponseDTO;
 import org.goodee.startup_BE.approval.dto.ApprovalLineRequestDTO;
+import org.goodee.startup_BE.common.dto.CommonCodeResponseDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -30,5 +31,8 @@ public interface ApprovalService {
 
     // 결재 완료 문서 조회 - 본인이 결재자로 참여했던 문서중 최종 처리가 완료된 목록
     Page<ApprovalDocResponseDTO> getCompletedDocuments(Pageable pageable, String username);
+
+    // 모든 결재양식 템플릿 목록을 조회
+    List<CommonCodeResponseDTO> getAllApprovalTemplates();
 
 }

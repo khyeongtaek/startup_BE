@@ -64,10 +64,9 @@ public class ApprovalDoc {
     @Comment("수정자")
     private Employee updater;
 
-    //아직 테이블이 없음
-//    @Column(name = "template_id", nullable = false)
-//    @Comment("문서 양식 ID")
-//    private Long templateId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @Comment("문서 양식 ID")
+    private CommonCode approvalTemplate;
 
     // --- 연관관계 매핑 추가 ---
     // mappedBy는 ApprovalLine 엔티티에 있는 ApprovalDoc 타입의 필드명(doc)
@@ -85,7 +84,7 @@ public class ApprovalDoc {
             String title
             , String content
             , Employee creator
-//            , Long templateId
+            , CommonCode templateId
             , LocalDateTime startDate
             , LocalDateTime endDate
             , CommonCode docStatus
@@ -94,7 +93,7 @@ public class ApprovalDoc {
         doc.updateTitle(title);
         doc.updateContent(content);
         doc.creator = creator;
-//        doc.setTemplateId(templateId);
+        doc.approvalTemplate = templateId;
         doc.updateStartDate(startDate);
         doc.updateEndDate(endDate);
         doc.updateDocStatus(docStatus);

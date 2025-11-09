@@ -36,7 +36,7 @@ public class EmployeeResponseDTO {
     private LocalDate hireDate;
 
     @Schema(description = "재직 상태 (CommonCode ID)", example = "101")
-    private Long status;
+    private String status;
 
     @Schema(description = "프로필 이미지 URL", example = "default_profile.png")
     private String profileImg;
@@ -81,7 +81,7 @@ public class EmployeeResponseDTO {
                 .email(employee.getEmail())
                 .phoneNumber(employee.getPhoneNumber())
                 .hireDate(employee.getHireDate())
-                .status(employee.getStatus().getCommonCodeId())
+                .status(employee.getStatus().getValue1())
                 .profileImg(employee.getProfileImg())
                 .department(employee.getDepartment().getValue1())
                 .position(employee.getPosition().getValue1())
