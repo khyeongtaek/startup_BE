@@ -58,7 +58,7 @@ public class ApprovalController {
     @PostMapping
     public ResponseEntity<APIResponseDTO<ApprovalDocResponseDTO>> createApproval(
             @Validated({ValidationGroups.Create.class})
-            @RequestBody ApprovalDocRequestDTO request,
+            @ModelAttribute ApprovalDocRequestDTO request,
             @Parameter(hidden = true) Authentication authentication
     ) {
         return ResponseEntity.ok(APIResponseDTO.<ApprovalDocResponseDTO>builder()

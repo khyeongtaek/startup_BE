@@ -57,7 +57,7 @@ class MailRepositoryTests {
 	private Employee newEmp(String username, String name, String email, CommonCode role, CommonCode dept, CommonCode pos, Employee creator) {
 		Employee e = Employee.createEmployee(
 			username, name, email, "010-0000-0000",
-			LocalDate.now(), statusActive, "default.png", role, dept, pos, creator
+			LocalDate.now(), statusActive,  role, dept, pos, creator
 		);
 		e.updateInitPassword("Pw1234!", creator);
 		return e;

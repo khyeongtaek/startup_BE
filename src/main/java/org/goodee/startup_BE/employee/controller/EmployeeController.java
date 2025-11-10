@@ -95,7 +95,7 @@ public class EmployeeController {
     public ResponseEntity<APIResponseDTO<EmployeeResponseDTO>> updateEmployeeByUser(
             @Parameter(hidden = true) Authentication authentication,
             @Validated(ValidationGroups.Update.class)
-            @RequestBody EmployeeRequestDTO request
+            @ModelAttribute EmployeeRequestDTO request
     ) {
         return ResponseEntity.ok(APIResponseDTO.<EmployeeResponseDTO>builder()
                 .message("개인 정보 수정 성공")
