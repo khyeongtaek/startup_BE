@@ -9,8 +9,10 @@ import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.validation.ValidationGroups;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.validation.EmployeeValidationGroup;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.util.List;
 
 
 @NoArgsConstructor
@@ -52,9 +54,6 @@ public class EmployeeRequestDTO {
     @NotNull(message = "재직상태는 필수 입력 값입니다.", groups = {ValidationGroups.Create.class, EmployeeValidationGroup.AdminUpdate.class})
     private Long status;
 
-    @Schema(description = "프로필 이미지 URL", example = "default_profile.png")
-    private String profileImg;
-
     @Schema(description = "소속 부서 (CommonCode ID)", example = "201")
     @NotNull(message = "소속부서는 필수 입력 값입니다.", groups = {ValidationGroups.Create.class, EmployeeValidationGroup.AdminUpdate.class})
     private Long department;
@@ -66,6 +65,9 @@ public class EmployeeRequestDTO {
     @Schema(description = "권한 (CommonCode ID)", example = "901")
     @NotNull(message = "권한은 필수 입력 값입니다.", groups = {ValidationGroups.Create.class, EmployeeValidationGroup.AdminUpdate.class})
     private Long role;
+
+    @Schema(description = "프로필 이미지용 MultipartFile")
+    private List<MultipartFile> multipartFile;
 
     public Employee toEntity(
             CommonCode statusCode,
@@ -82,7 +84,6 @@ public class EmployeeRequestDTO {
                 this.phoneNumber,
                 this.hireDate,
                 statusCode,
-                this.profileImg,
                 roleCode,
                 departmentCode,
                 positionCode,

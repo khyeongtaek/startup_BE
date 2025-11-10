@@ -2,6 +2,7 @@ package org.goodee.startup_BE.approval.dto;
 
 import lombok.*;
 import org.goodee.startup_BE.approval.entity.ApprovalDoc;
+import org.goodee.startup_BE.common.dto.AttachmentFileResponseDTO;
 import org.goodee.startup_BE.common.dto.CommonCodeResponseDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeResponseDTO;
 
@@ -54,6 +55,9 @@ public class ApprovalDocResponseDTO {
 
     // 참조자 목록 (DTO 리스트)
     private List<ApprovalReferenceResponseDTO> approvalReferences;
+
+    // 첨부 파일 목록
+    private List<AttachmentFileResponseDTO> attachmentFiles;
 
     /**
      * 엔티티와 DTO 리스트를 조합하여 최종 Response DTO를 생성

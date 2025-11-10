@@ -104,7 +104,7 @@ class ApprovalRepositoryTest {
     private Employee createAndSaveEmployee(String username, String email, CommonCode pos, Employee creatorEmployee) {
         Employee employee = Employee.createEmployee(
                 username, username, email, "010-0000-0000",
-                LocalDate.now(), statusActive, "default.png", roleUser, deptDev, pos,
+                LocalDate.now(), statusActive, roleUser, deptDev, pos,
                 creatorEmployee
         );
         employee.updateInitPassword("testPassword123!", creatorEmployee);
