@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @Tag(name = "Attendance API", description = "근태 관리 API")
 @RestController
@@ -183,5 +184,46 @@ public class AttendanceController {
                 .message("근무 이력 조회 성공")
                 .data(historyList)
                 .build());
+    }
+    //  주간 근무시간 조회
+    @Operation(summary = "주간 근무시간 조회", description = "이번 주 누적 근무시간 및 목표 근로시간을 반환합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "주간 근무시간 조회 성공"),
+            @ApiResponse(responseCode = "400", description = "조회 실패", content = @Content)
+    })
+    @GetMapping("/weekly/{employeeId}")
+    public ResponseEntity<APIResponseDTO<Map<String, Object>>> getWeeklyWorkSummary(
+            @Parameter(description = "사원 ID", required = true, example = "1")
+            @PathVariable Long employeeId
+    ) {
+        Map<String, Object> weeklySummary = attendanceService.getWeeklyWorkSummary(employeeId);
+
+        return ResponseEntity.ok(
+                APIResponseDTO.<Map<String, Object>>builder()
+                        .message("주간 근무시간 조회 성공")
+                        .data(weeklySummary)
+                        .build()
+        );
+    }
+
+    //  근태 요약 조회
+    @Operation(summary = "근태 요약 조회", description = "사원 ID를 기준으로 전체 근무일수, 총 근무시간, 잔여 연차, 이번 주 지각 횟수를 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "근태 요약 조회 성공"),
+            @ApiResponse(responseCode = "404", description = "근태 요약 데이터 없음", content = @Content)
+    })
+    @GetMapping("/summary/{employeeId}")
+    public ResponseEntity<APIResponseDTO<Map<String, Object>>> getAttendanceSummary(
+            @Parameter(description = "사원 ID", required = true, example = "1")
+            @PathVariable Long employeeId
+    ) {
+        Map<String, Object> summary = attendanceService.getAttendanceSummary(employeeId);
+
+        return ResponseEntity.ok(
+                APIResponseDTO.<Map<String, Object>>builder()
+                        .message("근태 요약 조회 성공")
+                        .data(summary)
+                        .build()
+        );
     }
 }

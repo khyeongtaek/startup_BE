@@ -30,10 +30,10 @@ public class AttendanceResponseDTO {
     private LocalDate attendanceDate;
 
     @Schema(description = "직원 연차 개수", example = "15")
-    private Integer annualLeaveCount;
+    private Long annualLeaveCount;
 
     @Schema(description = "총 근무 일수", example = "30일")
-    private Integer workDate;
+    private Long workDate;
 
     @Schema(description = "출근 시간", example = "2025-10-27T09:00:00")
     private LocalDateTime startTime;

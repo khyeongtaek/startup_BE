@@ -66,4 +66,5 @@ public class AnnualLeaveServiceImpl implements AnnualLeaveService {
     public List<AnnualLeave> getAllAnnualLeaves() {
         return annualLeaveRepository.findAll();
     }
+
 }
