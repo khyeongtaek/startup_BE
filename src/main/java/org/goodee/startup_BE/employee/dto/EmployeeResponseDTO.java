@@ -65,7 +65,6 @@ public class EmployeeResponseDTO {
                 this.phoneNumber,
                 this.hireDate,
                 statusCode,
-                this.profileImg,
                 roleCode,
                 departmentCode,
                 positionCode,

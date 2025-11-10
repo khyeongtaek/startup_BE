@@ -52,7 +52,7 @@ class ScheduleServiceImplTest {
     void setUp() {
         mockEmployee = Employee.createEmployee(
                 "tester", "테스트", "test@test.com", "010-0000-0000",
-                LocalDate.now(), null, "default.png", null, null, null, null
+                LocalDate.now(), null, null, null, null, null
         );
         mockEmployee.updateInitPassword("1234", null);
 

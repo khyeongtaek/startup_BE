@@ -1,5 +1,6 @@
 package org.goodee.startup_BE.approval.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -12,6 +13,7 @@ import org.goodee.startup_BE.approval.entity.ApprovalDoc;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.validation.ValidationGroups;
 import org.goodee.startup_BE.employee.entity.Employee;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -52,6 +54,9 @@ public class ApprovalDocRequestDTO {
     @Valid // 이 리스트 내부의 DTO들도 유효성 검사를 수행
     // 참조 리스트는 0명일 수 있으므로(null 허용)
     private List<ApprovalReferenceRequestDTO> approvalReferences;
+
+    @Schema(description = "결재 첨부파일용 MultipartFile")
+    private List<MultipartFile> multipartFile;
 
     /**
      * DTO를 ApprovalDoc 엔티티로 변환
