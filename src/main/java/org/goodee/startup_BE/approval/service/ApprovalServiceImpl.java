@@ -16,6 +16,7 @@ import org.goodee.startup_BE.common.dto.CommonCodeResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
+import org.goodee.startup_BE.common.service.AttachmentFileService;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
 import org.goodee.startup_BE.notification.dto.NotificationRequestDTO;
@@ -44,6 +45,8 @@ public class ApprovalServiceImpl implements ApprovalService {
     private final EmployeeRepository employeeRepository;
     private final CommonCodeRepository commonCodeRepository;
     private final NotificationService notificationService;
+    private final AttachmentFileService attachmentFileService;
+
 
     // --- 공통 코드 Prefix 정의 ---
     private static final String DOC_STATUS_PREFIX = ApprovalDocStatus.PREFIX;
@@ -95,7 +98,7 @@ public class ApprovalServiceImpl implements ApprovalService {
                 .orElseThrow(() -> new EntityNotFoundException("결재 양식을 찾을 수 없습니다."));
 
         // 2. 문서(Doc) 생성 및 저장 (ID 자동 생성)
-        ApprovalDoc doc = approvalDocRepository.save(request.toEntity(creator,template, docStatus));
+        ApprovalDoc doc = approvalDocRepository.save(request.toEntity(creator, template, docStatus));
 
         // 3. 결재선(Lines) 생성
         List<ApprovalLineRequestDTO> lineRequests = request.getApprovalLines();
@@ -131,7 +134,13 @@ public class ApprovalServiceImpl implements ApprovalService {
             approvalReferenceRepository.saveAll(refList); // 참조자 일괄 저장
         }
 
-        // 5. 알림 발송
+        // 5. 첨부파일 저장
+        if (request.getMultipartFile() != null) {
+            attachmentFileService
+                    .uploadFiles(request.getMultipartFile(), ownerCode.getCommonCodeId(), doc.getDocId());
+        }
+
+        // 6. 알림 발송
         sendCreationNotifications(doc, lineList, refList, ownerCode);
 
         // 6. 저장된 전체 문서를 DTO로 변환하여 반환
@@ -239,7 +248,22 @@ public class ApprovalServiceImpl implements ApprovalService {
                 });
 
         // 헬퍼 메서드를 통해 DTO 변환
-        return convertToDocResponseDTO(doc);
+        ApprovalDocResponseDTO approvalDocResponseDTO = convertToDocResponseDTO(doc);
+
+        // 결재 상세 조회는 첨부파일을 포함하여 반환
+
+        // 결재 모듈 조회
+        CommonCode ownerCode = commonCodeRepository
+                .findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.APPROVAL.name())
+                .get(0);
+        approvalDocResponseDTO.setAttachmentFiles(
+                attachmentFileService
+                        .listFiles(ownerCode.getCommonCodeId(), doc.getDocId())
+        );
+
+        return approvalDocResponseDTO;
+
+
     }
 
     /**
