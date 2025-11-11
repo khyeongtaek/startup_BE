@@ -3,7 +3,9 @@ package org.goodee.startup_BE.employee.service;
 
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.common.entity.CommonCode;
+import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
+import org.goodee.startup_BE.common.service.AttachmentFileService;
 import org.goodee.startup_BE.employee.dto.EmployeeRequestDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeResponseDTO;
 import org.goodee.startup_BE.employee.entity.Employee;
@@ -19,39 +21,52 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class EmployeeServiceImpl implements EmployeeService{
+public class EmployeeServiceImpl implements EmployeeService {
     private final EmployeeRepository employeeRepository;
     private final CommonCodeRepository commonCodeRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AttachmentFileService attachmentFileService;
+    private final EmployeeHistoryService employeeHistoryService;
 
     @Override
     public EmployeeResponseDTO updateEmployeeByUser(String username, EmployeeRequestDTO request) {
-        Employee employee = employeeRepository.findByUsername(request.getUsername())
-                .orElse(null);
+        Employee employee = employeeRepository.findByUsername(username)
+                .orElseThrow(() -> new BadCredentialsException("회원 정보 수정 권한이 없습니다."));
 
-        if(employee == null || !username.equals(employee.getUsername())){
-            throw new BadCredentialsException("회원 정보 수정 권한이 없습니다.");
+        CommonCode ownerCode = commonCodeRepository
+                .findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.EMPLOYEE.name())
+                .get(0);
+
+
+        employee.updatePhoneNumber(request.getPhoneNumber(), employee);
+
+        //이미지를 실제 업로드 후 이미지경로만 가져옴
+        if (request.getMultipartFile() != null) {
+            employee.updateProfileImg(
+                    attachmentFileService
+                            .uploadFiles(request.getMultipartFile(), ownerCode.getCommonCodeId(), employee.getEmployeeId())
+                            .get(0)
+                            .getStoragePath()
+                    , employee
+            );
         }
 
-        employee.updatePhoneNumber(request.getPhoneNumber(),employee);
         return EmployeeResponseDTO.toDTO(employee);
     }
-
-    // 첨부 기능이 없어서 미구현
-    @Override
-    public EmployeeResponseDTO updateEmployeeProfileImg(String username, EmployeeRequestDTO request) {
-        return null;
-    }
-
-
 
     @Override
     public EmployeeResponseDTO updateEmployeeByAdmin(String username, EmployeeRequestDTO request) {
         Employee admin = employeeRepository.findByUsername(username)
-                .orElseThrow(()-> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
 
         Employee employee = employeeRepository.findById(request.getEmployeeId())
-                .orElseThrow(()-> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
+
+        // --- 변경 전 값 저장 ---
+        String oldStatus = employee.getStatus().getValue2();
+        String oldRole = employee.getRole().getValue2();
+        String oldDepartment = employee.getDepartment().getValue1();
+        String oldPosition = employee.getPosition().getValue1();
 
         CommonCode statusCode = commonCodeRepository
                 .findById(request.getStatus())
@@ -70,10 +85,16 @@ public class EmployeeServiceImpl implements EmployeeService{
                 .orElseThrow(() -> new ResourceNotFoundException("position code: " + request.getPosition() + " 를 찾을 수 없습니다."));
 
 
-        employee.updateStatus(statusCode,admin);
-        employee.updateRole(roleCode,admin);
-        employee.updateDepartment(departmentCode,admin);
-        employee.updatePosition(positionCode,admin);
+        employee.updateStatus(statusCode, admin);
+        employee.updateRole(roleCode, admin);
+        employee.updateDepartment(departmentCode, admin);
+        employee.updatePosition(positionCode, admin);
+
+        // --- 이력 기록 ---
+        employeeHistoryService.logHistory(employee, admin, "재직상태", oldStatus, statusCode.getValue2());
+        employeeHistoryService.logHistory(employee, admin, "권한", oldRole, roleCode.getValue2());
+        employeeHistoryService.logHistory(employee, admin, "부서", oldDepartment, departmentCode.getValue1());
+        employeeHistoryService.logHistory(employee, admin, "직급", oldPosition, positionCode.getValue1());
 
         return EmployeeResponseDTO.toDTO(employee);
     }
@@ -81,12 +102,13 @@ public class EmployeeServiceImpl implements EmployeeService{
     @Override
     public EmployeeResponseDTO initPassword(String username, EmployeeRequestDTO request) {
         Employee admin = employeeRepository.findByUsername(username)
-                .orElseThrow(()-> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
 
         Employee employee = employeeRepository.findById(request.getEmployeeId())
-                .orElseThrow(()-> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
 
         employee.updateInitPassword(passwordEncoder.encode(employee.getUsername()), admin);
+        employeeHistoryService.logHistory(employee, admin, "비밀번호", null, null);
 
         return EmployeeResponseDTO.toDTO(employee);
     }
@@ -95,7 +117,7 @@ public class EmployeeServiceImpl implements EmployeeService{
     public EmployeeResponseDTO getEmployee(Long employeeId) {
         return EmployeeResponseDTO.toDTO(
                 employeeRepository.findById(employeeId)
-                        .orElseThrow(()-> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."))
+                        .orElseThrow(() -> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."))
         );
     }
 
@@ -103,7 +125,7 @@ public class EmployeeServiceImpl implements EmployeeService{
     public EmployeeResponseDTO getEmployee(String username) {
         return EmployeeResponseDTO.toDTO(
                 employeeRepository.findByUsername(username)
-                        .orElseThrow(()-> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."))
+                        .orElseThrow(() -> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."))
         );
     }
 

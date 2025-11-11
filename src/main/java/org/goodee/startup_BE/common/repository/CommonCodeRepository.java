@@ -21,12 +21,6 @@ public interface CommonCodeRepository extends JpaRepository<CommonCode, Long> {
             @Param("keyword") String keyword
     );
 
-    // 부모 자식 관계가 모두 담긴 부서 List를 List<CommonCode>로 반환
-    @Query("SELECT c FROM CommonCode c " +
-            "WHERE c.codeDescription = '부서' " +
-            "AND c.isDeleted = false " +
-            "ORDER BY c.sortOrder ASC")
-    List<CommonCode> findAllDepartments();
 
     // 삭제 되지 않은 결재 양식 조회를 위한 쿼리 메소드
     List<CommonCode> findByCodeDescriptionAndIsDeletedFalseOrderBySortOrderAsc(String codeDescription);

@@ -129,7 +129,7 @@ public class Employee implements UserDetails {
     // --- 생성 팩토리 메서드 ---
     public static Employee createEmployee(
             String username, String name, String email
-            , String phoneNumber, LocalDate hireDate, CommonCode status, String profileImg
+            , String phoneNumber, LocalDate hireDate, CommonCode status
             , CommonCode role, CommonCode department, CommonCode position
             , Employee creator
     ) {
@@ -141,7 +141,6 @@ public class Employee implements UserDetails {
         employee.phoneNumber = phoneNumber;
         employee.hireDate = hireDate;
         employee.status = status;
-        employee.profileImg = profileImg;
         employee.role = role;
         employee.department = department;
         employee.position = position;
