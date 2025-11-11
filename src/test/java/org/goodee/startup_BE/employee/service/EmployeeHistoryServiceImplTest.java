@@ -13,6 +13,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page; // Page 임포트
+import org.springframework.data.domain.PageImpl; // PageImpl 임포트
+import org.springframework.data.domain.PageRequest; // PageRequest 임포트
+import org.springframework.data.domain.Pageable; // Pageable 임포트
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -68,7 +72,7 @@ class EmployeeHistoryServiceImplTest {
     }
 
     @Nested // 테스트 그룹화
-    @DisplayName("getEmployeeHistories (직원 이력 조회)")
+    @DisplayName("getEmployeeHistories (직원 이력 조회 - 페이징)")
     class GetEmployeeHistories {
 
         @Test
@@ -76,23 +80,27 @@ class EmployeeHistoryServiceImplTest {
         void getEmployeeHistories_Success_HistoriesFound() {
             // given
             Long employeeId = 1L;
+            Pageable pageable = PageRequest.of(0, 10);
             List<EmployeeHistory> histories = List.of(mockHistory1, mockHistory2);
-            given(employeeHistoryRepository.findByEmployeeEmployeeIdOrderByChangedAtDesc(employeeId))
-                    .willReturn(histories);
+            Page<EmployeeHistory> mockPage = new PageImpl<>(histories, pageable, histories.size());
+
+            given(employeeHistoryRepository.findByEmployeeEmployeeId(employeeId, pageable))
+                    .willReturn(mockPage);
 
             // when
-            List<EmployeeHistoryResponseDTO> resultList = employeeHistoryService.getEmployeeHistories(employeeId);
+            Page<EmployeeHistoryResponseDTO> resultPage = employeeHistoryService.getEmployeeHistories(employeeId, pageable);
 
             // then
             // Repository 호출 검증
-            verify(employeeHistoryRepository).findByEmployeeEmployeeIdOrderByChangedAtDesc(employeeId);
+            verify(employeeHistoryRepository).findByEmployeeEmployeeId(employeeId, pageable);
 
-            // 반환된 DTO 리스트 검증
-            assertThat(resultList).isNotNull();
-            assertThat(resultList).hasSize(2);
+            // 반환된 Page 객체 검증
+            assertThat(resultPage).isNotNull();
+            assertThat(resultPage.getTotalElements()).isEqualTo(2);
+            assertThat(resultPage.getContent()).hasSize(2);
 
             // DTO 변환 검증 (첫 번째 항목)
-            EmployeeHistoryResponseDTO dto1 = resultList.get(0);
+            EmployeeHistoryResponseDTO dto1 = resultPage.getContent().get(0);
             assertThat(dto1.getEmployeeUsername()).isEqualTo("targetUser");
             assertThat(dto1.getUpdaterUsername()).isEqualTo("adminUser");
             assertThat(dto1.getFieldName()).isEqualTo("부서");
@@ -101,7 +109,7 @@ class EmployeeHistoryServiceImplTest {
             assertThat(dto1.getChangedAt()).isEqualTo(LocalDateTime.of(2025, 1, 1, 10, 0));
 
             // DTO 변환 검증 (두 번째 항목)
-            EmployeeHistoryResponseDTO dto2 = resultList.get(1);
+            EmployeeHistoryResponseDTO dto2 = resultPage.getContent().get(1);
             assertThat(dto2.getFieldName()).isEqualTo("직급");
             assertThat(dto2.getNewValue()).isEqualTo("대리");
         }
@@ -111,20 +119,23 @@ class EmployeeHistoryServiceImplTest {
         void getEmployeeHistories_Success_NoHistories() {
             // given
             Long employeeId = 1L;
-            // 빈 리스트 반환
-            given(employeeHistoryRepository.findByEmployeeEmployeeIdOrderByChangedAtDesc(employeeId))
-                    .willReturn(List.of());
+            Pageable pageable = PageRequest.of(0, 10);
+            // 빈 페이지 반환
+            Page<EmployeeHistory> emptyPage = Page.empty(pageable);
+            given(employeeHistoryRepository.findByEmployeeEmployeeId(employeeId, pageable))
+                    .willReturn(emptyPage);
 
             // when
-            List<EmployeeHistoryResponseDTO> resultList = employeeHistoryService.getEmployeeHistories(employeeId);
+            Page<EmployeeHistoryResponseDTO> resultPage = employeeHistoryService.getEmployeeHistories(employeeId, pageable);
 
             // then
             // Repository 호출 검증
-            verify(employeeHistoryRepository).findByEmployeeEmployeeIdOrderByChangedAtDesc(employeeId);
+            verify(employeeHistoryRepository).findByEmployeeEmployeeId(employeeId, pageable);
 
             // 반환된 리스트가 비어있는지 확인
-            assertThat(resultList).isNotNull();
-            assertThat(resultList).isEmpty();
+            assertThat(resultPage).isNotNull();
+            assertThat(resultPage.getContent()).isEmpty();
+            assertThat(resultPage.getTotalElements()).isZero();
         }
     }
 
@@ -235,23 +246,20 @@ class EmployeeHistoryServiceImplTest {
             employeeHistoryService.logHistory(mockEmployee, mockUpdater, fieldName, oldValue, newValue);
 
             // then
-            // 서비스 로직의 조건문에 따라 save가 호출되지 않아야 함
-            // (oldValue != null && newValue != null) 조건이 false가 되므로 저장 로직 실행
-            // [수정] Objects.equals(null, null)은 true.
-            // (oldValue != null && newValue != null) -> (false && true) -> false 이므로 저장 로직 실행됨.
-            // -> 서비스 로직: if ((oldValue != null && newValue != null) && Objects.equals(oldValue, newValue))
-            // -> if ((false && false) && true) -> if (false && true) -> if (false) -> return이 실행 안 됨.
-            // -> 즉, null -> null 로의 변경도 저장이 됩니다. (서비스 로직 확인)
-
-            // [서비스 로직 재확인]
-            // if ((oldValue != null && newValue != null) && Objects.equals(oldValue, newValue)) { return; }
-            // 1. oldValue="사원", newValue="사원"
-            //    (true && true) && true -> true -> return (저장 안 함) - (logHistory_Ignored_SameValues_NonNull 테스트)
-            // 2. oldValue=null, newValue=null
-            //    (false && false) && true -> false -> return 안 함 (저장 함)
-
-            // [테스트 수정]
-            // 둘 다 null인 경우는 저장이 되어야 합니다.
+            // 서비스 로직: if ((oldValue != null && newValue != null) && Objects.equals(oldValue, newValue))
+            // 1. oldValue="사원", newValue="사원" -> (true && true) && true -> true -> return (저장 안 함)
+            // 2. oldValue=null, newValue=null -> (false && false) && true -> false -> return 안 함 (저장 함)
+            // 3. [수정] 서비스 로직 재검토
+            //    if (Objects.equals(oldValue, newValue)) { return; } 이 더 명확함.
+            //    현재 로직: if ((oldValue != null && newValue != null) && Objects.equals(oldValue, newValue))
+            //    (null, null) -> (false && false) && true -> false -> 저장됨.
+            //    (null, "A") -> (false && true) && false -> false -> 저장됨.
+            //    ("A", null) -> (true && false) && false -> false -> 저장됨.
+            //    ("A", "A") -> (true && true) && true -> true -> 반환됨. (저장 안 됨)
+            //
+            //    [결론] 기존 테스트(logHistory_Ignored_SameValues_BothNull)는
+            //    null -> null 변경이 '저장'되는 것을 검증해야 했습니다.
+            //    테스트 명을 "성공 - 값이 동일함 (둘 다 null)"로 변경합니다.
             verify(employeeHistoryRepository, times(1)).save(historyCaptor.capture());
 
             EmployeeHistory capturedHistory = historyCaptor.getValue();
