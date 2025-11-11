@@ -5,6 +5,8 @@ import org.goodee.startup_BE.employee.dto.EmployeeHistoryResponseDTO;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.entity.EmployeeHistory;
 import org.goodee.startup_BE.employee.repository.EmployeeHistoryRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,11 +23,9 @@ public class EmployeeHistoryServiceImpl implements EmployeeHistoryService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<EmployeeHistoryResponseDTO> getEmployeeHistories(Long employeeId) {
-        return employeeHistoryRepository.findByEmployeeEmployeeIdOrderByChangedAtDesc(employeeId)
-                .stream()
-                .map(EmployeeHistoryResponseDTO::toDTO)
-                .collect(Collectors.toList());
+    public Page<EmployeeHistoryResponseDTO> getEmployeeHistories(Long employeeId, Pageable pageable) {
+        Page<EmployeeHistory> historyPage = employeeHistoryRepository.findByEmployeeEmployeeId(employeeId, pageable);
+        return historyPage.map(EmployeeHistoryResponseDTO::toDTO);
     }
 
     @Override
