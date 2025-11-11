@@ -19,7 +19,7 @@ public class CommonCodeServiceImpl implements CommonCodeService {
 
   @Override
   public List<CommonCode>  getAllDepartments() {
-    return commonCodeRepository.findAllDepartments();
+    return commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse("DP");
   }
 
   @Override
