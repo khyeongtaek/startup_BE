@@ -68,7 +68,7 @@ class EmployeeRepositoryTest {
         // 요청하신 워크플로우(create -> updateInitPassword -> save)를 적용
         creator = Employee.createEmployee(
                 "admin", "관리자", "admin@test.com", "010-0000-0000",
-                LocalDate.now(), statusActive, "default.png", roleAdmin, deptHr, posSenior,
+                LocalDate.now(), statusActive, roleAdmin, deptHr, posSenior,
                 null // 최초 생성자는 creator가 null
         );
         // password 및 isInitialPassword 필드 설정
@@ -86,7 +86,7 @@ class EmployeeRepositoryTest {
         // 1. 팩토리 메서드로 객체 생성
         Employee employee = Employee.createEmployee(
                 username, "테스트유저", email, "010-1234-5678",
-                LocalDate.now(), statusActive, "default.png", role, dept, pos,
+                LocalDate.now(), statusActive, role, dept, pos,
                 creator // 이 직원의 생성자는 setUp에서 만든 'creator'
         );
 
@@ -322,7 +322,7 @@ class EmployeeRepositoryTest {
         // 헬퍼 메서드를 쓰지 않고, createEmployee만 호출
         Employee incompleteEmployee = Employee.createEmployee(
                 "noPassUser", "nopass@test.com", "Nopass", "010-1111-1111",
-                LocalDate.now(), statusActive, "default.png", roleUser, deptDev, posJunior,
+                LocalDate.now(), statusActive, roleUser, deptDev, posJunior,
                 creator
         );
         // updateInitPassword()를 고의로 누락
@@ -339,7 +339,7 @@ class EmployeeRepositoryTest {
         // given
         Employee incompleteEmployee = Employee.createEmployee(
                 "noDeptUser", "nodept@test.com", "Nopass", "010-2222-2222",
-                LocalDate.now(), statusActive, "default.png", roleUser,
+                LocalDate.now(), statusActive, roleUser,
                 null, // department (nullable=false)를 null로 설정
                 posJunior,
                 creator

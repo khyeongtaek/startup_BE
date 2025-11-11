@@ -1,6 +1,8 @@
 //
 package org.goodee.startup_BE.employee.service;
 
+// [추가] 신규 의존성 import
+import org.goodee.startup_BE.common.service.AttachmentFileService;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.employee.dto.EmployeeRequestDTO;
@@ -25,6 +27,9 @@ import java.util.Optional;
 
 // AssertJ static import
 import static org.assertj.core.api.Assertions.*;
+// [추가] ArgumentMatchers import
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 // BDDMockito static import
 import static org.mockito.BDDMockito.given;
 // Mockito static import
@@ -44,6 +49,9 @@ class EmployeeServiceImplTest {
 
     @Mock // Mock 객체로 생성
     private PasswordEncoder passwordEncoder;
+
+    @Mock // [추가] 신규 의존성 Mock 객체
+    private AttachmentFileService attachmentFileService;
 
     // 테스트에서 공통으로 사용할 Mock 객체 선언
     private Employee mockEmployee;
@@ -96,17 +104,24 @@ class EmployeeServiceImplTest {
             String username = "user";
             String newPhoneNumber = "010-2222-2222";
             EmployeeRequestDTO request = new EmployeeRequestDTO();
+            // request.username은 더 이상 서비스에서 사용되지 않음
             request.setUsername(username);
             request.setPhoneNumber(newPhoneNumber);
+            // request.getMultipartFile()은 null이므로 파일 업로드 로직은 실행되지 않음
 
             // DTO 변환 시 업데이트된 번호를 반환하도록 설정
-            // 이 테스트는 DTO 변환 로직이 실패 경로에 영향을 주지 않으므로 lenient() 사용
             lenient().when(mockEmployee.getPhoneNumber()).thenReturn(newPhoneNumber);
 
-            // 레포지토리 조회 시 mockEmployee 반환
+            // [수정] 서비스가 인증된 username으로 조회함
             given(employeeRepository.findByUsername(username)).willReturn(Optional.of(mockEmployee));
-            // 권한 확인을 위해 getUsername() 설정
-            given(mockEmployee.getUsername()).willReturn(username);
+
+            // [추가] CommonCode (OwnerType) 조회를 Mocking (IndexOutOfBoundsException 방지)
+            // 서비스 로직의 .get(0) 호출을 위함
+            CommonCode mockOwnerCode = mock(CommonCode.class);
+            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(
+                    anyString(), // OwnerType.PREFIX
+                    anyString()  // OwnerType.EMPLOYEE.name()
+            )).willReturn(List.of(mockOwnerCode));
 
             // when
             EmployeeResponseDTO result = employeeServiceImpl.updateEmployeeByUser(username, request);
@@ -114,19 +129,22 @@ class EmployeeServiceImplTest {
             // then
             // 엔티티의 updatePhoneNumber 메서드가 정확한 인자와 함께 호출되었는지 검증
             verify(mockEmployee).updatePhoneNumber(newPhoneNumber, mockEmployee);
+            // [추가] 파일이 없었으므로 updateProfileImg는 호출되지 않았는지 검증
+            verify(mockEmployee, never()).updateProfileImg(anyString(), any(Employee.class));
             // 반환된 DTO의 값이 요청 값과 일치하는지 확인
             assertThat(result.getPhoneNumber()).isEqualTo(newPhoneNumber);
         }
 
         @Test
-        @DisplayName("실패 - 사용자 없음 (orElse(null) 처리)")
+        @DisplayName("실패 - 사용자 없음 (orElseThrow 처리)")
         void updateEmployeeByUser_Fail_UserNotFound() {
             // given
             String username = "user";
             EmployeeRequestDTO request = new EmployeeRequestDTO();
             request.setUsername(username);
 
-            // findByUsername이 Optional.empty()를 반환하면 서비스 로직에서 orElse(null)에 의해 null이 됨
+            // [수정] findByUsername이 Optional.empty()를 반환하면
+            // 서비스 로직의 orElseThrow가 예외를 발생시킴
             given(employeeRepository.findByUsername(username)).willReturn(Optional.empty());
 
             // when & then
@@ -134,54 +152,19 @@ class EmployeeServiceImplTest {
             assertThatThrownBy(() -> employeeServiceImpl.updateEmployeeByUser(username, request))
                     .isInstanceOf(BadCredentialsException.class)
                     .hasMessage("회원 정보 수정 권한이 없습니다.");
+
+            // 이 테스트는 예외가 먼저 발생하므로 CommonCodeRepository를 호출하지 않음
         }
 
-        @Test
-        @DisplayName("실패 - 권한 없음 (요청자와 대상자 불일치)")
-        void updateEmployeeByUser_Fail_Unauthorized() {
-            // given
-            String authUsername = "admin"; // 인증된 사용자
-            String requestUsername = "user"; // 요청 대상
-            EmployeeRequestDTO request = new EmployeeRequestDTO();
-            request.setUsername(requestUsername);
-
-            // 요청 대상(user)은 조회 성공
-            given(employeeRepository.findByUsername(requestUsername)).willReturn(Optional.of(mockEmployee));
-            // 대상의 username 설정
-            given(mockEmployee.getUsername()).willReturn(requestUsername);
-
-            // when & then
-            // 인증된 사용자(admin)와 대상 사용자(user)가 달라 BadCredentialsException 발생 확인
-            assertThatThrownBy(() -> employeeServiceImpl.updateEmployeeByUser(authUsername, request))
-                    .isInstanceOf(BadCredentialsException.class)
-                    .hasMessage("회원 정보 수정 권한이 없습니다.");
-        }
-    }
-
-    @Nested
-    @DisplayName("updateEmployeeProfileImg (프로필 이미지 변경)")
-    class UpdateEmployeeProfileImg {
-
-        @Test
-        @DisplayName("미구현 - null 반환")
-        void updateEmployeeProfileImg_NotImplemented() {
-            // given
-            String username = "user";
-            EmployeeRequestDTO request = new EmployeeRequestDTO();
-
-            // when
-            EmployeeResponseDTO result = employeeServiceImpl.updateEmployeeProfileImg(username, request);
-
-            // then
-            // 현재 구현체가 null을 반환하므로 null인지 확인
-            assertThat(result).isNull();
-        }
+        // [삭제] updateEmployeeByUser_Fail_Unauthorized 테스트
+        // 서비스 로직 변경으로 인해 더 이상 유효하지 않은 테스트 케이스이므로 삭제
     }
 
     @Nested
     @DisplayName("updateEmployeeByAdmin (관리자 정보 수정)")
     class UpdateEmployeeByAdmin {
 
+        // ... (기존과 동일)
         private EmployeeRequestDTO request;
         private String adminUsername = "admin";
         private String targetUsername = "user";
@@ -284,6 +267,7 @@ class EmployeeServiceImplTest {
     @DisplayName("initPassword (비밀번호 초기화)")
     class InitPassword {
 
+        // ... (기존과 동일)
         private EmployeeRequestDTO request;
         private String adminUsername = "admin";
         private String targetUsername = "user";
@@ -347,6 +331,7 @@ class EmployeeServiceImplTest {
     @DisplayName("getEmployee (사원 조회)")
     class GetEmployee {
 
+        // ... (기존과 동일)
         @Test
         @DisplayName("성공 - ID로 조회")
         void getEmployeeById_Success() {
@@ -413,6 +398,7 @@ class EmployeeServiceImplTest {
     @DisplayName("getDepartmentMembers (부서원 조회)")
     class GetDepartmentMembers {
 
+        // ... (기존과 동일)
         @Test
         @DisplayName("성공 - 부서원 있음")
         void getDepartmentMembers_Success_MembersFound() {

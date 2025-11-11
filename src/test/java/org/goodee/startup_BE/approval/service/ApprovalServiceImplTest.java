@@ -1,3 +1,4 @@
+// 전체 코드를 보여달라는 요청에 따라 파일 전체를 제공
 package org.goodee.startup_BE.approval.service;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -11,6 +12,7 @@ import org.goodee.startup_BE.approval.repository.ApprovalReferenceRepository;
 import org.goodee.startup_BE.common.dto.CommonCodeResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
+import org.goodee.startup_BE.common.service.AttachmentFileService;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
 import org.goodee.startup_BE.notification.dto.NotificationRequestDTO;
@@ -38,6 +40,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+// [수정] anyLong 임포트
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.*;
@@ -61,7 +65,10 @@ class ApprovalServiceImplTest {
     private CommonCodeRepository commonCodeRepository;
     @Mock
     private NotificationService notificationService;
-    // [수정] ApprovalTemplateRepository Mock 제거
+
+    // [수정] AttachmentFileService Mock 객체 추가
+    @Mock
+    private AttachmentFileService attachmentFileService;
 
     // --- 테스트용 Mock 엔티티 선언 ---
     private Employee mockCreator;
@@ -257,6 +264,7 @@ class ApprovalServiceImplTest {
             requestDto.setTitle("새 기안 문서");
             requestDto.setContent("내용입니다.");
             requestDto.setTemplateCode(templateId); // [수정]
+            // requestDto.setMultipartFile(List.of()); // [수정] 파일 관련 로직 추가 시 Mock 필요
 
             ApprovalLineRequestDTO lineDto1 = new ApprovalLineRequestDTO();
             lineDto1.setApprovalOrder(1L);
@@ -299,6 +307,9 @@ class ApprovalServiceImplTest {
 
             given(approvalDocRepository.save(any(ApprovalDoc.class))).willReturn(mockDoc);
 
+            // [수정] 파일 업로드 서비스 Mocking (파일이 없는 경우)
+            // requestDto.setMultipartFile(null)인 상태
+
             // [수정] ResponseDTO 생성 시 approvalTemplate 필드가 추가됨
             // setUp()에서 mockDoc.getApprovalTemplate()이 mockTemplateCode를 반환하도록 이미 stub 되어있음.
 
@@ -335,6 +346,9 @@ class ApprovalServiceImplTest {
 
             // Refs 저장 확인
             then(approvalReferenceRepository).should(times(1)).saveAll(anyList());
+
+            // [수정] 파일 서비스 호출 확인 (파일이 null이므로 호출되면 안됨)
+            then(attachmentFileService).should(never()).uploadFiles(any(), anyLong(), anyLong());
 
             // 알림 서비스 호출 검증 (총 4회: approver1(신규), approver1(대기), approver2(신규), referrer(신규))
             then(notificationService).should(times(4)).create(any(NotificationRequestDTO.class));
@@ -579,6 +593,15 @@ class ApprovalServiceImplTest {
             // 공통 given (문서 조회 성공)
             // (참고: setUp()에서 mockDoc은 mockLine1, mockLine2, mockRef를 리스트로 반환하도록 stub됨)
             given(approvalDocRepository.findDocWithDetailsById(docId)).willReturn(Optional.of(mockDoc));
+
+            // [수정] 추가된 로직(파일 서비스)을 위한 Mock Stubbing
+            // getApproval() 메서드에서 'OT', 'APPROVAL' 코드를 조회하므로 stubbing 추가
+            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("OT", "APPROVAL"))
+                    .willReturn(List.of(mockOwnerCodeApproval));
+
+            // [수정] attachmentFileService.listFiles()가 호출되므로 Mocking
+            // lenient()를 사용하여 호출되지 않아도 오류가 발생하지 않도록 함
+            lenient().when(attachmentFileService.listFiles(anyLong(), anyLong())).thenReturn(List.of());
         }
 
         @Test
@@ -596,6 +619,8 @@ class ApprovalServiceImplTest {
             assertThat(result.getDocId()).isEqualTo(docId);
             // 참조자(mockRef)의 update()가 호출되지 않았는지 검증
             then(mockRef).should(never()).update(any(LocalDateTime.class));
+            // [수정] 파일 서비스가 호출되었는지 검증
+            then(attachmentFileService).should(times(1)).listFiles(anyLong(), eq(docId));
         }
 
         @Test
@@ -614,6 +639,8 @@ class ApprovalServiceImplTest {
             // then
             // 참조자(mockRef)의 update()가 1회 호출
             then(mockRef).should(times(1)).update(any(LocalDateTime.class));
+            // [수정] 파일 서비스가 호출되었는지 검증
+            then(attachmentFileService).should(times(1)).listFiles(anyLong(), eq(docId));
         }
 
         @Test
@@ -630,6 +657,8 @@ class ApprovalServiceImplTest {
             // then
             // 이미 열람했으므로 update()가 호출되지 않음
             then(mockRef).should(never()).update(any(LocalDateTime.class));
+            // [수정] 파일 서비스가 호출되었는지 검증
+            then(attachmentFileService).should(times(1)).listFiles(anyLong(), eq(docId));
         }
     }
 

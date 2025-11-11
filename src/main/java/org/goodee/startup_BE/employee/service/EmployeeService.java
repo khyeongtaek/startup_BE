@@ -9,9 +9,6 @@ public interface EmployeeService {
     // 사용자 개인정보 변경
     EmployeeResponseDTO updateEmployeeByUser(String username, EmployeeRequestDTO request);
 
-    // 사용자 프로필이미지 변경
-    EmployeeResponseDTO updateEmployeeProfileImg(String username, EmployeeRequestDTO request);
-
     //관리자의 사원 인사관리
     EmployeeResponseDTO updateEmployeeByAdmin(String username, EmployeeRequestDTO request);
 
