@@ -30,7 +30,7 @@ public class EmployeeHistoryServiceImpl implements EmployeeHistoryService {
 
     @Override
     public void logHistory(Employee employee, Employee updater, String fieldName, String oldValue, String newValue) {
-        if (Objects.equals(oldValue, newValue)) {
+        if ((oldValue != null && newValue != null) && Objects.equals(oldValue, newValue)) {
             return;
         }
 
