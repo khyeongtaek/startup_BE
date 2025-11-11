@@ -118,11 +118,24 @@ public class ScheduleServiceImpl implements  ScheduleService{
         Schedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new ScheduleNotFoundException("해당 일정을 찾을 수 없습니다."));
 
+        //  카테고리 처리 추가
+        CommonCode category = null;
+        if (request.getCategoryCode() != null && !request.getCategoryCode().isBlank()) {
+            List<CommonCode> categoryList =
+                    commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("SC", request.getCategoryCode());
+            if (categoryList.isEmpty()) {
+                throw new InvalidScheduleArgumentException("유효하지 않은 일정 카테고리 코드입니다.");
+            }
+            category = categoryList.get(0);
+        }
+
+        //  카테고리를 포함한 update 호출
         schedule.update(
                 request.getTitle(),
                 request.getContent(),
                 request.getStartTime(),
-                request.getEndTime()
+                request.getEndTime(),
+                category
         );
 
         scheduleRepository.save(schedule);

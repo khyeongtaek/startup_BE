@@ -55,7 +55,7 @@ public class ScheduleResponseDTO {
                 .scheduleId(schedule.getScheduleId())
                 .title(schedule.getTitle())
                 .content(schedule.getContent())
-                .categoryName(schedule.getCategory().getCodeDescription())
+                .categoryName(schedule.getCategory().getValue2())
                 .employeeId(schedule.getEmployee().getEmployeeId())
                 .employeeName(schedule.getEmployee().getName())
                 .startTime(schedule.getStartTime())
