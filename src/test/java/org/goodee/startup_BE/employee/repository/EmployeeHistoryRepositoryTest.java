@@ -11,6 +11,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page; // Page 임포트
+import org.springframework.data.domain.PageRequest; // PageRequest 임포트
+import org.springframework.data.domain.Pageable; // Pageable 임포트
+import org.springframework.data.domain.Sort; // Sort 임포트
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -179,8 +183,8 @@ class EmployeeHistoryRepositoryTest {
     // --- Custom Repository Method Tests ---
 
     @Test
-    @DisplayName("Custom: findByEmployeeEmployeeIdOrderByChangedAtDesc 테스트")
-    void findByEmployeeIdAndOrderByChangedAtDescTest() throws InterruptedException {
+    @DisplayName("Custom: findByEmployeeEmployeeId (페이징 및 정렬) 테스트")
+    void findByEmployeeIdWithPagingAndSortingTest() throws InterruptedException {
         // given
         // 1. 다른 직원(otherEmployee) 생성
         Employee otherEmployee = createPersistableEmployee("otherUser", "other@test.com", roleUser, deptDev, posJunior);
@@ -201,15 +205,34 @@ class EmployeeHistoryRepositoryTest {
         EmployeeHistory history3_other = createPersistableHistory(otherEmployee, adminUpdater, "status", "재직", "휴직");
         employeeHistoryRepository.save(history3_other);
 
-        // when
-        // targetEmployee의 ID로 이력 조회 (변경 시간 내림차순)
-        List<EmployeeHistory> histories = employeeHistoryRepository.findByEmployeeEmployeeIdOrderByChangedAtDesc(targetEmployee.getEmployeeId());
+        // when (1) - 첫 페이지(0), 페이지당 1개, 최신순(내림차순) 정렬
+        Pageable pageableDesc = PageRequest.of(0, 1, Sort.by(Sort.Direction.DESC, "changedAt"));
+        Page<EmployeeHistory> resultPage1 = employeeHistoryRepository.findByEmployeeEmployeeId(targetEmployee.getEmployeeId(), pageableDesc);
 
-        // then
-        assertThat(histories).hasSize(2);
-        assertThat(histories).doesNotContain(history3_other); // 다른 직원 이력 미포함 확인
-        // 정렬 순서 확인: history2 (최신) -> history1 (과거)
-        assertThat(histories).containsExactly(history2_target, history1_target);
+        // then (1)
+        assertThat(resultPage1.getTotalElements()).isEqualTo(2); // targetEmployee의 전체 이력 수
+        assertThat(resultPage1.getTotalPages()).isEqualTo(2); // 1개씩 2페이지
+        assertThat(resultPage1.getContent()).hasSize(1);
+        assertThat(resultPage1.getContent().get(0)).isEqualTo(history2_target); // 가장 최신 이력 (history2)
+
+        // when (2) - 두 번째 페이지(1), 페이지당 1개, 최신순(내림차순) 정렬
+        Pageable pageableDescPage2 = PageRequest.of(1, 1, Sort.by(Sort.Direction.DESC, "changedAt"));
+        Page<EmployeeHistory> resultPage2 = employeeHistoryRepository.findByEmployeeEmployeeId(targetEmployee.getEmployeeId(), pageableDescPage2);
+
+        // then (2)
+        assertThat(resultPage2.getTotalElements()).isEqualTo(2);
+        assertThat(resultPage2.getContent()).hasSize(1);
+        assertThat(resultPage2.getContent().get(0)).isEqualTo(history1_target); // 2번째 이력 (history1)
+
+        // when (3) - 한 페이지에 모두(5개), 오래된순(오름차순) 정렬
+        Pageable pageableAsc = PageRequest.of(0, 5, Sort.by(Sort.Direction.ASC, "changedAt"));
+        Page<EmployeeHistory> resultPage3 = employeeHistoryRepository.findByEmployeeEmployeeId(targetEmployee.getEmployeeId(), pageableAsc);
+
+        // then (3)
+        assertThat(resultPage3.getTotalElements()).isEqualTo(2);
+        assertThat(resultPage3.getContent()).hasSize(2);
+        assertThat(resultPage3.getContent()).containsExactly(history1_target, history2_target); // 오름차순 정렬 확인
+        assertThat(resultPage3.getContent()).doesNotContain(history3_other); // 다른 직원 이력 미포함 확인
     }
 
     // --- Exception (Constraints) Tests ---

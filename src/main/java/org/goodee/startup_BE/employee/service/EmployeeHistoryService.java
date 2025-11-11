@@ -2,17 +2,20 @@ package org.goodee.startup_BE.employee.service;
 
 import org.goodee.startup_BE.employee.dto.EmployeeHistoryResponseDTO;
 import org.goodee.startup_BE.employee.entity.Employee;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
 public interface EmployeeHistoryService {
 
     /**
-     * 특정 직원의 변경 이력을 최근순으로 조회
+     * 특정 직원의 변경 이력을 최근순으로 조회 (페이징)
      * @param employeeId 대상 직원의 ID
-     * @return 변경 이력 DTO 리스트
+     * @param pageable 페이징 및 정렬 정보
+     * @return 변경 이력 DTO 페이지
      */
-    List<EmployeeHistoryResponseDTO> getEmployeeHistories(Long employeeId);
+    Page<EmployeeHistoryResponseDTO> getEmployeeHistories(Long employeeId, Pageable pageable);
 
     /**
      * 직원 정보 변경 이력을 기록
