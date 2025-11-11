@@ -15,6 +15,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Schema(description = "직원 정보 변경 이력 응답 DTO")
 public class EmployeeHistoryResponseDTO {
+    @Schema(description = "변경 이력 고유 id", example = "user123")
+    private Long historyId;
 
     @Schema(description = "변경 대상 직원 아이디", example = "user123")
     private String employeeUsername;
@@ -36,6 +38,7 @@ public class EmployeeHistoryResponseDTO {
 
     public static EmployeeHistoryResponseDTO toDTO(EmployeeHistory history) {
         return EmployeeHistoryResponseDTO.builder()
+                .historyId(history.getHistoryId())
                 .employeeUsername(history.getEmployee().getUsername())
                 .updaterUsername(history.getUpdater().getUsername())
                 .fieldName(history.getFieldName())
