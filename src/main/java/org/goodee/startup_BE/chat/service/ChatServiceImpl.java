@@ -104,7 +104,7 @@ public class ChatServiceImpl implements ChatService{
 
         // WebSocket 브로드캐스트 (/topic/rooms/{roomId})
         ChatMessageResponseDTO messageDTO = ChatMessageResponseDTO.toDTO(savedInitialMessage);
-        simpMessagingTemplate.convertAndSend("/topic/rooms/" + chatRoomId, messageDTO);
+        simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + chatRoomId, messageDTO);
 
         // TEAM 채팅방 이면, 초대 대상에게 알림 받기
         if(isTeamChat) {
@@ -187,7 +187,7 @@ public class ChatServiceImpl implements ChatService{
         // 6) 커밋 후 알림
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override public void afterCommit() {
-                simpMessagingTemplate.convertAndSend("/topic/rooms/" + finalRoomId,
+                simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + finalRoomId,
                         ChatMessageResponseDTO.toDTO(systemMsg));
 
                 try {
@@ -251,7 +251,7 @@ public class ChatServiceImpl implements ChatService{
         if (systemMessage != null) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override public void afterCommit() {
-                    simpMessagingTemplate.convertAndSend("/topic/rooms/" + finalRoomId,
+                    simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + finalRoomId,
                             ChatMessageResponseDTO.toDTO(systemMessage));
                 }
             });
@@ -298,7 +298,7 @@ public class ChatServiceImpl implements ChatService{
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override public void afterCommit() {
-                simpMessagingTemplate.convertAndSend("/topic/rooms/" + finalRoomId, dto);
+                simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + finalRoomId, dto);
             }
         });
 
@@ -345,7 +345,7 @@ public class ChatServiceImpl implements ChatService{
         // 읽음 브로드캐스트: 프론트는 해당 방의 메시지들 중 msg.id 이하의 미읽음 카운트만 감소
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override public void afterCommit() {
-                simpMessagingTemplate.convertAndSend("/topic/rooms/" + roomId + "/reads",
+                simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + roomId + "/reads",
                         Map.of("lastMessageId", membership.getEmployee().getEmployeeId(),
                         "readUpToMessageId", message.getChatMessageId()));
             }
