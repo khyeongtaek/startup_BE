@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.chat.dto.ChatMessageResponseDTO;
+import org.goodee.startup_BE.chat.dto.ChatRoomCreateRequestDTO;
 import org.goodee.startup_BE.chat.dto.ChatRoomListResponseDTO;
 import org.goodee.startup_BE.chat.dto.ChatRoomResponseDTO;
 import org.goodee.startup_BE.chat.service.ChatService;
@@ -40,10 +41,10 @@ public class ChatRoomApiController {
     @PostMapping("/rooms")
     public ResponseEntity<ChatRoomResponseDTO> createRoom(
             Authentication authentication,
-            @RequestBody CreateRoomRequest request
+            @RequestBody ChatRoomCreateRequestDTO request
     ) {
         String username = authentication.getName();
-        ChatRoomResponseDTO dto = chatService.createRoom(username, request.roomName, request.inviteeEmployeeIds);
+        ChatRoomResponseDTO dto = chatService.createRoom(username, request.getDisplayName(), request.getInviteeEmployeeIds());
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 
