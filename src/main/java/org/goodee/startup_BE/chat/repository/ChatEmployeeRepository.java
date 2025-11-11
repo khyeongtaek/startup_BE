@@ -97,4 +97,25 @@ public interface ChatEmployeeRepository extends JpaRepository<ChatEmployee, Long
     long countUnreadForMessage(@Param("roomId") Long roomId,
                                @Param("senderId") Long senderId,
                                @Param("messageCreatedAt") LocalDateTime messageCreatedAt);
+
+    /**
+     * 특정 사용자의 모든 채팅방에서 안 읽은 메시지의 총 개수를 합산합니다.
+     * ChatEmployee의 lastReadMessage ID와 ChatMessage의 ID를 비교하여 계산합니다.
+     *
+     * @param employeeId 안 읽은 개수를 계산할 직원의 ID
+     * @return 총 안 읽은 메시지 개수
+     */
+    @Query("""
+        SELECT COALESCE(SUM(
+            (SELECT COUNT(m.chatMessageId)
+             FROM ChatMessage m
+             WHERE m.chatRoom = ce.chatRoom
+             AND m.chatMessageId > ce.lastReadMessage.chatMessageId
+             AND m.employee.employeeId <> :employeeId)
+        ), 0)
+        FROM ChatEmployee ce
+        WHERE ce.employee.employeeId = :employeeId
+        AND ce.isLeft = false
+    """)
+    long sumTotalUnreadMessagesByEmployeeId(@Param("employeeId") Long employeeId);
 }
