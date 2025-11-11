@@ -35,6 +35,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final JwtService jwtService;
     private final LoginHistoryService loginHistoryService;
     private final NotificationService notificationService;
+    private final EmployeeHistoryService employeeHistoryService;
 
     // 회원가입
     @Override
@@ -73,6 +74,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         // 사용자 등록
         employee = employeeRepository.save(employee);
+
+        employeeHistoryService.logHistory(employee, creator, "신규", null, null);
+
 
         return APIResponseDTO.<EmployeeResponseDTO>builder()
                 .message("회원가입 성공")
@@ -156,6 +160,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         // 새 비밀번호로 업데이트
         employee.updatePassword(passwordEncoder.encode(request.getNewPassword()), employee);
+        employeeHistoryService.logHistory(employee, employee, "비밀번호", null, null);
 
         return EmployeeResponseDTO.toDTO(employee);
     }
