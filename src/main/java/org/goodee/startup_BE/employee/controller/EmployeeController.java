@@ -11,8 +11,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.common.dto.APIResponseDTO;
 import org.goodee.startup_BE.common.validation.ValidationGroups;
+import org.goodee.startup_BE.employee.dto.EmployeeHistoryResponseDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeRequestDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeResponseDTO;
+import org.goodee.startup_BE.employee.entity.EmployeeHistory;
+import org.goodee.startup_BE.employee.service.EmployeeHistoryService;
 import org.goodee.startup_BE.employee.service.EmployeeService;
 import org.goodee.startup_BE.employee.validation.EmployeeValidationGroup;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +32,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EmployeeController {
     private final EmployeeService employeeService;
+    private final EmployeeHistoryService employeeHistoryService;
 
 
     @Operation(summary = "로그인한 본인 정보 조회", description = "username 을 기준으로 로그인한  사원의 상세 정보를 조회.")
@@ -64,6 +68,23 @@ public class EmployeeController {
                 .build());
     }
 
+    @Operation(summary = "특정 사원 인사 정보 수정 이력 조회", description = "사원 ID를 기준으로 특정 사원의 인사 정보 수정 이력 목록을 조회.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "사원 이력 조회 성공"),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자", content = @Content)
+    })
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/history/{id}")
+    public ResponseEntity<APIResponseDTO<List<EmployeeHistoryResponseDTO>>> getEmployeeHistory(
+            @Parameter(description = "조회할 사원의 ID (employee_id)", required = true, example = "1")
+            @PathVariable("id") Long employeeId
+    ) {
+        return ResponseEntity.ok(APIResponseDTO.<List<EmployeeHistoryResponseDTO>>builder()
+                .message("사원 이력 조회 성공")
+                .data(employeeHistoryService.getEmployeeHistories(employeeId))
+                .build());
+    }
+
     @Operation(summary = "특정 부서 소속원 목록 조회", description = "부서 ID를 기준으로 해당 부서에 소속된 모든 사원 목록을 조회.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "부서원 목록 조회 성공"),
@@ -79,6 +100,8 @@ public class EmployeeController {
                 .data(employeeService.getDepartmentMembers(departmentId))
                 .build());
     }
+
+
 
     @Operation(summary = "사용자 본인 정보 수정",
             description = "로그인한 사용자 본인의 정보(예: 전화번호)를 수정.",
