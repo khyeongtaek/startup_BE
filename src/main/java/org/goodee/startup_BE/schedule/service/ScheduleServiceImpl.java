@@ -3,11 +3,17 @@ package org.goodee.startup_BE.schedule.service;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.goodee.startup_BE.common.entity.CommonCode;
+import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.exception.ResourceNotFoundException;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
+import org.goodee.startup_BE.notification.dto.NotificationRequestDTO;
+import org.goodee.startup_BE.notification.entity.Notification;
+import org.goodee.startup_BE.notification.repository.NotificationRepository;
+import org.goodee.startup_BE.notification.service.NotificationService;
 import org.goodee.startup_BE.schedule.dto.ScheduleParticipantResponseDTO;
 import org.goodee.startup_BE.schedule.dto.ScheduleRequestDTO;
 import org.goodee.startup_BE.schedule.dto.ScheduleResponseDTO;
@@ -19,21 +25,27 @@ import org.goodee.startup_BE.schedule.repository.ScheduleParticipantRepository;
 import org.goodee.startup_BE.schedule.repository.ScheduleRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 @Builder
+@Slf4j
 public class ScheduleServiceImpl implements  ScheduleService{
 
     private final CommonCodeRepository commonCodeRepository;
     private final EmployeeRepository employeeRepository;
     private final ScheduleRepository scheduleRepository;
     private final ScheduleParticipantRepository scheduleParticipantRepository;
+    private final NotificationService notificationService;
+    private final NotificationRepository notificationRepository;
 
     // 일정 등록
     @Override
@@ -146,7 +158,7 @@ public class ScheduleServiceImpl implements  ScheduleService{
                 .toList();
     }
 
-    //  일정 참여자 초대
+    // 일정 초대
     @Override
     @Transactional
     public void inviteParticipants(Long scheduleId, List<Long> employeeIds) {
@@ -159,18 +171,49 @@ public class ScheduleServiceImpl implements  ScheduleService{
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("기본 참여 상태 코드 'PENDING'을 찾을 수 없습니다."));
 
-        List<Employee> employees = employeeRepository.findAllById(employeeIds);
+        CommonCode inviteCode = commonCodeRepository
+                .findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.SCHEDULEINVITE.name())
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("일정 초대 관련 공통 코드를 찾을 수 없습니다."));
 
-        for (Employee emp : employees) {
-            boolean alreadyInvited = scheduleParticipantRepository
-                    .findByScheduleScheduleId(scheduleId)
+        List<Employee> candidates = employeeRepository.findAllById(employeeIds);
+        List<Employee> newInvitees = new ArrayList<>();
+
+        for (Employee emp : candidates) {
+            boolean alreadyInvited = scheduleParticipantRepository.findByScheduleScheduleId(scheduleId)
                     .stream()
                     .anyMatch(p -> p.getParticipant().getEmployeeId().equals(emp.getEmployeeId()));
 
             if (!alreadyInvited) {
-                ScheduleParticipant participant = ScheduleParticipant.createScheduleParticipant(schedule, emp, pendingStatus);
+                ScheduleParticipant participant =
+                        ScheduleParticipant.createScheduleParticipant(schedule, emp, pendingStatus);
                 scheduleParticipantRepository.save(participant);
+                newInvitees.add(emp);
             }
+        }
+
+        //  트랜잭션 안에서 바로 알림 전송 (ChatServiceImpl 방식)
+        if (!newInvitees.isEmpty()) {
+            Long inviteCodeId = inviteCode.getCommonCodeId();
+            String title = schedule.getTitle() + " 일정에 초대되었습니다.";
+            String content = schedule.getEmployee().getName() + "님이 일정을 공유했습니다.";
+
+            for (Employee recipient : newInvitees) {
+                NotificationRequestDTO notificationRequestDTO = NotificationRequestDTO.builder()
+                        .employeeId(recipient.getEmployeeId())
+                        .ownerTypeCommonCodeId(inviteCodeId)
+                        .url("/schedule?modal=edit&id=" + scheduleId)
+                        .title(title)
+                        .content(content)
+                        .build();
+
+                //  ChatServiceImpl과 동일하게 즉시 알림 생성
+                notificationService.create(notificationRequestDTO);
+            }
+
+            log.info(" 일정 초대 및 알림 전송 완료 (scheduleId={}, recipients={})",
+                    scheduleId, newInvitees.size());
         }
     }
 
