@@ -300,7 +300,7 @@ VALUES
     ('SC02', '일정 카테고리 - 출장', 'BUSINESS_TRIP', '출장', NULL, 2, NULL, NOW(), NOW(), false),
     ('SC03', '일정 카테고리 - 휴가', 'VACATION', '휴가', NULL, 3, NULL, NOW(), NOW(), false),
     ('SC04', '일정 카테고리 - 프로젝트', 'PROJECT', '프로젝트', NULL, 4, NULL, NOW(), NOW(), false),
-    ('SC05', '일정 카테고리 - 기타', 'ETC', '기타 일정', NULL, 5, NULL, NOW(), NOW(), false);
+    ('SC05', '일정 카테고리 - 기타', 'ETC', '기타', NULL, 5, NULL, NOW(), NOW(), false);
 /*
 * =============================================
 * Participant Status (참여 상태)
