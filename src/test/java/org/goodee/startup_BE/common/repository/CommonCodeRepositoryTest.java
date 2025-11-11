@@ -178,6 +178,22 @@ class CommonCodeRepositoryTest {
     class CustomQueryTests {
 
         @Test
+        @DisplayName("findAllDepartments: '부서' 코드만 sortOrder ASC로 조회")
+        void testFindAllDepartments() {
+            // when: codeDescription이 '부서'인 코드 조회
+            List<CommonCode> departments = commonCodeRepository.findAllDepartments();
+
+            // then: '부서'인 dept1, dept2만 조회되어야 함 (pos1, pos2는 제외)
+            assertThat(departments).hasSize(2);
+            assertThat(departments).contains(dept1, dept2);
+            assertThat(departments).doesNotContain(pos1, pos2);
+
+            // then: sortOrder ASC (오름차순) 정렬 확인 (dept2: 1L, dept1: 2L)
+            assertThat(departments).extracting(CommonCode::getCode)
+                    .containsExactly("DP2", "DP1");
+        }
+
+        @Test
         @DisplayName("findByCodeDescriptionAndIsDeletedFalseOrderBySortOrderAsc: codeDescription으로 조회 및 sortOrder ASC 정렬")
         void testFindByCodeDescriptionAndIsDeletedFalseOrderBySortOrderAsc() {
             // Case 1: "부서" 조회 (setUp에서 dept2: 1L, dept1: 2L로 설정됨)

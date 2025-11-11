@@ -42,7 +42,7 @@ class CommonCodeServiceImplTest {
     );
 
     // 레포지토리 메서드 호출 시 반환될 값 설정
-    given(commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse("DP")).willReturn(List.of(dept1, dept2));
+    given(commonCodeRepository.findAllDepartments()).willReturn(List.of(dept1, dept2));
 
     // when
     // 테스트할 서비스 메서드 호출
@@ -55,7 +55,7 @@ class CommonCodeServiceImplTest {
     assertThat(result.get(1).getCodeDescription()).isEqualTo("인사부");
 
     // 메서드가 1번 호출되었는지 검증
-    verify(commonCodeRepository, times(1)).findByCodeStartsWithAndIsDeletedFalse("DP");
+    verify(commonCodeRepository, times(1)).findAllDepartments();
   }
 
   @Test
