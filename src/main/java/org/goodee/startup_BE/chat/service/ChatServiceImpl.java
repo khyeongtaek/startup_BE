@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.goodee.startup_BE.chat.dto.ChatMessageResponseDTO;
 import org.goodee.startup_BE.chat.dto.ChatRoomListResponseDTO;
 import org.goodee.startup_BE.chat.dto.ChatRoomResponseDTO;
+import org.goodee.startup_BE.chat.dto.TotalUnreadCountResponseDTO;
 import org.goodee.startup_BE.chat.entity.ChatEmployee;
 import org.goodee.startup_BE.chat.entity.ChatMessage;
 import org.goodee.startup_BE.chat.entity.ChatRoom;
@@ -36,7 +37,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class ChatServiceImpl implements ChatService{
+public class ChatServiceImpl implements ChatService {
 
     // 필요한 Repository 주입
     private final ChatRoomRepository chatRoomRepository;
@@ -60,16 +61,16 @@ public class ChatServiceImpl implements ChatService{
 
         // 초대 대상 Employee 체크
         Set<Long> inviteeEmployeeId = new LinkedHashSet<>(inviteeEmployeeIds);
-        if(inviteeEmployeeId.isEmpty()) {
+        if (inviteeEmployeeId.isEmpty()) {
             throw new IllegalArgumentException("최소 한 명 이상 초대해야 합니다");
         }
-        if(inviteeEmployeeId.contains(creator.getEmployeeId())) {
+        if (inviteeEmployeeId.contains(creator.getEmployeeId())) {
             throw new IllegalArgumentException("초대할 수 있는 대상이 아닙니다");
         }
 
         // 초대 할 사원 조회 & 유효성 검사
         List<Employee> invitees = employeeRepository.findAllById(inviteeEmployeeId);
-        if(invitees.size() != inviteeEmployeeId.size()) {
+        if (invitees.size() != inviteeEmployeeId.size()) {
             throw new EntityNotFoundException("최대 대상 중 존재하지 않은 사원이 있습니다.");
         }
         // 모든 참여자 목록: 채팅방 생성자 + 초대 대상
@@ -87,7 +88,7 @@ public class ChatServiceImpl implements ChatService{
 
         // "채팅방이 생성되었습니다" 시스템 메시지 생성
         String systemMessageContent = String.format("%s님이 채팅방을 생성 했습니다.", creator.getName());
-        ChatMessage initialMessage = ChatMessage.createChatMessage(savedChatRoom,null,systemMessageContent);
+        ChatMessage initialMessage = ChatMessage.createChatMessage(savedChatRoom, null, systemMessageContent);
         ChatMessage savedInitialMessage = chatMessageRepository.save(initialMessage);
 
         // 채팅방 생성자 및 초대 대상 ChatEmployee 저장
@@ -104,27 +105,38 @@ public class ChatServiceImpl implements ChatService{
 
         // WebSocket 브로드캐스트 (/topic/rooms/{roomId})
         ChatMessageResponseDTO messageDTO = ChatMessageResponseDTO.toDTO(savedInitialMessage);
-        simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + chatRoomId, messageDTO);
 
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + chatRoomId, messageDTO);
+
+                notifyParticipantsOfNewMessage(savedChatRoom, savedInitialMessage, null);
+            }
+        });
         // TEAM 채팅방 이면, 초대 대상에게 알림 받기
-        if(isTeamChat) {
-            CommonCode chatInviteCode = commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.TEAMCHATNOTI.name())
-                    .stream()
-                    .findFirst()
-                    .orElseThrow(() -> new EntityNotFoundException("요청 하신 CommonCOde 또는 KeyWord 를 찾을 수 없습니다"));
+        if (isTeamChat) {
+            try {
+                CommonCode chatInviteCode = commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.TEAMCHATNOTI.name())
+                        .stream()
+                        .findFirst()
+                        .orElseThrow(() -> new EntityNotFoundException("요청 하신 CommonCOde 또는 KeyWord 를 찾을 수 없습니다"));
 
-            Long chatInviteCodeId = chatInviteCode.getCommonCodeId();
+                Long chatInviteCodeId = chatInviteCode.getCommonCodeId();
 
-            // 알림 전송 로직 호출
-            for(Employee recipient : invitees) {
-                NotificationRequestDTO notificationRequestDTO = NotificationRequestDTO.builder()
-                        .employeeId(recipient.getEmployeeId())
-                        .ownerTypeCommonCodeId(chatInviteCodeId)
-                        .url("/chat/rooms/" + chatRoomId)
-                        .title(roomName + "채팅방에 초대 되었습니다 ")
-                        .content(String.format("%s님이 채팅방에 초대 하였습니다.", creator.getName()))
-                        .build();
-                notificationService.create(notificationRequestDTO);
+                // 알림 전송 로직 호출
+                for (Employee recipient : invitees) {
+                    NotificationRequestDTO notificationRequestDTO = NotificationRequestDTO.builder()
+                            .employeeId(recipient.getEmployeeId())
+                            .ownerTypeCommonCodeId(chatInviteCodeId)
+                            .url("/chat/rooms/" + chatRoomId)
+                            .title(roomName + "채팅방에 초대 되었습니다 ")
+                            .content(String.format("%s님이 채팅방에 초대 하였습니다.", creator.getName()))
+                            .build();
+                    notificationService.create(notificationRequestDTO);
+                }
+            } catch (Exception e) {
+                log.warn("채팅방 생성 알림 전송에 실패 하였습니다.", chatRoomId, e.getMessage());
             }
         }
         return ChatRoomResponseDTO.toDTO(savedChatRoom);
@@ -186,9 +198,12 @@ public class ChatServiceImpl implements ChatService{
 
         // 6) 커밋 후 알림
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override public void afterCommit() {
+            @Override
+            public void afterCommit() {
                 simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + finalRoomId,
                         ChatMessageResponseDTO.toDTO(systemMsg));
+
+                notifyParticipantsOfNewMessage(room, systemMsg, null);
 
                 try {
                     Long codeId = commonCodeRepository
@@ -214,6 +229,7 @@ public class ChatServiceImpl implements ChatService{
             }
         });
     }
+
     // 채팅방 나가기
     @Override
     public void leaveRoom(String username, Long roomId) {
@@ -236,7 +252,7 @@ public class ChatServiceImpl implements ChatService{
         // 팀 채팅방인 경우에만 시스템 메시지 생성/브로드캐스트
         final ChatMessage systemMessage = isTeamRoom
                 ? chatMessageRepository.save(
-                        ChatMessage.createChatMessage(room, null, leaver.getName() + "님이 채팅방에서 나가셨습니다."))
+                ChatMessage.createChatMessage(room, null, leaver.getName() + "님이 채팅방에서 나가셨습니다."))
                 : null;
 
         // 남은 인원 수 확인(0명이면 채팅방 삭제)
@@ -250,7 +266,8 @@ public class ChatServiceImpl implements ChatService{
         // WebSocket 브로드캐스트 (/topic/rooms/{roomId})
         if (systemMessage != null) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override public void afterCommit() {
+                @Override
+                public void afterCommit() {
                     simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + finalRoomId,
                             ChatMessageResponseDTO.toDTO(systemMessage));
                 }
@@ -297,8 +314,10 @@ public class ChatServiceImpl implements ChatService{
         dto.setUnreadCount(unread);
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override public void afterCommit() {
+            @Override
+            public void afterCommit() {
                 simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + finalRoomId, dto);
+                notifyParticipantsOfNewMessage(room, message, sender.getEmployeeId());
             }
         });
 
@@ -328,8 +347,11 @@ public class ChatServiceImpl implements ChatService{
             throw new IllegalArgumentException("lastMessageId는 필수입니다.");
         }
 
+        Employee reader = employeeRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("존재하지 않는 사원 입니다"));
+
         ChatEmployee membership = chatEmployeeRepository
-                .findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(roomId, username)
+                .findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(roomId, reader.getUsername())
                 .orElseThrow(() -> new AccessDeniedException("채팅방 멤버가 아니거나 이미 나간 사용자입니다."));
 
         ChatMessage message = chatMessageRepository.findById(lastMessageId)
@@ -344,10 +366,13 @@ public class ChatServiceImpl implements ChatService{
 
         // 읽음 브로드캐스트: 프론트는 해당 방의 메시지들 중 msg.id 이하의 미읽음 카운트만 감소
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override public void afterCommit() {
+            @Override
+            public void afterCommit() {
                 simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + roomId + "/reads",
                         Map.of("lastMessageId", membership.getEmployee().getEmployeeId(),
-                        "readUpToMessageId", message.getChatMessageId()));
+                                "readUpToMessageId", message.getChatMessageId()));
+
+                calculateAndSendTotalUnreadCount(reader.getEmployeeId(), reader.getUsername());
             }
         });
     }
@@ -417,5 +442,87 @@ public class ChatServiceImpl implements ChatService{
         });
 
         return dtos;
+    }
+
+    // 알림 전송을 위한 헬퍼 메소드 추가
+
+    /**
+     * 새 메시지 발생 시, 관련자들에게 개인 큐로 전송
+     * 1. 채팅방 목록 업데이트 (/user/queue/chat-list-update)
+     * 2. 총 안 읽은 개수 업데이트 (/user/queue/unread-count)
+     *
+     * @param room     발생한 채팅방
+     * @param message  발생한 메시지 (LastMessage용)
+     * @param senderId 메시지 전송자 ID (알림에서 제외하기 위함, 시스템 메시지면 null)
+     */
+    private void notifyParticipantsOfNewMessage(ChatRoom room, ChatMessage message, Long senderId) {
+
+        // 채팅방에 참여중인 모든 멤버 조회
+        List<ChatEmployee> participants = chatEmployeeRepository.findAllByChatRoomChatRoomIdAndIsLeftFalse(room.getChatRoomId());
+
+        // 1:1 채팅방인 경우
+        Employee otherUserFor1to1 = null;
+        if (Boolean.FALSE.equals(room.getIsTeam()) && senderId != null) {
+            otherUserFor1to1 = employeeRepository.findById(senderId)
+                    .orElse(null);
+        }
+        for (ChatEmployee participant : participants) {
+            Employee recipient = participant.getEmployee();
+
+            // 메시지 전송자 본인에게는 알림을 보내지 않음
+            if (senderId != null && recipient.getEmployeeId().equals(senderId)) {
+                continue;
+            }
+            // 채팅방 목록 DTO
+            long unreadCount = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(
+                    room,
+                    participant.getLastReadMessage().getChatMessageId()
+            );
+
+            ChatRoomListResponseDTO listDto;
+            if (Boolean.FALSE.equals(room.getIsTeam())) {
+                // 1:1 방일 때
+                Employee otherUser = (otherUserFor1to1 != null) ? otherUserFor1to1 :
+                        participants.stream()
+                                .map(ChatEmployee::getEmployee)
+                                .filter(emp -> !emp.getEmployeeId().equals(recipient.getEmployeeId()))
+                                .findFirst().orElse(null);
+
+                if (otherUser == null) continue;
+
+                listDto = ChatRoomListResponseDTO.toDTO(
+                        room, otherUser, unreadCount, Optional.of(message)
+                );
+            } else {
+                // 팀 채팅방일 때
+                listDto = ChatRoomListResponseDTO.toDTO(
+                        room, unreadCount, Optional.of(message)
+                );
+            }
+            // 채팅방 목록 업데이트 알림 전송
+            simpMessagingTemplate.convertAndSendToUser(
+                    recipient.getUsername(),
+                    "/queue/chat-list-update",
+                    listDto
+            );
+
+            // 총 안 읽은 메시지 개수 전송
+            calculateAndSendTotalUnreadCount(recipient.getEmployeeId(), recipient.getUsername());
+        }
+    }
+
+    /**
+     * 특정 사용자의 총 안 읽은 메시지 개수를 계산하여 개인 큐로 전송합니다.
+     *
+     * @param employeeId 대상 직원 ID
+     * @param username   대상 직원 username (STOMP 전송용)
+     */
+    private void calculateAndSendTotalUnreadCount(Long employeeId, String username) {
+        long totalUnread = chatEmployeeRepository.sumTotalUnreadMessagesByEmployeeId(employeeId);
+        simpMessagingTemplate.convertAndSendToUser(
+                username,
+                "/queue/unread-count",
+                new TotalUnreadCountResponseDTO(totalUnread)
+        );
     }
 }
