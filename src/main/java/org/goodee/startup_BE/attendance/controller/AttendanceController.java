@@ -186,7 +186,7 @@ public class AttendanceController {
                 .build());
     }
     //  주간 근무시간 조회
-    @Operation(summary = "주간 근무시간 조회", description = "이번 주 누적 근무시간 및 목표 근로시간을 반환합니다.")
+    @Operation(summary = "주간 근무시간 조회", description = "지정한 주(또는 이번 주)의 누적 근무시간 및 목표 근로시간을 반환합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "주간 근무시간 조회 성공"),
             @ApiResponse(responseCode = "400", description = "조회 실패", content = @Content)
@@ -194,17 +194,29 @@ public class AttendanceController {
     @GetMapping("/weekly/{employeeId}")
     public ResponseEntity<APIResponseDTO<Map<String, Object>>> getWeeklyWorkSummary(
             @Parameter(description = "사원 ID", required = true, example = "1")
-            @PathVariable Long employeeId
+            @PathVariable Long employeeId,
+            @Parameter(description = "조회할 주의 시작일(월요일, yyyy-MM-dd)", required = false, example = "2025-11-03")
+            @RequestParam(required = false) String weekStart
     ) {
-        Map<String, Object> weeklySummary = attendanceService.getWeeklyWorkSummary(employeeId);
+        Map<String, Object> result;
 
-        return ResponseEntity.ok(
-                APIResponseDTO.<Map<String, Object>>builder()
-                        .message("주간 근무시간 조회 성공")
-                        .data(weeklySummary)
-                        .build()
-        );
+        if (weekStart != null && !weekStart.trim().isEmpty()) {
+            try {
+                LocalDate parsedStart = LocalDate.parse(weekStart);
+                result = attendanceService.getWeeklyWorkSummary(employeeId, parsedStart);
+            } catch (Exception e) {
+                result = attendanceService.getWeeklyWorkSummary(employeeId); // fallback
+            }
+        } else {
+            result = attendanceService.getWeeklyWorkSummary(employeeId);
+        }
+
+        return ResponseEntity.ok(APIResponseDTO.<Map<String, Object>>builder()
+                .message("주간 근무 조회 성공")
+                .data(result)
+                .build());
     }
+
 
     //  근태 요약 조회
     @Operation(summary = "근태 요약 조회", description = "사원 ID를 기준으로 전체 근무일수, 총 근무시간, 잔여 연차, 이번 주 지각 횟수를 조회합니다.")

@@ -31,7 +31,8 @@ public interface AttendanceService {
 
     // 주 근무 시간 조회
      Map<String, Object> getWeeklyWorkSummary(Long employeeId);
-
+    //
+    Map<String, Object> getWeeklyWorkSummary(Long employeeId, LocalDate weekStart);
 
     @Transactional(readOnly = true)
     Map<String, Object> getAttendanceSummary(Long employeeId);

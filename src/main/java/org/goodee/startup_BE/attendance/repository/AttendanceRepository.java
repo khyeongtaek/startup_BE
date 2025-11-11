@@ -31,10 +31,9 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     @Query("SELECT a FROM Attendance a " +
             "WHERE a.employee.employeeId = :employeeId " +
             "AND a.attendanceDate BETWEEN :startOfWeek AND :endOfWeek " +
-            "AND a.isDeleted = false " +
-            "AND a.startTime IS NOT NULL " +
-            "AND a.endTime IS NOT NULL")
+            "AND a.isDeleted = false")
     List<Attendance> findWeeklyRecords(Long employeeId, LocalDate startOfWeek, LocalDate endOfWeek);
+
 
 
     // 지각 횟수 체크

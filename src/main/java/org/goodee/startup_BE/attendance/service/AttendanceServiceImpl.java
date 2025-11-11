@@ -20,9 +20,7 @@ import org.goodee.startup_BE.employee.repository.EmployeeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -240,11 +238,49 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     @Override
     @Transactional(readOnly = true)
+    public Map<String, Object> getWeeklyWorkSummary(Long employeeId, LocalDate weekStart) {
+        // weekStart가 없으면 이번 주 월요일
+        LocalDate startOfWeek = (weekStart != null)
+                ? weekStart
+                : LocalDate.now().with(java.time.DayOfWeek.MONDAY);
+        LocalDate endOfWeek = startOfWeek.plusDays(6);
+
+        List<Attendance> weeklyRecords = attendanceRepository.findWeeklyRecords(employeeId, startOfWeek, endOfWeek);
+
+        long totalMinutes = weeklyRecords.stream()
+                .filter(a -> a.getStartTime() != null && a.getEndTime() != null)
+                .mapToLong(a -> java.time.Duration.between(a.getStartTime(), a.getEndTime()).toMinutes())
+                .sum();
+
+        long targetMinutes = 40 * 60;
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("records", weeklyRecords.stream()
+                .map(a -> AttendanceResponseDTO.builder()
+                        .attendanceId(a.getAttendanceId())
+                        .employeeId(a.getEmployee().getEmployeeId())
+                        .employeeName(a.getEmployee().getName())
+                        .attendanceDate(a.getAttendanceDate())
+                        .startTime(a.getStartTime())
+                        .endTime(a.getEndTime())
+                        .workStatus(a.getWorkStatus().getValue1())
+                        .build())
+                .toList());
+        result.put("totalMinutes", totalMinutes);
+        result.put("targetMinutes", targetMinutes);
+        result.put("totalHours", totalMinutes / 60);
+        result.put("targetHours", targetMinutes / 60);
+        return result;
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
     public Map<String, Object> getWeeklyWorkSummary(Long employeeId) {
         // 이번 주 월요일 ~ 일요일 계산
         LocalDate today = LocalDate.now();
-        LocalDate startOfWeek = today.with(java.time.DayOfWeek.MONDAY);
-        LocalDate endOfWeek = today.with(java.time.DayOfWeek.SUNDAY);
+        LocalDate startOfWeek = today.with(DayOfWeek.MONDAY);
+        LocalDate endOfWeek = today.with(DayOfWeek.SUNDAY);
 
         // 이번 주 출퇴근 데이터 조회
         List<Attendance> weeklyRecords = attendanceRepository.findWeeklyRecords(employeeId, startOfWeek, endOfWeek);
@@ -252,14 +288,27 @@ public class AttendanceServiceImpl implements AttendanceService {
         // 총 근무시간(분 단위)
         long totalMinutes = weeklyRecords.stream()
                 .filter(a -> a.getStartTime() != null && a.getEndTime() != null)
-                .mapToLong(a -> java.time.Duration.between(a.getStartTime(), a.getEndTime()).toMinutes())
+                .mapToLong(a -> Duration.between(a.getStartTime(), a.getEndTime()).toMinutes())
                 .sum();
 
         // 목표 근무시간 (기본 40시간)
         long targetMinutes = 40 * 60;
 
+        // ✅ 프론트에서 필요한 형태로 변환
+        List<Map<String, Object>> recordList = weeklyRecords.stream()
+                .map(a -> {
+                    Map<String, Object> record = new HashMap<>();
+                    record.put("attendanceDate", a.getAttendanceDate());
+                    record.put("startTime", a.getStartTime());
+                    record.put("endTime", a.getEndTime());
+                    record.put("workStatus", a.getWorkStatus().getValue1());
+                    return record;
+                })
+                .toList();
+
         // 응답 데이터 구성
-        Map<String, Object> result = new java.util.HashMap<>();
+        Map<String, Object> result = new HashMap<>();
+        result.put("records", recordList); // ✅ 주간 상세 내역 포함
         result.put("totalMinutes", totalMinutes);
         result.put("targetMinutes", targetMinutes);
         result.put("totalHours", totalMinutes / 60);
