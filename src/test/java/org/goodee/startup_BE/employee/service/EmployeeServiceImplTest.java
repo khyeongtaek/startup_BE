@@ -53,6 +53,9 @@ class EmployeeServiceImplTest {
     @Mock // [추가] 신규 의존성 Mock 객체
     private AttachmentFileService attachmentFileService;
 
+    @Mock
+    EmployeeHistoryService employeeHistoryService;
+
     // 테스트에서 공통으로 사용할 Mock 객체 선언
     private Employee mockEmployee;
     private Employee mockAdmin;
