@@ -68,7 +68,7 @@ class AttendanceWorkHistoryRepositoryTest {
         // --- 테스트용 직원 생성 ---
         employee = Employee.createEmployee(
                 "tester", "테스트", "test@test.com", "010-0000-0000",
-                LocalDate.now(), statusActive, "default.png", roleUser, deptDev, posJunior, null
+                LocalDate.now(), statusActive, roleUser, deptDev, posJunior, null
         );
         employee.updateInitPassword("1234", null);
         employeeRepository.save(employee);
