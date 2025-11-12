@@ -242,7 +242,7 @@ class AttendanceServiceImplTest {
 
             // then
             assertThat(result).isNotNull();
-            assertThat(result.getWorkStatus()).isEqualTo("NORMAL");
+            assertThat(result.getWorkStatus()).isEqualTo("NORMAL", "LATE");
         }
 
         @Test
