@@ -2,6 +2,7 @@ package org.goodee.startup_BE.chat.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.goodee.startup_BE.chat.dto.ChatMessageResponseDTO;
+import org.goodee.startup_BE.chat.dto.ChatRoomListResponseDTO;
 import org.goodee.startup_BE.chat.dto.ChatRoomResponseDTO;
 import org.goodee.startup_BE.chat.entity.ChatEmployee;
 import org.goodee.startup_BE.chat.entity.ChatMessage;
@@ -18,15 +19,9 @@ import org.goodee.startup_BE.notification.dto.NotificationRequestDTO;
 import org.goodee.startup_BE.notification.service.NotificationService;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -38,20 +33,23 @@ import java.util.*;
 
 // AssertJ static import
 import static org.assertj.core.api.Assertions.*;
+// ArgumentMatchers static import
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 // BDDMockito static import
-import static org.mockito.BDDMockito.*;
+import static org.mockito.BDDMockito.given;
 // Mockito static import
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
-// lenient(): Mocking이 모든 테스트에서 사용되지 않아도 경고/오류 미발생 (setUp에서 공통 Mocking 시 유용)
-@MockitoSettings(strictness = Strictness.LENIENT)
+@ExtendWith(MockitoExtension.class) // JUnit5에서 Mockito 확장 사용
 class ChatServiceImplTest {
 
     @InjectMocks // 테스트 대상 클래스, Mock 객체들이 주입됨
-    private ChatServiceImpl chatService;
+    private ChatServiceImpl chatServiceImpl;
 
-    // Mock 객체로 생성
+    // --- Mock 객체 선언 ---
     @Mock
     private ChatRoomRepository chatRoomRepository;
     @Mock
@@ -67,214 +65,282 @@ class ChatServiceImplTest {
     @Mock
     private SimpMessagingTemplate simpMessagingTemplate;
 
-    // 테스트용 공통 Mock 객체
+    // --- Mock 객체 캡처용 ---
+    @Captor
+    private ArgumentCaptor<TransactionSynchronization> syncCaptor;
+    @Captor
+    private ArgumentCaptor<ChatMessage> chatMessageCaptor;
+    @Captor
+    private ArgumentCaptor<List<ChatEmployee>> chatEmployeeListCaptor;
+    @Captor
+    private ArgumentCaptor<NotificationRequestDTO> notificationRequestCaptor;
+
+    // --- 테스트 공용 Mock 인스턴스 ---
     private Employee mockCreator;
-    private Employee mockMember1;
-    private Employee mockMember2;
-    private ChatRoom mockRoom;
-    private ChatEmployee mockChatEmployeeCreator;
-    private ChatMessage mockMessage;
-    private CommonCode mockInviteCode;
+    private Employee mockInvitee1;
+    private Employee mockInvitee2;
+    private ChatRoom mockChatRoom;
+    private ChatRoom mockTeamChatRoom;
+    private ChatMessage mockSystemMessage;
+    private ChatMessage mockUserMessage;
+    private ChatEmployee mockChatEmployee;
+    private CommonCode mockChatInviteCode;
 
-    /**
-     * 각 테스트 실행 전 공통 Mock 객체 설정
-     */
-    @BeforeEach
+    // 정적(static) Mock을 위한 핸들러
+    private static MockedStatic<TransactionSynchronizationManager> mockedTxSyncManager;
+
+    @BeforeAll
+    static void beforeAll() {
+        // TransactionSynchronizationManager.registerSynchronization 정적 호출을 Mocking
+        mockedTxSyncManager = mockStatic(TransactionSynchronizationManager.class);
+    }
+
+    @AfterAll
+    static void afterAll() {
+        // 정적 Mock 닫기
+        mockedTxSyncManager.close();
+    }
+
+
+    @BeforeEach // 각 테스트 실행 전 공통 설정
     void setUp() {
-        // Mock 객체 초기화 (lenient 설정으로 인해 @BeforeEach에서 초기화)
+        // --- Mock 객체 초기화 ---
         mockCreator = mock(Employee.class);
-        mockMember1 = mock(Employee.class);
-        mockMember2 = mock(Employee.class);
-        mockRoom = mock(ChatRoom.class);
-        mockChatEmployeeCreator = mock(ChatEmployee.class);
-        mockMessage = mock(ChatMessage.class);
-        mockInviteCode = mock(CommonCode.class);
+        mockInvitee1 = mock(Employee.class);
+        mockInvitee2 = mock(Employee.class);
+        mockChatRoom = mock(ChatRoom.class); // 1:1 채팅방
+        mockTeamChatRoom = mock(ChatRoom.class); // 팀 채팅방
+        mockSystemMessage = mock(ChatMessage.class);
+        mockUserMessage = mock(ChatMessage.class);
+        mockChatEmployee = mock(ChatEmployee.class); // mockCreator의 멤버십
+        mockChatInviteCode = mock(CommonCode.class);
 
-        // 공통 더미 값 설정
+        // --- DTO 변환(toDTO)을 위한 공통 Mocking (lenient) ---
+        // ( ... DTO 변환 Mocking 생략 ... )
         lenient().when(mockCreator.getEmployeeId()).thenReturn(1L);
         lenient().when(mockCreator.getUsername()).thenReturn("creator");
         lenient().when(mockCreator.getName()).thenReturn("CreatorName");
+        lenient().when(mockCreator.getProfileImg()).thenReturn("creator.png");
 
-        lenient().when(mockMember1.getEmployeeId()).thenReturn(2L);
-        lenient().when(mockMember1.getUsername()).thenReturn("m1");
-        lenient().when(mockMember1.getName()).thenReturn("Member1Name");
+        lenient().when(mockInvitee1.getEmployeeId()).thenReturn(2L);
+        lenient().when(mockInvitee1.getUsername()).thenReturn("invitee1");
+        lenient().when(mockInvitee1.getName()).thenReturn("InviteeOneName");
+        lenient().when(mockInvitee1.getProfileImg()).thenReturn("invitee1.png");
 
-        lenient().when(mockMember2.getEmployeeId()).thenReturn(3L);
-        lenient().when(mockMember2.getUsername()).thenReturn("m2");
-        lenient().when(mockMember2.getName()).thenReturn("Member2Name");
+        lenient().when(mockInvitee2.getEmployeeId()).thenReturn(3L);
+        lenient().when(mockInvitee2.getUsername()).thenReturn("invitee2");
+        lenient().when(mockInvitee2.getName()).thenReturn("InviteeTwoName");
+        lenient().when(mockInvitee2.getProfileImg()).thenReturn("invitee2.png");
 
-        lenient().when(mockRoom.getChatRoomId()).thenReturn(10L);
-        lenient().when(mockRoom.getName()).thenReturn("Test Room");
-        lenient().when(mockRoom.getIsTeam()).thenReturn(true); // 기본: 팀방
+        lenient().when(mockChatRoom.getChatRoomId()).thenReturn(100L);
+        lenient().when(mockChatRoom.getName()).thenReturn("Test Room");
+        lenient().when(mockChatRoom.getEmployee()).thenReturn(mockCreator);
+        lenient().when(mockChatRoom.getIsTeam()).thenReturn(false);
+        lenient().when(mockChatRoom.getCreatedAt()).thenReturn(LocalDateTime.now());
 
-        // DTO 변환 시 NullPointerException 방지를 위한 Mocking
-        lenient().when(mockRoom.getEmployee()).thenReturn(mockCreator);
-        lenient().when(mockRoom.getCreatedAt()).thenReturn(LocalDateTime.now());
+        lenient().when(mockTeamChatRoom.getChatRoomId()).thenReturn(200L);
+        lenient().when(mockTeamChatRoom.getName()).thenReturn("Team Room");
+        lenient().when(mockTeamChatRoom.getEmployee()).thenReturn(mockCreator);
+        lenient().when(mockTeamChatRoom.getIsTeam()).thenReturn(true);
 
-        lenient().when(mockChatEmployeeCreator.getEmployee()).thenReturn(mockCreator);
+        lenient().when(mockSystemMessage.getChatMessageId()).thenReturn(1001L);
+        lenient().when(mockSystemMessage.getChatRoom()).thenReturn(mockChatRoom);
+        lenient().when(mockSystemMessage.getEmployee()).thenReturn(null);
+        lenient().when(mockSystemMessage.getContent()).thenReturn("System Message");
+        lenient().when(mockSystemMessage.getCreatedAt()).thenReturn(LocalDateTime.now());
 
-        lenient().when(mockMessage.getChatMessageId()).thenReturn(100L);
-        lenient().when(mockMessage.getChatRoom()).thenReturn(mockRoom);
-        lenient().when(mockMessage.getContent()).thenReturn("hello");
-        lenient().when(mockMessage.getCreatedAt()).thenReturn(LocalDateTime.now());
-        lenient().when(mockMessage.getEmployee()).thenReturn(mockCreator);
+        lenient().when(mockUserMessage.getChatMessageId()).thenReturn(1002L);
+        lenient().when(mockUserMessage.getChatRoom()).thenReturn(mockChatRoom);
+        lenient().when(mockUserMessage.getEmployee()).thenReturn(mockCreator);
+        lenient().when(mockUserMessage.getContent()).thenReturn("User Message");
+        lenient().when(mockUserMessage.getCreatedAt()).thenReturn(LocalDateTime.now());
 
-        lenient().when(mockInviteCode.getCommonCodeId()).thenReturn(999L); // 알림용 가짜 ID
+        lenient().when(mockChatEmployee.getEmployee()).thenReturn(mockCreator);
+        lenient().when(mockChatEmployee.getChatRoom()).thenReturn(mockChatRoom);
+        lenient().when(mockChatEmployee.getLastReadMessage()).thenReturn(mockSystemMessage);
+        lenient().when(mockChatEmployee.getJoinedAt()).thenReturn(LocalDateTime.now().minusHours(1));
 
-        // findAllById(Iterable) 어떤 인자든 매칭되도록 설정
-        // 서비스 로직이 List<Long>을 사용하므로, 이를 처리
-        lenient().when(employeeRepository.findAllById(any(Iterable.class)))
-                .thenAnswer(invocation -> {
-                    Iterable<Long> ids = invocation.getArgument(0);
-                    List<Employee> result = new ArrayList<>();
-                    for (Long id : iterableToList(ids)) {
-                        if (Objects.equals(id, 1L)) result.add(mockCreator);
-                        if (Objects.equals(id, 2L)) result.add(mockMember1);
-                        if (Objects.equals(id, 3L)) result.add(mockMember2);
-                    }
-                    return result;
+        lenient().when(mockChatInviteCode.getCommonCodeId()).thenReturn(50L);
+
+        // 정적 Mockito 호출 설정 (SUT가 호출할 때 아무것도 하지 않도록)
+        mockedTxSyncManager.when(() -> TransactionSynchronizationManager.registerSynchronization(any(TransactionSynchronization.class)))
+                .then(invocation -> {
+                    return null; // void 메서드처럼 행동
                 });
-    }
 
-    /**
-     * Iterable을 List로 변환하는 헬퍼 메서드
-     */
-    private static <T> List<T> iterableToList(Iterable<T> it) {
-        if (it instanceof Collection) return new ArrayList<>((Collection<T>) it);
-        List<T> list = new ArrayList<>();
-        it.forEach(list::add);
-        return list;
+        // [FIXED] 정적 Mock의 호출 횟수를 매 테스트 전에 초기화
+        mockedTxSyncManager.clearInvocations();
     }
-
-    /**
-     * TransactionSynchronizationManager 래퍼
-     */
-    private void withTxSync(Runnable r) {
-        // 테스트 환경에서 TransactionSynchronizationManager 활성화
-        TransactionSynchronizationManager.initSynchronization();
-        try {
-            r.run();
-            // afterCommit 훅 실행
-            TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
-        } finally {
-            // 테스트 완료 후 정리
-            if (TransactionSynchronizationManager.isSynchronizationActive()) {
-                TransactionSynchronizationManager.clearSynchronization();
-            }
-        }
-    }
-
-    // -------------------- Tests --------------------
 
     @Nested
     @DisplayName("createRoom (채팅방 생성)")
-    class CreateRoomTests {
+    class CreateRoom {
 
         @Test
-        @DisplayName("성공 - 팀 채팅방 생성 (초대 2명)")
-        void createRoom_Success_Team() {
+        @DisplayName("성공 - 팀 채팅방 (2명 초대)")
+        void createRoom_Success_TeamChat() {
             // given
             String creatorUsername = "creator";
-            String roomName = "Team Room";
-            // [수정] 서비스 시그니처에 맞춰 List<Long> 사용
+            String roomName = "New Team Room";
             List<Long> inviteeIds = List.of(2L, 3L);
+            List<Employee> invitees = List.of(mockInvitee1, mockInvitee2);
 
+            // 1. Creator 조회
             given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
-            given(chatRoomRepository.save(any(ChatRoom.class))).willReturn(mockRoom); // 저장된 방 반환
-            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockMessage); // 저장된 시스템 메시지 반환
-
-            // isTeamChat = (invitees.size() >= 2) -> true
-            given(mockRoom.getIsTeam()).willReturn(true);
-
-            // 알림 전송 로직 Mocking
+            // 2. Invitees 조회
+            given(employeeRepository.findAllById(new LinkedHashSet<>(inviteeIds))).willReturn(invitees);
+            // 3. ChatRoom 저장 (isTeam=true)
+            given(chatRoomRepository.save(any(ChatRoom.class))).will(invocation -> {
+                return mockTeamChatRoom; // isTeam=true인 Mock 객체
+            });
+            // 4. 시스템 메시지 저장
+            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockSystemMessage);
+            // 5. 알림용 CommonCode 조회
             given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(
-                    eq(OwnerType.PREFIX), eq(OwnerType.TEAMCHATNOTI.name())))
-                    .willReturn(List.of(mockInviteCode)); // CommonCode 찾기 성공
+                    OwnerType.PREFIX, OwnerType.TEAMCHATNOTI.name()
+            )).willReturn(List.of(mockChatInviteCode));
+            // 6. 팀방 여부 (DTO 반환 값 검증용)
+            when(mockTeamChatRoom.getIsTeam()).thenReturn(true);
+
 
             // when
-            ChatRoomResponseDTO result = chatService.createRoom(creatorUsername, roomName, inviteeIds);
+            ChatRoomResponseDTO result = chatServiceImpl.createRoom(creatorUsername, roomName, inviteeIds);
 
             // then
-            // 1. 핵심 객체 저장 확인
-            verify(chatRoomRepository, times(1)).save(any(ChatRoom.class));
-            verify(chatMessageRepository, times(1)).save(any(ChatMessage.class));
-            verify(chatEmployeeRepository, times(1)).saveAll(anyList()); // 3명(creator + 2 invitees) 저장
+            // [FIXED] 1. verify로 캡처
+            mockedTxSyncManager.verify(() -> TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()));
+            // [FIXED] 2. 캡처 후 실행
+            syncCaptor.getValue().afterCommit();
 
-            // 2. WebSocket 브로드캐스트 확인 (afterCommit은 withTxSync로 대체 불가, 직접 호출)
-            verify(simpMessagingTemplate, times(1)).convertAndSend(eq("/topic/rooms/" + 10L), any(ChatMessageResponseDTO.class));
+            // 2. DB 저장 로직 검증
+            verify(chatRoomRepository).save(any(ChatRoom.class));
+            verify(chatMessageRepository).save(chatMessageCaptor.capture());
+            verify(chatEmployeeRepository).saveAll(chatEmployeeListCaptor.capture());
 
-            // 3. 알림 전송 확인 (초대 2명)
-            verify(notificationService, times(2)).create(any(NotificationRequestDTO.class));
+            // 3. WebSocket 전송 검증
+            verify(simpMessagingTemplate).convertAndSend(
+                    eq("/topic/chat/rooms/" + mockTeamChatRoom.getChatRoomId()), // 200L
+                    any(ChatMessageResponseDTO.class)
+            );
 
-            // 4. 반환값 검증
+            // 4. 알림 전송 검증 (팀 채팅방이므로 2명에게 전송)
+            verify(notificationService, times(2)).create(notificationRequestCaptor.capture());
+            List<NotificationRequestDTO> notifications = notificationRequestCaptor.getAllValues();
+            assertThat(notifications.get(0).getEmployeeId()).isEqualTo(2L);
+            assertThat(notifications.get(1).getEmployeeId()).isEqualTo(3L);
+            assertThat(notifications.get(0).getOwnerTypeCommonCodeId()).isEqualTo(50L);
+
+            // 5. 반환 값 검증
             assertThat(result).isNotNull();
-            assertThat(result.getChatRoomId()).isEqualTo(10L);
+            assertThat(result.getChatRoomId()).isEqualTo(mockTeamChatRoom.getChatRoomId());
+            assertThat(result.getIsTeam()).isTrue();
+
+            // 6. 저장된 엔티티 값 검증
+            assertThat(chatMessageCaptor.getValue().getEmployee()).isNull(); // 시스템 메시지
+            assertThat(chatEmployeeListCaptor.getValue()).hasSize(3); // Creator + 2 Invitees
         }
 
         @Test
-        @DisplayName("성공 - 1:1 채팅방 생성 (초대 1명, 알림 없음)")
-        void createRoom_Success_Single() {
+        @DisplayName("성공 - 1:1 채팅방 (1명 초대)")
+        void createRoom_Success_OneToOneChat() {
             // given
             String creatorUsername = "creator";
             String roomName = "1:1 Room";
             List<Long> inviteeIds = List.of(2L); // 1명만 초대
+            List<Employee> invitees = List.of(mockInvitee1);
 
-            // isTeamChat = (invitees.size() >= 2) -> false
-            given(mockRoom.getIsTeam()).willReturn(false);
-
+            // SUT의 `isTeamChat = invitees.size() >= 2` 로직에 따라 isTeam=false
             given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
-            given(chatRoomRepository.save(any(ChatRoom.class))).willReturn(mockRoom);
-            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockMessage);
+            given(employeeRepository.findAllById(new LinkedHashSet<>(inviteeIds))).willReturn(invitees);
+            given(chatRoomRepository.save(any(ChatRoom.class))).willReturn(mockChatRoom); // isTeam=false인 Mock 객체
+            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockSystemMessage);
+            // isTeam=false 이므로 DTO 반환을 위해 명시적 Mocking
+            when(mockChatRoom.getIsTeam()).thenReturn(false);
+
 
             // when
-            ChatRoomResponseDTO result = chatService.createRoom(creatorUsername, roomName, inviteeIds);
+            ChatRoomResponseDTO result = chatServiceImpl.createRoom(creatorUsername, roomName, inviteeIds);
 
             // then
-            // 1. 핵심 객체 저장 확인
-            verify(chatRoomRepository, times(1)).save(any(ChatRoom.class));
-            verify(chatMessageRepository, times(1)).save(any(ChatMessage.class));
-            verify(chatEmployeeRepository, times(1)).saveAll(anyList()); // 2명(creator + 1 invitee) 저장
+            // [FIXED] 1. verify로 캡처
+            mockedTxSyncManager.verify(() -> TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()));
+            // [FIXED] 2. 캡처 후 실행
+            syncCaptor.getValue().afterCommit(); // afterCommit 실행
 
-            // 2. WebSocket 브로드캐스트 확인
-            verify(simpMessagingTemplate, times(1)).convertAndSend(eq("/topic/rooms/" + 10L), any(ChatMessageResponseDTO.class));
+            // 1. DB 저장 로직 검증
+            verify(chatRoomRepository).save(any(ChatRoom.class));
+            verify(chatMessageRepository).save(any(ChatMessage.class));
+            verify(chatEmployeeRepository).saveAll(chatEmployeeListCaptor.capture());
 
-            // 3. 알림 전송이 "호출되지 않음" 확인
+            // 2. WebSocket 전송 검증
+            verify(simpMessagingTemplate).convertAndSend(
+                    eq("/topic/chat/rooms/" + mockChatRoom.getChatRoomId()), // 100L
+                    any(ChatMessageResponseDTO.class)
+            );
+
+            // 3. 알림 전송 검증 (1:1 채팅방이므로 알림 전송 안 함)
             verify(notificationService, never()).create(any(NotificationRequestDTO.class));
+
+            // 4. 반환 값 검증
+            assertThat(result).isNotNull();
+            assertThat(result.getChatRoomId()).isEqualTo(mockChatRoom.getChatRoomId());
+            assertThat(result.getIsTeam()).isFalse(); // 1:1 채팅방
+
+            // 5. 저장된 엔티티 값 검증
+            assertThat(chatEmployeeListCaptor.getValue()).hasSize(2); // Creator + 1 Invitee
         }
 
         @Test
-        @DisplayName("예외 - 초대 리스트 비어있음")
-        void createRoom_Fail_EmptyInvitee() {
+        @DisplayName("실패 - 생성자 없음")
+        void createRoom_Fail_CreatorNotFound() {
+            // given
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> chatServiceImpl.createRoom("creator", "Room", List.of(2L)))
+                    .isInstanceOf(UsernameNotFoundException.class)
+                    .hasMessage("존재 하지 않은 사원 입니다");
+
+            verify(chatRoomRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("실패 - 초대 대상 없음 (Empty List)")
+        void createRoom_Fail_EmptyInvitees() {
             // given
             given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(mockCreator));
 
             // when & then
-            assertThatThrownBy(() -> chatService.createRoom("creator", "room", List.of()))
+            assertThatThrownBy(() -> chatServiceImpl.createRoom("creator", "Room", Collections.emptyList()))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("최소 한 명 이상 초대해야 합니다");
         }
 
         @Test
-        @DisplayName("예외 - 생성자 자신을 초대")
+        @DisplayName("실패 - 초대 대상에 본인 포함")
         void createRoom_Fail_InviteSelf() {
             // given
             given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(mockCreator));
+            when(mockCreator.getEmployeeId()).thenReturn(1L);
 
             // when & then
-            assertThatThrownBy(() -> chatService.createRoom("creator", "room", List.of(1L)))
+            assertThatThrownBy(() -> chatServiceImpl.createRoom("creator", "Room", List.of(1L, 2L)))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("초대할 수 있는 대상이 아닙니다");
         }
 
         @Test
-        @DisplayName("예외 - 초대 대상 중 존재하지 않는 사원")
+        @DisplayName("실패 - 초대 대상 중 존재하지 않는 사원")
         void createRoom_Fail_InviteeNotFound() {
             // given
+            List<Long> inviteeIds = List.of(2L, 999L); // 999L은 존재하지 않음
+            List<Employee> foundInvitees = List.of(mockInvitee1); // 1명만 조회됨
+
             given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(mockCreator));
-            List<Long> inviteeIds = List.of(2L, 999L); // 999L은 존재하지 않음 (findAllById Mocking 기준)
+            given(employeeRepository.findAllById(new LinkedHashSet<>(inviteeIds))).willReturn(foundInvitees); // 요청 2명, 반환 1명
 
             // when & then
-            assertThatThrownBy(() -> chatService.createRoom("creator", "room", inviteeIds))
+            assertThatThrownBy(() -> chatServiceImpl.createRoom("creator", "Room", inviteeIds))
                     .isInstanceOf(EntityNotFoundException.class)
                     .hasMessage("최대 대상 중 존재하지 않은 사원이 있습니다.");
         }
@@ -282,165 +348,257 @@ class ChatServiceImplTest {
 
     @Nested
     @DisplayName("inviteToRoom (채팅방 초대)")
-    class InviteToRoomTests {
+    class InviteToRoom {
+
+        // [FIXED] 필드 초기화를 @BeforeEach로 이동
+        private Long roomId;
+        private List<Long> inviteeIds;
+        private List<Employee> invitees;
 
         @BeforeEach
         void inviteSetup() {
-            // 공통 given: 초대자(creator), 방(room)은 존재함
+            // [FIXED] NPE 방지. setUp() 이후 mock 객체가 생성된 뒤 필드 초기화
+            roomId = 100L;
+            inviteeIds = List.of(3L); // mockInvitee2 (3L)
+            invitees = List.of(mockInvitee2);
+        }
+
+
+        @Test
+        @DisplayName("성공 - 1:1 채팅방에서 초대하여 팀 채팅방으로 전환")
+        void inviteToRoom_Success_ConvertToTeamRoom() {
+            // given
+            // 1. Inviter(creator) 조회
             given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(mockCreator));
-            given(chatRoomRepository.findById(10L)).willReturn(Optional.of(mockRoom));
-            // 공통 given: 초대자는 방 멤버임
-            given(chatEmployeeRepository.existsByChatRoomChatRoomIdAndEmployeeEmployeeIdAndIsLeftFalse(10L, 1L))
+            // 2. Room 조회 (1:1 채팅방)
+            given(chatRoomRepository.findById(roomId)).willReturn(Optional.of(mockChatRoom));
+            // 3. Inviter가 멤버인지 확인
+            given(chatEmployeeRepository.existsByChatRoomChatRoomIdAndEmployeeEmployeeIdAndIsLeftFalse(roomId, 1L))
                     .willReturn(true);
-        }
-
-        @Test
-        @DisplayName("성공 - 1:1 방에서 초대 (팀방으로 변경)")
-        void invite_Success_FromSingleRoom() {
-            // given
-            given(mockRoom.getIsTeam()).willReturn(false); // 1:1 방
-            given(chatEmployeeRepository.findActiveEmployeeIdsByRoomId(10L)).willReturn(Set.of(1L, 2L)); // 기존 멤버
-
-            List<Long> inviteeIds = List.of(3L); // 신규 멤버 3L
-            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockMessage);
-            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(any(), any())).willReturn(List.of(mockInviteCode));
-
-            // when
-            // afterCommit 훅을 테스트하기 위해 withTxSync 래퍼 사용
-            withTxSync(() -> chatService.inviteToRoom("creator", 10L, inviteeIds));
-
-            // then
-            // 1. 1:1 -> 팀방 변경 메서드 호출 확인
-            verify(mockRoom, times(1)).updateToTeamRoom();
-
-            // 2. 시스템 메시지 저장 확인
-            verify(chatMessageRepository, times(1)).save(any(ChatMessage.class));
-
-            // 3. 신규 멤버(1명) 저장 확인
-            verify(chatEmployeeRepository, times(1)).saveAll(argThat(list -> ((Collection<?>) list).size() == 1));
-
-            // 4. (afterCommit) WebSocket 브로드캐스트 확인
-            verify(simpMessagingTemplate, times(1)).convertAndSend(eq("/topic/rooms/10"), any(ChatMessageResponseDTO.class));
-
-            // 5. (afterCommit) 알림 전송 확인
-            verify(notificationService, times(1)).create(any(NotificationRequestDTO.class));
-        }
-
-        @Test
-        @DisplayName("성공 - 이미 멤버인 인원 제외")
-        void invite_Success_FilterExisting() {
-            // given
-            given(mockRoom.getIsTeam()).willReturn(true); // 팀방
-            given(chatEmployeeRepository.findActiveEmployeeIdsByRoomId(10L)).willReturn(Set.of(1L, 2L)); // 1, 2는 이미 멤버
-
-            List<Long> inviteeIds = List.of(2L, 3L); // 2L(기존), 3L(신규)
-
-            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockMessage);
-            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(any(), any())).willReturn(List.of(mockInviteCode));
+            // 4. Invitee(invitee2) 조회
+            given(employeeRepository.findAllById(new LinkedHashSet<>(inviteeIds))).willReturn(invitees);
+            // 5. 기존 멤버 ID 조회 (creator=1L, invitee1=2L)
+            given(chatEmployeeRepository.findActiveEmployeeIdsByRoomId(roomId)).willReturn(Set.of(1L, 2L));
+            // 6. 방 상태가 1:1방이라고 명시
+            when(mockChatRoom.getIsTeam()).thenReturn(false);
+            // 7. 시스템 메시지 저장
+            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockSystemMessage);
+            // 8. 알림용 CommonCode 조회
+            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(
+                    OwnerType.PREFIX, OwnerType.TEAMCHATNOTI.name()
+            )).willReturn(List.of(mockChatInviteCode));
 
             // when
-            withTxSync(() -> chatService.inviteToRoom("creator", 10L, inviteeIds));
+            chatServiceImpl.inviteToRoom("creator", roomId, inviteeIds);
 
             // then
-            // 1. 신규 멤버(1명: 3L)만 저장되는지 확인
-            verify(chatEmployeeRepository, times(1)).saveAll(argThat(list -> ((Collection<?>) list).size() == 1));
+            // [FIXED] 9. verify로 캡처
+            mockedTxSyncManager.verify(() -> TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()));
+            // [FIXED] 10. 캡처 후 실행
+            syncCaptor.getValue().afterCommit();
 
-            // 2. (afterCommit) 알림도 1명에게만 전송되는지 확인
-            verify(notificationService, times(1)).create(any(NotificationRequestDTO.class));
+            // 10. 1:1 -> 팀방으로 전환 메서드 호출 검증
+            verify(mockChatRoom).updateToTeamRoom();
+            // 11. 시스템 메시지 저장 검증
+            verify(chatMessageRepository).save(chatMessageCaptor.capture());
+            assertThat(chatMessageCaptor.getValue().getContent()).contains(mockInvitee2.getName());
+            // 12. 신규 멤버 저장 검증
+            verify(chatEmployeeRepository).saveAll(chatEmployeeListCaptor.capture());
+            assertThat(chatEmployeeListCaptor.getValue()).hasSize(1);
+            assertThat(chatEmployeeListCaptor.getValue().get(0).getEmployee()).isEqualTo(mockInvitee2);
+            // 13. WebSocket 전송 검증
+            verify(simpMessagingTemplate).convertAndSend(eq("/topic/chat/rooms/" + roomId), any(ChatMessageResponseDTO.class));
+            // 14. 알림 전송 검증
+            verify(notificationService).create(notificationRequestCaptor.capture());
+            assertThat(notificationRequestCaptor.getValue().getEmployeeId()).isEqualTo(3L);
         }
 
         @Test
-        @DisplayName("예외 - 초대자가 멤버가 아님")
-        void invite_Fail_NotMember() {
+        @DisplayName("성공 - 이미 팀 채팅방에 초대")
+        void inviteToRoom_Success_TeamRoom() {
             // given
-            // 초대자 권한 체크 실패
-            given(chatEmployeeRepository.existsByChatRoomChatRoomIdAndEmployeeEmployeeIdAndIsLeftFalse(10L, 1L))
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(mockCreator));
+            // 2. Room 조회 (팀 채팅방)
+            given(chatRoomRepository.findById(roomId)).willReturn(Optional.of(mockTeamChatRoom)); // 팀방
+            given(chatEmployeeRepository.existsByChatRoomChatRoomIdAndEmployeeEmployeeIdAndIsLeftFalse(roomId, 1L))
+                    .willReturn(true);
+            given(employeeRepository.findAllById(new LinkedHashSet<>(inviteeIds))).willReturn(invitees);
+            given(chatEmployeeRepository.findActiveEmployeeIdsByRoomId(roomId)).willReturn(Set.of(1L, 2L));
+            // 6. 방 상태가 팀방이라고 명시
+            when(mockTeamChatRoom.getIsTeam()).thenReturn(true);
+            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockSystemMessage);
+            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(
+                    anyString(), anyString()
+            )).willReturn(List.of(mockChatInviteCode));
+
+            // when
+            chatServiceImpl.inviteToRoom("creator", roomId, inviteeIds);
+
+            // then
+            // [FIXED]
+            mockedTxSyncManager.verify(() -> TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()));
+            syncCaptor.getValue().afterCommit();
+
+            // 10. 팀방이므로 전환 메서드 호출 안 함
+            verify(mockTeamChatRoom, never()).updateToTeamRoom();
+            // 11. (검증 동일)
+            verify(chatMessageRepository).save(any(ChatMessage.class));
+            verify(chatEmployeeRepository).saveAll(anyList());
+            verify(simpMessagingTemplate).convertAndSend(anyString(), any(ChatMessageResponseDTO.class));
+            verify(notificationService).create(any(NotificationRequestDTO.class));
+        }
+
+        @Test
+        @DisplayName("실패 - 초대자가 멤버가 아님")
+        void inviteToRoom_Fail_NotAMember() {
+            // given
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(mockCreator));
+            given(chatRoomRepository.findById(roomId)).willReturn(Optional.of(mockChatRoom));
+            // 3. Inviter가 멤버가 아님
+            given(chatEmployeeRepository.existsByChatRoomChatRoomIdAndEmployeeEmployeeIdAndIsLeftFalse(roomId, 1L))
                     .willReturn(false);
 
             // when & then
-            assertThatThrownBy(() -> chatService.inviteToRoom("creator", 10L, List.of(2L)))
+            assertThatThrownBy(() -> chatServiceImpl.inviteToRoom("creator", roomId, inviteeIds))
                     .isInstanceOf(AccessDeniedException.class)
                     .hasMessage("채팅방 구성원이 아니면 초대할 수 없습니다.");
+        }
+
+        @Test
+        @DisplayName("실패 - 초대 대상이 이미 멤버임")
+        void inviteToRoom_Fail_AlreadyMember() {
+            // given
+            List<Long> alreadyMemberIds = List.of(2L); // 1L(Inviter), 2L(AlreadyMember)
+            List<Employee> alreadyMembers = List.of(mockInvitee1);
+
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(mockCreator));
+            given(chatRoomRepository.findById(roomId)).willReturn(Optional.of(mockChatRoom));
+            given(chatEmployeeRepository.existsByChatRoomChatRoomIdAndEmployeeEmployeeIdAndIsLeftFalse(roomId, 1L))
+                    .willReturn(true);
+            given(employeeRepository.findAllById(new LinkedHashSet<>(alreadyMemberIds))).willReturn(alreadyMembers);
+            // 5. 2L은 이미 멤버임
+            given(chatEmployeeRepository.findActiveEmployeeIdsByRoomId(roomId)).willReturn(Set.of(1L, 2L));
+
+            // when
+            chatServiceImpl.inviteToRoom("creator", roomId, alreadyMemberIds);
+
+            // then
+            // 예외가 발생하지 않고, newInvitees.isEmpty()로 인해 조용히 리턴됨
+            verify(chatMessageRepository, never()).save(any());
+            verify(chatEmployeeRepository, never()).saveAll(anyList());
+            verify(simpMessagingTemplate, never()).convertAndSend(anyString(), any(Object.class));
         }
     }
 
     @Nested
     @DisplayName("leaveRoom (채팅방 나가기)")
-    class LeaveRoomTests {
+    class LeaveRoom {
 
-        @BeforeEach
-        void leaveSetup() {
+        private Long roomId = 200L; // 팀방
+        private Long oneOnOneRoomId = 100L; // 1:1방
+
+        @Test
+        @DisplayName("성공 - 팀 채팅방 (시스템 메시지 전송)")
+        void leaveRoom_Success_TeamRoom() {
+            // given
             given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(mockCreator));
-            given(chatRoomRepository.findById(10L)).willReturn(Optional.of(mockRoom));
-        }
-
-        @Test
-        @DisplayName("성공 - 팀 채팅방 나가기 (남은 인원 1명 이상)")
-        void leave_Success_Team_MembersRemain() {
-            // given
-            given(mockRoom.getIsTeam()).willReturn(true); // 팀방
-            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeEmployeeId(10L, 1L))
-                    .willReturn(Optional.of(mockChatEmployeeCreator));
-
-            // 남은 인원 1명 (0 아님)
-            given(chatEmployeeRepository.countByChatRoomChatRoomIdAndIsLeftFalse(10L)).willReturn(1L);
-
-            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockMessage);
+            given(chatRoomRepository.findById(roomId)).willReturn(Optional.of(mockTeamChatRoom)); // 팀방
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeEmployeeId(roomId, 1L))
+                    .willReturn(Optional.of(mockChatEmployee));
+            // 1. 방 상태가 팀방이라고 명시
+            when(mockTeamChatRoom.getIsTeam()).thenReturn(true);
+            // 2. 시스템 메시지 저장
+            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockSystemMessage);
+            // 3. 남은 인원 1명
+            given(chatEmployeeRepository.countByChatRoomChatRoomIdAndIsLeftFalse(roomId)).willReturn(1L);
 
             // when
-            withTxSync(() -> chatService.leaveRoom("creator", 10L));
+            chatServiceImpl.leaveRoom("creator", roomId);
 
             // then
-            // 1. 나가기 처리 확인
-            verify(mockChatEmployeeCreator, times(1)).leftChatRoom();
-            verify(chatEmployeeRepository, times(1)).save(mockChatEmployeeCreator);
+            // [FIXED]
+            mockedTxSyncManager.verify(() -> TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()));
+            syncCaptor.getValue().afterCommit();
 
-            // 2. 시스템 메시지 저장 확인
-            verify(chatMessageRepository, times(1)).save(any(ChatMessage.class));
-
-            // 3. (afterCommit) 브로드캐스트 확인
-            verify(simpMessagingTemplate, times(1)).convertAndSend(anyString(), any(ChatMessageResponseDTO.class));
-
-            // 4. 방 삭제 "호출되지 않음" 확인
-            verify(mockRoom, never()).deleteRoom(); // (ChatRoom.java에 deleteRoom() 추가 필요)
+            // 4. 상태 변경 및 저장 검증
+            verify(mockChatEmployee).leftChatRoom();
+            verify(chatEmployeeRepository).save(mockChatEmployee);
+            // 5. 시스템 메시지 저장 검증
+            verify(chatMessageRepository).save(chatMessageCaptor.capture());
+            assertThat(chatMessageCaptor.getValue().getContent()).contains("나가셨습니다.");
+            // 6. 방 삭제 안 함
+            verify(mockTeamChatRoom, never()).deleteRoom();
+            // 7. WebSocket 전송 검증
+            verify(simpMessagingTemplate).convertAndSend(eq("/topic/chat/rooms/" + roomId), any(ChatMessageResponseDTO.class));
         }
 
         @Test
-        @DisplayName("성공 - 1:1 채팅방 나가기 (메시지 없음)")
-        void leave_Success_Single() {
+        @DisplayName("성공 - 1:1 채팅방 (시스템 메시지 전송 안 함)")
+        void leaveRoom_Success_OneOnOneRoom() {
             // given
-            given(mockRoom.getIsTeam()).willReturn(false); // 1:1 방
-            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeEmployeeId(10L, 1L))
-                    .willReturn(Optional.of(mockChatEmployeeCreator));
-            given(chatEmployeeRepository.countByChatRoomChatRoomIdAndIsLeftFalse(10L)).willReturn(1L);
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(mockCreator));
+            given(chatRoomRepository.findById(oneOnOneRoomId)).willReturn(Optional.of(mockChatRoom)); // 1:1방
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeEmployeeId(oneOnOneRoomId, 1L))
+                    .willReturn(Optional.of(mockChatEmployee));
+            // 1. 방 상태가 1:1방이라고 명시
+            when(mockChatRoom.getIsTeam()).thenReturn(false);
+            // 3. 남은 인원 1명
+            given(chatEmployeeRepository.countByChatRoomChatRoomIdAndIsLeftFalse(oneOnOneRoomId)).willReturn(1L);
 
             // when
-            withTxSync(() -> chatService.leaveRoom("creator", 10L));
+            chatServiceImpl.leaveRoom("creator", oneOnOneRoomId);
 
             // then
-            // 1. 나가기 처리 확인
-            verify(mockChatEmployeeCreator, times(1)).leftChatRoom();
-
-            // 2. 시스템 메시지 "저장되지 않음" 확인
-            verify(chatMessageRepository, never()).save(any(ChatMessage.class));
-
-            // 3. (afterCommit) 브로드캐스트 "호출되지 않음" 확인
-            verify(simpMessagingTemplate, never()).convertAndSend(anyString(), any(ChatMessageResponseDTO.class));
-
-            // 4. 방 삭제 "호출되지 않음" 확인
-            verify(mockRoom, never()).deleteRoom();
+            // 4. 상태 변경 및 저장 검증
+            verify(mockChatEmployee).leftChatRoom();
+            verify(chatEmployeeRepository).save(mockChatEmployee);
+            // 5. 시스템 메시지 저장 안 함
+            verify(chatMessageRepository, never()).save(any());
+            // 7. WebSocket 전송 안 함 (afterCommit 캡처 X)
+            verify(simpMessagingTemplate, never()).convertAndSend(anyString(), any(Object.class));
         }
 
         @Test
-        @DisplayName("예외 - 멤버가 아님")
-        void leave_Fail_NotMember() {
+        @DisplayName("성공 - 마지막 멤버가 나가서 방 삭제")
+        void leaveRoom_Success_LastMemberDeletesRoom() {
             // given
-            // 멤버 조회 실패
-            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeEmployeeId(10L, 1L))
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(mockCreator));
+            given(chatRoomRepository.findById(roomId)).willReturn(Optional.of(mockTeamChatRoom));
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeEmployeeId(roomId, 1L))
+                    .willReturn(Optional.of(mockChatEmployee));
+            when(mockTeamChatRoom.getIsTeam()).thenReturn(true);
+            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockSystemMessage);
+            // 3. 남은 인원 0명
+            given(chatEmployeeRepository.countByChatRoomChatRoomIdAndIsLeftFalse(roomId)).willReturn(0L);
+
+            // when
+            chatServiceImpl.leaveRoom("creator", roomId);
+
+            // then
+            // [FIXED]
+            mockedTxSyncManager.verify(() -> TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()));
+            syncCaptor.getValue().afterCommit();
+
+            // ... (기본 검증)
+            verify(mockChatEmployee).leftChatRoom();
+            verify(chatEmployeeRepository).save(mockChatEmployee);
+            // 6. 방 삭제 로직 호출 검증
+            verify(mockTeamChatRoom).deleteRoom();
+            verify(chatRoomRepository).save(mockTeamChatRoom);
+        }
+
+        @Test
+        @DisplayName("실패 - 멤버가 아님")
+        void leaveRoom_Fail_NotAMember() {
+            // given
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(mockCreator));
+            given(chatRoomRepository.findById(roomId)).willReturn(Optional.of(mockTeamChatRoom));
+            // 3. 멤버십 정보 없음
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeEmployeeId(roomId, 1L))
                     .willReturn(Optional.empty());
 
             // when & then
-            assertThatThrownBy(() -> chatService.leaveRoom("creator", 10L))
+            assertThatThrownBy(() -> chatServiceImpl.leaveRoom("creator", roomId))
                     .isInstanceOf(EntityNotFoundException.class)
                     .hasMessage("해당 채팅방의 멤버가 아닙니다.");
         }
@@ -448,95 +606,106 @@ class ChatServiceImplTest {
 
     @Nested
     @DisplayName("sendMessage (메시지 전송)")
-    class SendMessageTests {
+    class SendMessage {
 
-        @BeforeEach
-        void sendSetup() {
-            // 공통 given: sender, room, membership 조회 성공
+        private Long roomId = 200L; // 팀방
+        private String content = "Hello";
+
+        @Test
+        @DisplayName("성공 - 팀 채팅방 (미읽음 수 계산)")
+        void sendMessage_Success_TeamRoom() {
+            // given
             given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(mockCreator));
-            given(chatRoomRepository.findById(10L)).willReturn(Optional.of(mockRoom));
-            given(chatEmployeeRepository
-                    .findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(10L, "creator"))
-                    .willReturn(Optional.of(mockChatEmployeeCreator));
-        }
+            given(chatRoomRepository.findById(roomId)).willReturn(Optional.of(mockTeamChatRoom)); // 팀방
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(roomId, "creator"))
+                    .willReturn(Optional.of(mockChatEmployee));
+            // 1. 메시지 저장
+            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockUserMessage);
+            // 2. DTO용 isTeam
+            when(mockTeamChatRoom.getIsTeam()).thenReturn(true);
+            // 3. 미읽음 수 계산 (본인 제외 3명)
+            given(chatEmployeeRepository.countUnreadForMessage(eq(roomId), eq(1L), any(LocalDateTime.class)))
+                    .willReturn(3L);
 
-        @Test
-        @DisplayName("성공 - 팀방: 미읽음 카운트 포함")
-        void send_Success_Team_UnreadCount() {
-            // given
-            long expectedUnreadCount = 2L;
-            given(mockRoom.getIsTeam()).willReturn(true); // 팀방
-            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockMessage);
+            // [FIXED] SUT가 'continue' 로직을 통과하도록 발신자 외의 멤버(mockChatEmployee2)를 추가
+            ChatEmployee mockChatEmployee2 = mock(ChatEmployee.class);
+            Employee mockRecipient = mockInvitee1; // mockInvitee1 (ID=2L, Username=invitee1)
+            lenient().when(mockChatEmployee2.getEmployee()).thenReturn(mockRecipient);
+            lenient().when(mockRecipient.getEmployeeId()).thenReturn(2L); // SUT의 continue 로직용
+            lenient().when(mockRecipient.getUsername()).thenReturn("invitee1"); // convertAndSendToUser 용
+            lenient().when(mockChatEmployee2.getLastReadMessage()).thenReturn(mockSystemMessage); // NPE 방지
+            lenient().when(mockChatEmployee2.getChatRoom()).thenReturn(mockTeamChatRoom); // NPE 방지
+            lenient().when(mockChatEmployee2.getJoinedAt()).thenReturn(LocalDateTime.now().minusDays(1)); // NPE 방지
 
-            // DTO 변환용 Mocking
-            given(mockMessage.getEmployee()).willReturn(mockCreator);
-            given(mockCreator.getName()).willReturn("CreatorName");
+            // 4. (Helper) 알림 보낼 멤버 목록 (발신자 + 수신자)
+            given(chatEmployeeRepository.findAllByChatRoomChatRoomIdAndIsLeftFalse(roomId))
+                    .willReturn(List.of(mockChatEmployee, mockChatEmployee2));
 
-            // 미읽음 카운트 Mocking
-            given(chatEmployeeRepository.countUnreadForMessage(eq(10L), eq(1L), any(LocalDateTime.class)))
-                    .willReturn(expectedUnreadCount);
+            // [FIXED] eq() 안에 mock 객체 호출을 방지하기 위해 값을 미리 변수로 추출
+            Long lastReadMsgId = mockSystemMessage.getChatMessageId();
 
-            // when
-            ChatMessageResponseDTO resultDTO = null;
-            withTxSync(() -> {
-                // withTxSync 내부에서 결과를 받아야 함
-                ChatMessageResponseDTO dto = chatService.sendMessage("creator", 10L, " hello ");
-                // DTO에 unreadCount가 설정되었는지 확인
-                // (ChatMessageResponseDTO에 @Setter와 unreadCount 필드 추가 필요)
-                assertThat(dto.getUnreadCount()).isEqualTo(expectedUnreadCount);
-            });
+            // 5. (Helper) 수신자의 안 읽은 개수 계산
+            given(chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(
+                    eq(mockTeamChatRoom),
+                    eq(lastReadMsgId) // [FIXED]
+            )).willReturn(1L); // 1개 안읽음
 
-            // then
-            // 1. 메시지 저장 확인
-            verify(chatMessageRepository, times(1)).save(any(ChatMessage.class));
-            // 2. 본인 읽음 처리 확인
-            verify(mockChatEmployeeCreator, times(1)).updateLastReadMessage(mockMessage);
-            verify(chatEmployeeRepository, times(1)).save(mockChatEmployeeCreator);
-            // 3. (afterCommit) 브로드캐스트 확인
-            verify(simpMessagingTemplate, times(1)).convertAndSend(eq("/topic/rooms/10"), any(ChatMessageResponseDTO.class));
-        }
+            // 6. (Helper) 수신자의 총 안 읽은 개수 계산
+            given(chatEmployeeRepository.sumTotalUnreadMessagesByEmployeeId(2L)).willReturn(1L);
 
-        @Test
-        @DisplayName("성공 - 1:1 방: 미읽음 카운트 0")
-        void send_Success_Single_UnreadZero() {
-            // given
-            given(mockRoom.getIsTeam()).willReturn(false); // 1:1 방
-            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockMessage);
-            given(mockMessage.getEmployee()).willReturn(mockCreator);
-            given(mockCreator.getName()).willReturn("CreatorName");
 
             // when
-            withTxSync(() -> {
-                ChatMessageResponseDTO dto = chatService.sendMessage("creator", 10L, " hello ");
-                // DTO에 unreadCount가 0으로 설정되었는지 확인
-                assertThat(dto.getUnreadCount()).isZero();
-            });
+            ChatMessageResponseDTO result = chatServiceImpl.sendMessage("creator", roomId, content);
 
             // then
-            // 1. 미읽음 카운트 쿼리 "호출되지 않음" 확인
-            verify(chatEmployeeRepository, never()).countUnreadForMessage(anyLong(), anyLong(), any(LocalDateTime.class));
+            mockedTxSyncManager.verify(() -> TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()));
+            syncCaptor.getValue().afterCommit();
+
+            // 6. 본인 메시지 즉시 읽음 처리 검증
+            verify(mockChatEmployee).updateLastReadMessage(mockUserMessage);
+            verify(chatEmployeeRepository).save(mockChatEmployee);
+            // 7. WebSocket 전송 검증
+            verify(simpMessagingTemplate).convertAndSend(eq("/topic/chat/rooms/" + roomId), eq(result));
+
+            // 8. (Helper) 채팅방 목록 업데이트 알림 전송 검증
+            verify(simpMessagingTemplate).convertAndSendToUser(eq("invitee1"), eq("/queue/chat-list-update"), any(ChatRoomListResponseDTO.class));
+            // 9. (Helper) 총 미읽음 수 전송 검증
+            verify(chatEmployeeRepository).sumTotalUnreadMessagesByEmployeeId(2L); // 수신자 ID
+            verify(simpMessagingTemplate).convertAndSendToUser(eq("invitee1"), eq("/queue/unread-count"), any());
+
+            // 10. (Helper) 발신자('creator')에게는 전송되지 않았는지 확인 (SUT의 continue 로직 검증)
+            verify(simpMessagingTemplate, never()).convertAndSendToUser(eq("creator"), anyString(), any());
+
+            // 11. 반환 DTO 검증
+            assertThat(result).isNotNull();
+            assertThat(result.getChatMessageId()).isEqualTo(mockUserMessage.getChatMessageId());
+            assertThat(result.getUnreadCount()).isEqualTo(3L); // SUT가 계산한 미읽음 수
         }
 
         @Test
-        @DisplayName("예외 - 빈 메시지 전송")
-        void send_Fail_EmptyContent() {
+        @DisplayName("실패 - 빈 메시지")
+        void sendMessage_Fail_EmptyContent() {
+            // given
+            String emptyContent = " ";
+
             // when & then
-            assertThatThrownBy(() -> chatService.sendMessage("creator", 10L, "   "))
+            assertThatThrownBy(() -> chatServiceImpl.sendMessage("creator", roomId, emptyContent))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("메시지 내용이 비어 있습니다.");
         }
 
         @Test
-        @DisplayName("예외 - 멤버가 아님")
-        void send_Fail_NotMember() {
+        @DisplayName("실패 - 멤버가 아님")
+        void sendMessage_Fail_NotAMember() {
             // given
-            // 멤버십 조회 실패
-            given(chatEmployeeRepository
-                    .findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(10L, "creator"))
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(mockCreator));
+            given(chatRoomRepository.findById(roomId)).willReturn(Optional.of(mockTeamChatRoom));
+            // 1. 멤버십 없음
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(roomId, "creator"))
                     .willReturn(Optional.empty());
 
             // when & then
-            assertThatThrownBy(() -> chatService.sendMessage("creator", 10L, " hello "))
+            assertThatThrownBy(() -> chatServiceImpl.sendMessage("creator", roomId, content))
                     .isInstanceOf(AccessDeniedException.class)
                     .hasMessage("채팅방 멤버가 아니거나 이미 나간 사용자입니다.");
         }
@@ -544,103 +713,205 @@ class ChatServiceImplTest {
 
     @Nested
     @DisplayName("getMessages (메시지 목록 조회)")
-    class GetMessagesTests {
+    class GetMessages {
+
+        private Long roomId = 100L;
+        private Pageable pageable = PageRequest.of(0, 10);
 
         @Test
-        @DisplayName("성공 - joinedAt 이후 메시지 페이징 조회")
+        @DisplayName("성공 - 메시지 목록 조회")
         void getMessages_Success() {
             // given
-            Pageable pageable = PageRequest.of(0, 10);
-            LocalDateTime joinedAt = LocalDateTime.now().minusMinutes(5);
+            // 1. 멤버십 조회 (JoinedAt을 얻기 위함)
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(roomId, "creator"))
+                    .willReturn(Optional.of(mockChatEmployee));
+            // 2. 메시지 목록(Page) 조회
+            Page<ChatMessage> mockPage = new PageImpl<>(List.of(mockUserMessage, mockSystemMessage), pageable, 2);
 
-            given(chatEmployeeRepository
-                    .findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(10L, "creator"))
-                    .willReturn(Optional.of(mockChatEmployeeCreator));
-            given(mockChatEmployeeCreator.getJoinedAt()).willReturn(joinedAt);
+            // [FIXED] eq() 안에 mock 객체 호출을 방지하기 위해 값을 미리 변수로 추출
+            LocalDateTime joinedAt = mockChatEmployee.getJoinedAt();
 
-            // DTO 변환용 Mocking
-            given(mockMessage.getEmployee()).willReturn(mockCreator);
-            given(mockCreator.getName()).willReturn("CreatorName");
-
-            Page<ChatMessage> mockPage = new PageImpl<>(List.of(mockMessage));
-            given(chatMessageRepository
-                    .findByChatRoomChatRoomIdAndCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(
-                            eq(10L), eq(joinedAt), eq(pageable)))
-                    .willReturn(mockPage);
+            // [CORRECT] 모든 인자를 eq() 매처로 래핑
+            given(chatMessageRepository.findByChatRoomChatRoomIdAndCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(
+                    eq(roomId),
+                    eq(joinedAt), // [FIXED]
+                    eq(pageable)
+            )).willReturn(mockPage);
 
             // when
-            Page<ChatMessageResponseDTO> resultPage = chatService.getMessages("creator", 10L, pageable);
+            Page<ChatMessageResponseDTO> result = chatServiceImpl.getMessages("creator", roomId, pageable);
 
             // then
-            assertThat(resultPage).isNotNull();
-            assertThat(resultPage.getTotalElements()).isEqualTo(1);
-            assertThat(resultPage.getContent().get(0).getContent()).isEqualTo("hello");
-            // getMessages는 미읽음 카운트를 설정하지 않으므로 기본값 0
-            assertThat(resultPage.getContent().get(0).getUnreadCount()).isZero();
+            assertThat(result).isNotNull();
+            assertThat(result.getTotalElements()).isEqualTo(2);
+            assertThat(result.getContent()).hasSize(2);
+            assertThat(result.getContent().get(0).getContent()).isEqualTo(mockUserMessage.getContent());
         }
 
         @Test
-        @DisplayName("예외 - 멤버가 아님")
-        void getMessages_Fail_NotMember() {
+        @DisplayName("실패 - 멤버가 아님")
+        void getMessages_Fail_NotAMember() {
             // given
-            Pageable pageable = PageRequest.of(0, 10);
-            given(chatEmployeeRepository
-                    .findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(10L, "creator"))
+            // 1. 멤버십 없음
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(roomId, "creator"))
                     .willReturn(Optional.empty());
 
             // when & then
-            assertThatThrownBy(() -> chatService.getMessages("creator", 10L, pageable))
-                    .isInstanceOf(AccessDeniedException.class);
+            assertThatThrownBy(() -> chatServiceImpl.getMessages("creator", roomId, pageable))
+                    .isInstanceOf(AccessDeniedException.class)
+                    .hasMessage("채팅방 멤버가 아니거나 이미 나간 사용자입니다.");
         }
     }
 
     @Nested
-    @DisplayName("updateLastReadMessageId (읽음 처리)")
-    class UpdateLastReadMessageIdTests {
+    @DisplayName("updateLastReadMessageId (마지막 읽은 메시지 ID 업데이트)")
+    class UpdateLastReadMessageId {
+
+        private Long roomId = 100L;
+        private Long lastMessageId = 1002L; // mockUserMessage ID
 
         @Test
         @DisplayName("성공")
-        void updateLastRead_Success() {
+        void updateLastReadMessageId_Success() {
             // given
-            Long messageId = 100L;
-            given(chatEmployeeRepository
-                    .findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(10L, "creator"))
-                    .willReturn(Optional.of(mockChatEmployeeCreator));
-            given(chatMessageRepository.findById(messageId)).willReturn(Optional.of(mockMessage));
-            given(mockMessage.getChatRoom()).willReturn(mockRoom);
-            given(mockRoom.getChatRoomId()).willReturn(10L); // 방 ID 일치
-            given(mockChatEmployeeCreator.getEmployee()).willReturn(mockCreator); // Map 생성용
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(mockCreator));
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(roomId, "creator"))
+                    .willReturn(Optional.of(mockChatEmployee));
+            // 1. 메시지 조회
+            given(chatMessageRepository.findById(lastMessageId)).willReturn(Optional.of(mockUserMessage));
+            // 2. 메시지 방 ID 검증 (일치)
+            when(mockUserMessage.getChatRoom()).thenReturn(mockChatRoom); // mockChatRoom ID는 100L
+            when(mockChatRoom.getChatRoomId()).thenReturn(roomId);
+            // 3. (Helper) 총 미읽음 수 계산
+            given(chatEmployeeRepository.sumTotalUnreadMessagesByEmployeeId(1L)).willReturn(0L);
 
             // when
-            withTxSync(() -> chatService.updateLastReadMessageId("creator", 10L, messageId));
+            chatServiceImpl.updateLastReadMessageId("creator", roomId, lastMessageId);
 
             // then
-            // 1. ChatEmployee의 updateLastReadMessage 메서드 호출 검증
-            verify(mockChatEmployeeCreator, times(1)).updateLastReadMessage(mockMessage);
-            // 2. ChatEmployee 저장 검증
-            verify(chatEmployeeRepository, times(1)).save(mockChatEmployeeCreator);
-            // 3. (afterCommit) WebSocket 브로드캐스트 검증
-            verify(simpMessagingTemplate, times(1)).convertAndSend(eq("/topic/rooms/10/reads"), any(Map.class));
+
+            // [FIXED] 1. verify()를 호출하여 syncCaptor가 인수를 캡처하도록 합니다.
+            mockedTxSyncManager.verify(() -> TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()));
+
+            // [FIXED] 2. 캡처가 완료된 후, .getValue()를 호출하여 afterCommit()을 수동 실행합니다.
+            syncCaptor.getValue().afterCommit();
+
+            // 4. 멤버십에 마지막 읽은 메시지 업데이트 및 저장 검증
+            verify(mockChatEmployee).updateLastReadMessage(mockUserMessage);
+            verify(chatEmployeeRepository).save(mockChatEmployee);
+            // 5. WebSocket 읽음 브로드캐스트 검증
+            verify(simpMessagingTemplate).convertAndSend(
+                    eq("/topic/chat/rooms/" + roomId + "/reads"),
+                    any(Map.class)
+            );
+            // 6. (Helper) 총 미읽음 수 전송 검증
+            verify(chatEmployeeRepository).sumTotalUnreadMessagesByEmployeeId(1L);
+            verify(simpMessagingTemplate).convertAndSendToUser(eq("creator"), eq("/queue/unread-count"), any());
         }
 
         @Test
-        @DisplayName("예외 - 메시지가 다른 방 소속")
-        void updateLastRead_Fail_MismatchedRoom() {
+        @DisplayName("실패 - 메시지가 다른 채팅방 소속")
+        void updateLastReadMessageId_Fail_MessageInDifferentRoom() {
             // given
-            Long messageId = 100L;
-            ChatRoom otherRoom = mock(ChatRoom.class);
-            when(otherRoom.getChatRoomId()).thenReturn(99L); // 다른 방 ID
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(mockCreator));
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(roomId, "creator"))
+                    .willReturn(Optional.of(mockChatEmployee));
+            given(chatMessageRepository.findById(lastMessageId)).willReturn(Optional.of(mockUserMessage));
 
-            given(chatEmployeeRepository
-                    .findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(10L, "creator"))
-                    .willReturn(Optional.of(mockChatEmployeeCreator));
-            given(chatMessageRepository.findById(messageId)).willReturn(Optional.of(mockMessage));
-            given(mockMessage.getChatRoom()).willReturn(otherRoom); // 메시지가 다른 방 소속
+            // 2. 메시지 방 ID 검증 (불일치)
+            ChatRoom differentRoom = mock(ChatRoom.class);
+            when(differentRoom.getChatRoomId()).thenReturn(999L);
+            when(mockUserMessage.getChatRoom()).thenReturn(differentRoom);
 
             // when & then
-            assertThatThrownBy(() -> chatService.updateLastReadMessageId("creator", 10L, messageId))
+            assertThatThrownBy(() -> chatServiceImpl.updateLastReadMessageId("creator", roomId, lastMessageId))
                     .isInstanceOf(AccessDeniedException.class)
                     .hasMessage("해당 채팅방의 메시지가 아닙니다.");
+        }
+    }
+
+    @Nested
+    @DisplayName("findRoomsByUsername (채팅방 목록 조회)")
+    class FindRoomsByUsername {
+
+        @Test
+        @DisplayName("성공 - 1:1방과 팀방 목록 조회")
+        void findRoomsByUsername_Success_MixOfRooms() {
+            // given
+            // --- User ---
+            Employee user = mockCreator;
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(user));
+
+            // --- Room 1 (1:1) ---
+            ChatEmployee membership1 = mockChatEmployee; // user의 1:1방 멤버십 (setUp에서 생성됨)
+            ChatRoom room1 = mockChatRoom; // 1:1방 (setUp)
+            Employee otherUser = mockInvitee1; // 1:1방 상대 (setUp)
+            ChatEmployee otherMembership = mock(ChatEmployee.class); // 상대방 멤버십
+            ChatMessage lastMsg1 = mockUserMessage; // 마지막 메시지 (setUp)
+
+            given(membership1.getChatRoom()).willReturn(room1);
+            when(room1.getIsTeam()).thenReturn(false);
+            // 마지막 메시지 조회
+            given(chatMessageRepository.findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc(room1, membership1.getJoinedAt()))
+                    .willReturn(Optional.of(lastMsg1));
+            // 안 읽은 수 (1:1)
+            given(membership1.getLastReadMessage()).willReturn(mockSystemMessage);
+            given(chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(room1, mockSystemMessage.getChatMessageId()))
+                    .willReturn(1L); // 1개 안읽음
+            // 1:1 상대방 찾기
+            given(chatEmployeeRepository.findAllByChatRoomChatRoomIdAndIsLeftFalse(room1.getChatRoomId()))
+                    .willReturn(List.of(membership1, otherMembership));
+            when(otherMembership.getEmployee()).thenReturn(otherUser);
+
+            // --- Room 2 (Team) ---
+            ChatEmployee membership2 = mock(ChatEmployee.class);
+            ChatRoom room2 = mockTeamChatRoom; // 팀방 (setUp)
+            ChatMessage lastMsg2 = mock(ChatMessage.class);
+
+            given(membership2.getChatRoom()).willReturn(room2);
+            when(room2.getIsTeam()).thenReturn(true);
+            when(membership2.getJoinedAt()).thenReturn(LocalDateTime.now().minusDays(1));
+            // 마지막 메시지
+            given(chatMessageRepository.findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc(room2, membership2.getJoinedAt()))
+                    .willReturn(Optional.of(lastMsg2));
+            // 안 읽은 수 (팀)
+            given(membership2.getLastReadMessage()).willReturn(lastMsg2); // 다 읽음
+            given(chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(room2, lastMsg2.getChatMessageId()))
+                    .willReturn(0L);
+
+            // --- SUT 진입점 ---
+            // 사용자가 속한 모든 멤버십 조회
+            given(chatEmployeeRepository.findAllByEmployeeAndIsLeftFalse(user))
+                    .willReturn(List.of(membership1, membership2));
+
+            // DTO.toDTO에서 사용할 Getter (lenient로 대부분 커버되지만 확실하게)
+            when(lastMsg1.getContent()).thenReturn("1:1 Message");
+            when(lastMsg2.getContent()).thenReturn("Team Message");
+
+            // when
+            List<ChatRoomListResponseDTO> result = chatServiceImpl.findRoomsByUsername("creator");
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result).hasSize(2);
+
+            // (참고: SUT는 DTO 생성 후 마지막 메시지 시각으로 정렬함. 여기서는 메시지 내용으로 구분)
+            Optional<ChatRoomListResponseDTO> room1Dto = result.stream().filter(r -> r.getName().equals(otherUser.getName())).findFirst();
+            Optional<ChatRoomListResponseDTO> room2Dto = result.stream().filter(r -> r.getName().equals(room2.getName())).findFirst();
+
+            assertThat(room1Dto).isPresent();
+            assertThat(room1Dto.get().getChatRoomId()).isEqualTo(room1.getChatRoomId());
+            assertThat(room1Dto.get().getName()).isEqualTo(otherUser.getName()); // 상대방 이름
+            assertThat(room1Dto.get().getProfile()).isEqualTo(otherUser.getProfileImg()); // 상대방 프로필
+            assertThat(room1Dto.get().getUnreadCount()).isEqualTo(1L);
+            assertThat(room1Dto.get().getLastMessage()).isEqualTo(lastMsg1.getContent());
+
+            assertThat(room2Dto).isPresent();
+            assertThat(room2Dto.get().getChatRoomId()).isEqualTo(room2.getChatRoomId());
+            assertThat(room2Dto.get().getName()).isEqualTo(room2.getName()); // 팀방 이름
+            assertThat(room2Dto.get().getProfile()).isNull(); // 팀방 프로필
+            assertThat(room2Dto.get().getUnreadCount()).isEqualTo(0L);
+            assertThat(room2Dto.get().getLastMessage()).isEqualTo(lastMsg2.getContent());
         }
     }
 }
