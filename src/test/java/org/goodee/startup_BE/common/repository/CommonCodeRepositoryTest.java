@@ -177,51 +177,8 @@ class CommonCodeRepositoryTest {
     @DisplayName("커스텀 쿼리 메소드 테스트")
     class CustomQueryTests {
 
-        @Test
-        @DisplayName("findAllDepartments: '부서' 코드만 sortOrder ASC로 조회")
-        void testFindAllDepartments() {
-            // when: codeDescription이 '부서'인 코드 조회
-            List<CommonCode> departments = commonCodeRepository.findAllDepartments();
-
-            // then: '부서'인 dept1, dept2만 조회되어야 함 (pos1, pos2는 제외)
-            assertThat(departments).hasSize(2);
-            assertThat(departments).contains(dept1, dept2);
-            assertThat(departments).doesNotContain(pos1, pos2);
-
-            // then: sortOrder ASC (오름차순) 정렬 확인 (dept2: 1L, dept1: 2L)
-            assertThat(departments).extracting(CommonCode::getCode)
-                    .containsExactly("DP2", "DP1");
-        }
-
-        @Test
-        @DisplayName("findByCodeDescriptionAndIsDeletedFalseOrderBySortOrderAsc: codeDescription으로 조회 및 sortOrder ASC 정렬")
-        void testFindByCodeDescriptionAndIsDeletedFalseOrderBySortOrderAsc() {
-            // Case 1: "부서" 조회 (setUp에서 dept2: 1L, dept1: 2L로 설정됨)
-            List<CommonCode> departments = commonCodeRepository.findByCodeDescriptionAndIsDeletedFalseOrderBySortOrderAsc("부서");
-
-            // then: '부서' 2개 조회
-            assertThat(departments).hasSize(2);
-            assertThat(departments).contains(dept1, dept2);
-            assertThat(departments).doesNotContain(pos1, pos2);
-            // then: sortOrder ASC 정렬 확인 (dept2(1L)가 dept1(2L)보다 먼저 와야 함)
-            assertThat(departments).extracting(CommonCode::getCode)
-                    .containsExactly("DP2", "DP1");
-
-            // Case 2: "직위" 조회 (setUp에서 pos1: 1L, pos2: 2L로 설정됨)
-            List<CommonCode> positions = commonCodeRepository.findByCodeDescriptionAndIsDeletedFalseOrderBySortOrderAsc("직위");
-
-            // then: '직위' 2개 조회
-            assertThat(positions).hasSize(2);
-            assertThat(positions).contains(pos1, pos2);
-            assertThat(positions).doesNotContain(dept1, dept2);
-            // then: sortOrder ASC 정렬 확인 (pos1(1L)이 pos2(2L)보다 먼저 와야 함)
-            assertThat(positions).extracting(CommonCode::getCode)
-                    .containsExactly("PO1", "PO2");
-
-            // Case 3: 없는 codeDescription 조회
-            List<CommonCode> emptyList = commonCodeRepository.findByCodeDescriptionAndIsDeletedFalseOrderBySortOrderAsc("없는설명");
-            assertThat(emptyList).isEmpty();
-        }
+        // --- testFindByCodeDescriptionAndIsDeletedFalseOrderBySortOrderAsc() ---
+        // CommonCodeRepository.java에서 해당 메소드가 삭제되었으므로 테스트 케이스 제거
         // -----------------------------------------------------------------
 
         @Test

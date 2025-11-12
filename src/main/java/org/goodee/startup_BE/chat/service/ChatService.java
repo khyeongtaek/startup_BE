@@ -1,6 +1,7 @@
 package org.goodee.startup_BE.chat.service;
 
 import org.goodee.startup_BE.chat.dto.ChatMessageResponseDTO;
+import org.goodee.startup_BE.chat.dto.ChatRoomListResponseDTO;
 import org.goodee.startup_BE.chat.dto.ChatRoomResponseDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -58,4 +59,11 @@ public interface ChatService {
      * @param lastMessageId 마지막으로 읽은 메시지 ID
      */
     void updateLastReadMessageId(String username, Long roomId, Long lastMessageId);
+
+    /**
+     * 사용자가 속한 채팅방 목록을 조회 한다.
+     * @param username 사용자 username
+     * @return 해당 사용자가 속한 채팅방 DTO 목록
+     */
+    List<ChatRoomListResponseDTO> findRoomsByUsername(String username);
 }

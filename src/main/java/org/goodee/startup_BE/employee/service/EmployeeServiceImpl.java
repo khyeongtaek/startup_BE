@@ -26,6 +26,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final CommonCodeRepository commonCodeRepository;
     private final PasswordEncoder passwordEncoder;
     private final AttachmentFileService attachmentFileService;
+    private final EmployeeHistoryService employeeHistoryService;
 
     @Override
     public EmployeeResponseDTO updateEmployeeByUser(String username, EmployeeRequestDTO request) {
@@ -61,6 +62,12 @@ public class EmployeeServiceImpl implements EmployeeService {
         Employee employee = employeeRepository.findById(request.getEmployeeId())
                 .orElseThrow(() -> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
 
+        // --- 변경 전 값 저장 ---
+        String oldStatus = employee.getStatus().getValue2();
+        String oldRole = employee.getRole().getValue2();
+        String oldDepartment = employee.getDepartment().getValue1();
+        String oldPosition = employee.getPosition().getValue1();
+
         CommonCode statusCode = commonCodeRepository
                 .findById(request.getStatus())
                 .orElseThrow(() -> new ResourceNotFoundException("status code: " + request.getStatus() + " 를 찾을 수 없습니다."));
@@ -83,6 +90,12 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.updateDepartment(departmentCode, admin);
         employee.updatePosition(positionCode, admin);
 
+        // --- 이력 기록 ---
+        employeeHistoryService.logHistory(employee, admin, "재직상태", oldStatus, statusCode.getValue2());
+        employeeHistoryService.logHistory(employee, admin, "권한", oldRole, roleCode.getValue2());
+        employeeHistoryService.logHistory(employee, admin, "부서", oldDepartment, departmentCode.getValue1());
+        employeeHistoryService.logHistory(employee, admin, "직급", oldPosition, positionCode.getValue1());
+
         return EmployeeResponseDTO.toDTO(employee);
     }
 
@@ -95,6 +108,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .orElseThrow(() -> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
 
         employee.updateInitPassword(passwordEncoder.encode(employee.getUsername()), admin);
+        employeeHistoryService.logHistory(employee, admin, "비밀번호", null, null);
 
         return EmployeeResponseDTO.toDTO(employee);
     }

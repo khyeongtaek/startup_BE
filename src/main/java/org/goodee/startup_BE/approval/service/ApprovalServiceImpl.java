@@ -9,6 +9,7 @@ import org.goodee.startup_BE.approval.entity.ApprovalLine;
 import org.goodee.startup_BE.approval.entity.ApprovalReference;
 import org.goodee.startup_BE.approval.enums.ApprovalDocStatus;
 import org.goodee.startup_BE.approval.enums.ApprovalLineStatus;
+import org.goodee.startup_BE.approval.enums.ApprovalTemplate;
 import org.goodee.startup_BE.approval.repository.ApprovalDocRepository;
 import org.goodee.startup_BE.approval.repository.ApprovalLineRepository;
 import org.goodee.startup_BE.approval.repository.ApprovalReferenceRepository;
@@ -51,6 +52,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     // --- 공통 코드 Prefix 정의 ---
     private static final String DOC_STATUS_PREFIX = ApprovalDocStatus.PREFIX;
     private static final String LINE_STATUS_PREFIX = ApprovalLineStatus.PREFIX;
+    private static final String TEMPLATE_PREFIX = ApprovalTemplate.PREFIX;
 
     // --- 공통 코드 Value1 정의 ---
     // 문서 상태
@@ -64,12 +66,12 @@ public class ApprovalServiceImpl implements ApprovalService {
     private static final String LINE_STATUS_REJECTED = ApprovalLineStatus.REJECTED.name(); // 반려 (AL4)
 
     /**
-     * 결재 양식 조회
+     * 결재 양식 전체 조회
      */
     @Override
     public List<CommonCodeResponseDTO> getAllApprovalTemplates() {
         List<CommonCode> templateList = commonCodeRepository
-                .findByCodeDescriptionAndIsDeletedFalseOrderBySortOrderAsc("결재 양식");
+                .findByCodeStartsWithAndIsDeletedFalse(TEMPLATE_PREFIX);
 
         return templateList.stream()
                 .map(CommonCodeResponseDTO::toDTO)
