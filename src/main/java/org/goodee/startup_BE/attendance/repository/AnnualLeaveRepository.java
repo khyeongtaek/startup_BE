@@ -9,4 +9,6 @@ public interface AnnualLeaveRepository extends JpaRepository<AnnualLeave, Long> 
 
     // 직원 ID와 연도를 기준으로 연차 정보 조회
     Optional<AnnualLeave> findByEmployeeEmployeeIdAndYear(Long employeeId, Long year);
+
+    Optional<AnnualLeave> findByEmployeeEmployeeId(Long employeeEmployeeId);
 }

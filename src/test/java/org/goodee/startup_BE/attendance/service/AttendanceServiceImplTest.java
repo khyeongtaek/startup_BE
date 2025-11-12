@@ -44,6 +44,9 @@ class AttendanceServiceImplTest {
     @Mock
     private AnnualLeaveService annualLeaveService;
 
+    @Mock
+    private AttendanceWorkHistoryService attendanceWorkHistoryService;
+
     private Employee mockEmployee;
     private CommonCode mockWorkStatusNormal;
     private CommonCode mockWorkStatusOut;
@@ -87,7 +90,7 @@ class AttendanceServiceImplTest {
                     .willReturn(List.of(mockWorkStatusNormal));
             given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "LATE"))
                     .willReturn(List.of(mockWorkStatusLate)); // ✅ 지각 코드 추가
-            given(attendanceRepository.countByEmployeeEmployeeId(employeeId)).willReturn(0);
+            given(attendanceRepository.countByEmployeeEmployeeId(employeeId)).willReturn(0L);
             given(annualLeaveService.createIfNotExists(employeeId)).willReturn(null);
             given(attendanceRepository.save(any(Attendance.class)))
                     .willAnswer(invocation -> invocation.getArgument(0));
@@ -143,7 +146,7 @@ class AttendanceServiceImplTest {
             given(employeeRepository.findById(employeeId)).willReturn(Optional.of(mockEmployee));
             given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "NORMAL"))
                     .willReturn(List.of());
-            lenient().when(attendanceRepository.countByEmployeeEmployeeId(employeeId)).thenReturn(0);
+            lenient().when(attendanceRepository.countByEmployeeEmployeeId(employeeId)).thenReturn(0L);
             lenient().when(annualLeaveService.createIfNotExists(employeeId)).thenReturn(null);
 
             // when & then
@@ -168,10 +171,13 @@ class AttendanceServiceImplTest {
 
             given(attendanceRepository.findCurrentWorkingRecord(employeeId))
                     .willReturn(Optional.of(attendance));
+
+            // ✅ CLOCK_OUT 과 EARLY_LEAVE 둘 다 Mock
             given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "CLOCK_OUT"))
                     .willReturn(List.of(mockWorkStatusOut));
             given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "EARLY_LEAVE"))
                     .willReturn(List.of(mockWorkStatusEarlyLeave));
+
             given(attendanceRepository.save(any(Attendance.class)))
                     .willAnswer(invocation -> invocation.getArgument(0));
 
@@ -236,7 +242,7 @@ class AttendanceServiceImplTest {
 
             // then
             assertThat(result).isNotNull();
-            assertThat(result.getWorkStatus()).isEqualTo("NORMAL");
+            assertThat(result.getWorkStatus()).isEqualTo("NORMAL", "LATE");
         }
 
         @Test

@@ -33,7 +33,7 @@ public class Attendance {
 
     // 누적 근무 일수
     @Column(name="work_date", nullable = false)
-    private Integer workDate;
+    private Long workDate;
 
     // 근무한 날짜
     @Column(name = "attendance_date", nullable = false)
@@ -67,7 +67,7 @@ public class Attendance {
         attendance.employee = employee;
         attendance.attendanceDate = attendanceDate;
         attendance.workStatus = workStatus;
-        attendance.workDate = 1;
+        attendance.workDate = 1L;
         attendance.isDeleted = false;
         attendance.createdAt = LocalDateTime.now();
         attendance.updatedAt = LocalDateTime.now();
@@ -90,7 +90,7 @@ public class Attendance {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public void setWorkDate(Integer workDate) {
+    public void setWorkDate(Long workDate) {
         this.workDate = workDate;
     }
 }

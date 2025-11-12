@@ -20,4 +20,5 @@ public interface AnnualLeaveService {
 
     // 전체 연차 조회 (관리자용)
     List<AnnualLeave> getAllAnnualLeaves();
+
 }

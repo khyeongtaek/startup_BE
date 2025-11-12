@@ -1,7 +1,9 @@
 package org.goodee.startup_BE.schedule.service;
 
+import org.goodee.startup_BE.schedule.dto.ScheduleParticipantResponseDTO;
 import org.goodee.startup_BE.schedule.dto.ScheduleRequestDTO;
 import org.goodee.startup_BE.schedule.dto.ScheduleResponseDTO;
+import org.goodee.startup_BE.schedule.entity.Schedule;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -22,7 +24,20 @@ public interface ScheduleService {
     List<ScheduleResponseDTO> getAllScheduleByPeriod(LocalDate start, LocalDate end);
 
     // 일정 삭제
-    public void deleteSchedule(Long scheduleId);
+    void deleteSchedule(Long scheduleId);
 
+    // 일정 변경
     ScheduleResponseDTO updateSchedule(Long scheduleId, ScheduleRequestDTO request);
+
+    //  일정 참여자 초대
+    void inviteParticipants(Long scheduleId, List<Long> employeeIds);
+
+    //   일정 참여자 조회
+    List<ScheduleParticipantResponseDTO> getParticipants(Long scheduleId);
+
+    List<ScheduleResponseDTO> getVisibleSchedules(Long employeeId);
+
+    // 일점 참여자 참여 상태 변경
+    void updateParticipantStatus(Long scheduleId, Long employeeId, String value1);
+
 }

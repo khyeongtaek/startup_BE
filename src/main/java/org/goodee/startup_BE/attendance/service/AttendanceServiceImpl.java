@@ -4,11 +4,14 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.goodee.startup_BE.attendance.dto.AttendanceResponseDTO;
+import org.goodee.startup_BE.attendance.entity.AnnualLeave;
 import org.goodee.startup_BE.attendance.entity.Attendance;
+import org.goodee.startup_BE.attendance.entity.AttendanceWorkHistory;
 import org.goodee.startup_BE.attendance.enums.WorkStatus;
 import org.goodee.startup_BE.attendance.exception.AttendanceException;
 import org.goodee.startup_BE.attendance.exception.DuplicateAttendanceException;
 import org.goodee.startup_BE.attendance.repository.AttendanceRepository;
+import org.goodee.startup_BE.attendance.repository.AttendanceWorkHistoryRepository;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.employee.entity.Employee;
@@ -17,11 +20,10 @@ import org.goodee.startup_BE.employee.repository.EmployeeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.chrono.ChronoLocalDateTime;
+import java.time.*;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -33,6 +35,9 @@ public class AttendanceServiceImpl implements AttendanceService {
     private final EmployeeRepository employeeRepository;
     private final CommonCodeRepository commonCodeRepository;
     private final AnnualLeaveService annualLeaveService;
+    private final AttendanceWorkHistoryService attendanceWorkHistoryService;
+    private final AttendanceWorkHistoryRepository historyRepository;
+
 
     // 공통 코드 Prefix 정의
     private static final String WOKR_STATUS_PREFIX = WorkStatus.PREFIX;
@@ -102,7 +107,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         CommonCode workStatus = codes.get(0);
 
 
-        Integer workCount = attendanceRepository.countByEmployeeEmployeeId(employeeId) + 1;
+        Long workCount = attendanceRepository.countByEmployeeEmployeeId(employeeId) + 1;
 
         // 출근 기록 생성
         Attendance attendance = Attendance.createAttendance(employee, today, workStatus);
@@ -120,6 +125,8 @@ public class AttendanceServiceImpl implements AttendanceService {
             log.info("[정상 출근] {}님이 {}에 출근했습니다.", employee.getName(), now.toLocalTime());
         }
         Attendance saved = attendanceRepository.save(attendance);
+
+        attendanceWorkHistoryService.recordHistory(saved, employee, saved.getWorkStatus().getValue1());
 
         return AttendanceResponseDTO.builder()
                 .attendanceId(saved.getAttendanceId())
@@ -170,6 +177,8 @@ public class AttendanceServiceImpl implements AttendanceService {
             log.info("[정상 퇴근] {}님이 {}에 퇴근했습니다.", attendance.getEmployee().getName(), endTime.toLocalTime());
         }
         Attendance saved = attendanceRepository.save(attendance);
+
+        attendanceWorkHistoryService.recordHistory(saved, saved.getEmployee(), saved.getWorkStatus().getValue1());
 
         return AttendanceResponseDTO.builder()
                 .attendanceId(saved.getAttendanceId())
@@ -227,8 +236,131 @@ public class AttendanceServiceImpl implements AttendanceService {
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> getWeeklyWorkSummary(Long employeeId, LocalDate weekStart) {
+        // weekStart가 없으면 이번 주 월요일
+        LocalDate startOfWeek = (weekStart != null)
+                ? weekStart
+                : LocalDate.now().with(java.time.DayOfWeek.MONDAY);
+        LocalDate endOfWeek = startOfWeek.plusDays(6);
+
+        List<Attendance> weeklyRecords = attendanceRepository.findWeeklyRecords(employeeId, startOfWeek, endOfWeek);
+
+        long totalMinutes = weeklyRecords.stream()
+                .filter(a -> a.getStartTime() != null && a.getEndTime() != null)
+                .mapToLong(a -> java.time.Duration.between(a.getStartTime(), a.getEndTime()).toMinutes())
+                .sum();
+
+        long targetMinutes = 40 * 60;
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("records", weeklyRecords.stream()
+                .map(a -> AttendanceResponseDTO.builder()
+                        .attendanceId(a.getAttendanceId())
+                        .employeeId(a.getEmployee().getEmployeeId())
+                        .employeeName(a.getEmployee().getName())
+                        .attendanceDate(a.getAttendanceDate())
+                        .startTime(a.getStartTime())
+                        .endTime(a.getEndTime())
+                        .workStatus(a.getWorkStatus().getValue1())
+                        .build())
+                .toList());
+        result.put("totalMinutes", totalMinutes);
+        result.put("targetMinutes", targetMinutes);
+        result.put("totalHours", totalMinutes / 60);
+        result.put("targetHours", targetMinutes / 60);
+        return result;
+    }
 
 
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> getWeeklyWorkSummary(Long employeeId) {
+        // 이번 주 월요일 ~ 일요일 계산
+        LocalDate today = LocalDate.now();
+        LocalDate startOfWeek = today.with(DayOfWeek.MONDAY);
+        LocalDate endOfWeek = today.with(DayOfWeek.SUNDAY);
+
+        // 이번 주 출퇴근 데이터 조회
+        List<Attendance> weeklyRecords = attendanceRepository.findWeeklyRecords(employeeId, startOfWeek, endOfWeek);
+
+        // 총 근무시간(분 단위)
+        long totalMinutes = weeklyRecords.stream()
+                .filter(a -> a.getStartTime() != null && a.getEndTime() != null)
+                .mapToLong(a -> Duration.between(a.getStartTime(), a.getEndTime()).toMinutes())
+                .sum();
+
+        // 목표 근무시간 (기본 40시간)
+        long targetMinutes = 40 * 60;
+
+        // ✅ 프론트에서 필요한 형태로 변환
+        List<Map<String, Object>> recordList = weeklyRecords.stream()
+                .map(a -> {
+                    Map<String, Object> record = new HashMap<>();
+                    record.put("attendanceDate", a.getAttendanceDate());
+                    record.put("startTime", a.getStartTime());
+                    record.put("endTime", a.getEndTime());
+                    record.put("workStatus", a.getWorkStatus().getValue1());
+                    return record;
+                })
+                .toList();
+
+        // 응답 데이터 구성
+        Map<String, Object> result = new HashMap<>();
+        result.put("records", recordList); // ✅ 주간 상세 내역 포함
+        result.put("totalMinutes", totalMinutes);
+        result.put("targetMinutes", targetMinutes);
+        result.put("totalHours", totalMinutes / 60);
+        result.put("targetHours", targetMinutes / 60);
+
+        return result;
+    }
+
+
+    @Override
+    @Transactional
+    public String updateWorkStatus(Long employeeId, String statusCode) {
+        LocalDate today = LocalDate.now();
+
+        Attendance attendance = attendanceRepository
+                .findByEmployeeEmployeeIdAndAttendanceDate(employeeId, today)
+                .orElseThrow(() -> new ResourceNotFoundException("오늘 출근 기록이 존재하지 않습니다."));
+
+        String finalStatusValue = statusCode;
+
+        // 복귀: OUT_ON_BUSINESS 직전 "같은 Attendance"의 상태로 복원
+        if (WORK_STATUS_NORMAL.equals(statusCode)) {
+            //  오늘 출근건(history는 같은 attendance_id 기준으로만 조회)
+            List<AttendanceWorkHistory> histories =
+                    historyRepository.findByAttendanceAttendanceIdOrderByActionTimeDesc(attendance.getAttendanceId());
+
+            // histories[0] = OUT_ON_BUSINESS 이어야 정상. 그 이전 “비-외근 상태”를 찾는다.
+            finalStatusValue = histories.stream()
+                    .map(h -> h.getActionCode().getValue1())
+                    // 첫 번째 OUT_ON_BUSINESS는 건너뛰고
+                    .skip(1)
+                    // OUT_ON_BUSINESS가 아닌 첫 번째 상태(예: LATE, NORMAL 등)
+                    .filter(v -> !WORK_STATUS_OUT_ON_BUSINESS.equals(v))
+                    .findFirst()
+                    // 못 찾으면 NORMAL로 폴백
+                    .orElse(WORK_STATUS_NORMAL);
+        }
+
+        // 최종 상태 코드로 CommonCode 조회
+        CommonCode newStatus = commonCodeRepository
+                .findByCodeStartsWithAndKeywordExactMatchInValues("WS", finalStatusValue)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new AttendanceException("해당 근무 상태 코드를 찾을 수 없습니다."));
+
+        attendance.changeWorkStatus(newStatus);
+        attendanceRepository.save(attendance);
+
+        // 이력 기록
+        attendanceWorkHistoryService.recordHistory(attendance, attendance.getEmployee(), newStatus.getValue1());
+        return newStatus.getValue1();
+    }
     /**
      * 공통 코드 조회
      *
@@ -251,4 +383,47 @@ public class AttendanceServiceImpl implements AttendanceService {
             throw new EntityNotFoundException("공통 코드 조회 실패: " + codePrefix + ", " + value1);
         }
     }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> getAttendanceSummary(Long employeeId) {
+
+        // (1) 전체 근무일수
+        Long totalDays = attendanceRepository.countByEmployeeEmployeeId(employeeId);
+        if (totalDays == null) totalDays = 0L;
+
+        // (2) 전체 근무시간 (출근~퇴근 시간 합계)
+        List<Attendance> allRecords = attendanceRepository.findByEmployeeEmployeeId(employeeId);
+        Long totalMinutes = allRecords.stream()
+                .filter(a -> a.getStartTime() != null && a.getEndTime() != null)
+                .mapToLong(a -> java.time.Duration.between(a.getStartTime(), a.getEndTime()).toMinutes())
+                .sum();
+
+        Long totalHours = totalMinutes / 60;
+
+        // (3) 잔여 연차 (getAnnualLeave → 없으면 자동 생성)
+        AnnualLeave leave = annualLeaveService.getAnnualLeave(employeeId);
+        Long remainingLeave = 0L;
+        if (leave != null && leave.getRemainingDays() != null) {
+            remainingLeave = leave.getRemainingDays().longValue();
+        }
+
+        // (4) 이번 주 지각 횟수
+        LocalDate startOfWeek = LocalDate.now().with(java.time.DayOfWeek.MONDAY);
+        LocalDate endOfWeek = LocalDate.now().with(java.time.DayOfWeek.SUNDAY);
+        Long lateCount = attendanceRepository.countLatesThisWeek(employeeId, startOfWeek, endOfWeek);
+        if (lateCount == null) lateCount = 0L;
+
+        //  (5) 결과 맵 구성
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalDays", totalDays);
+        result.put("totalHours", totalHours); // 기존 유지
+        result.put("totalMinutes", totalMinutes); // 새로 추가
+        result.put("remainingLeave", remainingLeave);
+        result.put("lateCount", lateCount);
+
+        return result;
+    }
+
 }

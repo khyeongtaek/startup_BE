@@ -241,7 +241,8 @@ VALUES
     ('OT02', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false),
     ('OT03', '출처 모듈 : 사원', 'EMPLOYEE', '', '', 0, NULL, NOW(), NOW(), false),
     ('OT04', '출처 모듈 : 전자결재', 'APPROVAL', '', '', 0, NULL, NOW(), NOW(), false),
-    ('OT05', '출처 모듈 : 채팅 초대', 'TEAMCHATNOTI', '', '', 0, NULL, NOW(), NOW(), false);
+    ('OT05', '출처 모듈 : 채팅 초대', 'TEAMCHATNOTI', '', '', 0, NULL, NOW(), NOW(), false),
+    ('OT06', '출처 모듈 : 일정 초대', 'SCHEDULEINVITE', '', '', 0, NULL, NOW(), NOW(), false);
 /*
 * =============================================
 * Schedule Color (일정 색상)
@@ -299,7 +300,7 @@ VALUES
     ('SC02', '일정 카테고리 - 출장', 'BUSINESS_TRIP', '출장', NULL, 2, NULL, NOW(), NOW(), false),
     ('SC03', '일정 카테고리 - 휴가', 'VACATION', '휴가', NULL, 3, NULL, NOW(), NOW(), false),
     ('SC04', '일정 카테고리 - 프로젝트', 'PROJECT', '프로젝트', NULL, 4, NULL, NOW(), NOW(), false),
-    ('SC05', '일정 카테고리 - 기타', 'ETC', '기타 일정', NULL, 5, NULL, NOW(), NOW(), false);
+    ('SC05', '일정 카테고리 - 기타', 'ETC', '기타', NULL, 5, NULL, NOW(), NOW(), false);
 /*
 * =============================================
 * Participant Status (참여 상태)
@@ -312,9 +313,9 @@ VALUES
 INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
 VALUES
-    ('PS01', '참여 상태 - 참석', 'ATTEND', '참석', NULL, 1, NULL, NOW(), NOW(), false),
-    ('PS02', '참여 상태 - 거절', 'REJECT', '거절', NULL, 2, NULL, NOW(), NOW(), false),
-    ('PS03', '참여 상태 - 미응답', 'PENDING', '미응답', NULL, 3, NULL, NOW(), NOW(), false);
+    ('SP01', '참여 상태 - 참석', 'ATTEND', '참석', NULL, 1, NULL, NOW(), NOW(), false),
+    ('SP02', '참여 상태 - 거절', 'REJECT', '거절', NULL, 2, NULL, NOW(), NOW(), false),
+    ('SP03', '참여 상태 - 미응답', 'PENDING', '미응답', NULL, 3, NULL, NOW(), NOW(), false);
 
 
 /*
