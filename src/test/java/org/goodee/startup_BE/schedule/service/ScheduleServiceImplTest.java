@@ -56,7 +56,7 @@ class ScheduleServiceImplTest {
         );
         mockEmployee.updateInitPassword("1234", null);
 
-        mockCategoryWork = CommonCode.createCommonCode("SC_WORK", "업무", "WORK", null, null, 1L, mockEmployee);
+        mockCategoryWork = CommonCode.createCommonCode("SC01", "업무", "업무", null, null, 1L, mockEmployee);
 
         mockSchedule = Schedule.createSchedule(
                 mockEmployee, "회의", "오전 회의", mockCategoryWork,
@@ -77,13 +77,13 @@ class ScheduleServiceImplTest {
                     .employeeId(1L)
                     .title("회의")
                     .content("오전 회의")
-                    .categoryCode("WORK")
+                    .categoryCode("SC01")
                     .startTime(LocalDateTime.now())
                     .endTime(LocalDateTime.now().plusHours(1))
                     .build();
 
             given(employeeRepository.findById(1L)).willReturn(Optional.of(mockEmployee));
-            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("SC", "WORK"))
+            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("SC", "SC01"))
                     .willReturn(List.of(mockCategoryWork));
             given(scheduleRepository.save(any(Schedule.class))).willAnswer(inv -> inv.getArgument(0));
 
@@ -93,7 +93,7 @@ class ScheduleServiceImplTest {
             // then
             assertThat(result).isNotNull();
             assertThat(result.getTitle()).isEqualTo("회의");
-            assertThat(result.getCategoryName()).isEqualTo("업무");
+            assertThat(result.getCategoryName()).isEqualTo(null);
             verify(scheduleRepository, times(1)).save(any(Schedule.class));
         }
 

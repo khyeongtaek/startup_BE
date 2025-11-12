@@ -94,11 +94,14 @@ public class Schedule {
     }
 
 
-    public void update(String title, String content, LocalDateTime startTime, LocalDateTime endTime) {
+    public void update(String title, String content, LocalDateTime startTime, LocalDateTime endTime, CommonCode category) {
         this.title = title;
         this.content = content;
         this.startTime = startTime;
         this.endTime = endTime;
+        if (category != null) {
+            this.category = category;
+        }
         this.updatedAt = LocalDateTime.now();
     }
 

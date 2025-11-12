@@ -2,10 +2,12 @@ package org.goodee.startup_BE.attendance.service;
 
 import org.goodee.startup_BE.attendance.dto.AttendanceResponseDTO;
 import org.goodee.startup_BE.attendance.entity.Attendance;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 public interface AttendanceService {
 
@@ -24,7 +26,14 @@ public interface AttendanceService {
     // 관리자 전체 근태 조회
     List<AttendanceResponseDTO> getAllAttendances();
 
+    // 근무 상태 변경
+    String updateWorkStatus(Long employeeId, String statusCode);
 
+    // 주 근무 시간 조회
+     Map<String, Object> getWeeklyWorkSummary(Long employeeId);
+    //
+    Map<String, Object> getWeeklyWorkSummary(Long employeeId, LocalDate weekStart);
 
-
+    @Transactional(readOnly = true)
+    Map<String, Object> getAttendanceSummary(Long employeeId);
 }
