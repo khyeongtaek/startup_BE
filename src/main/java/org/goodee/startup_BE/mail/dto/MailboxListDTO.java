@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -30,4 +31,7 @@ public class MailboxListDTO {
 	
 	@Schema(description = "읽음 여부")
 	private Boolean isRead;
+	
+	@Schema(description = "수신자들")
+	private List<String> receivers;
 }

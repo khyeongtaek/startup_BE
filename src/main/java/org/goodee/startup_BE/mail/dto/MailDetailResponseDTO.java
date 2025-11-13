@@ -8,6 +8,7 @@ import org.goodee.startup_BE.mail.entity.Mail;
 import org.goodee.startup_BE.mail.entity.Mailbox;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 @NoArgsConstructor
@@ -15,7 +16,7 @@ import java.util.List;
 @Getter
 @Setter
 @Builder
-@ToString(exclude = "attachmentFiles")
+@ToString
 @Schema(name = "MailDetailResponseDTO", description = "메일 상세 응답 DTO")
 public class MailDetailResponseDTO {
 	@Schema(description = "메일 ID", example = "100")
@@ -77,10 +78,10 @@ public class MailDetailResponseDTO {
 		Mail mail, List<String> toList, List<String> ccList, List<String> bccList,
 		Mailbox mailbox, List<AttachmentFileResponseDTO> attachmentFiles
 	) {
-		List<String> safeTo  = (toList  == null) ? java.util.Collections.emptyList() : toList;
-		List<String> safeCc  = (ccList  == null) ? java.util.Collections.emptyList() : ccList;
-		List<String> safeBcc = (bccList == null) ? java.util.Collections.emptyList() : bccList;
-		List<AttachmentFileResponseDTO> safeFiles = (attachmentFiles == null) ? java.util.Collections.emptyList() : attachmentFiles;
+		List<String> safeTo  = (toList  == null) ? Collections.emptyList() : toList;
+		List<String> safeCc  = (ccList  == null) ? Collections.emptyList() : ccList;
+		List<String> safeBcc = (bccList == null) ? Collections.emptyList() : bccList;
+		List<AttachmentFileResponseDTO> safeFiles = (attachmentFiles == null) ? Collections.emptyList() : attachmentFiles;
 		
 		return MailDetailResponseDTO.builder()
 			       .mailId(mail.getMailId())
@@ -99,10 +100,10 @@ public class MailDetailResponseDTO {
 			       .isRead(mailbox.getIsRead())
 			       .deletedStatus(mailbox.getDeletedStatus())
 			       .attachments(safeFiles)
-			       .toCount(toList.size())
-			       .ccCount(ccList.size())
-			       .bccCount(bccList.size())
-			       .attachmentCount(attachmentFiles.size())
+			       .toCount(safeTo.size())
+			       .ccCount(safeCc.size())
+			       .bccCount(safeBcc.size())
+			       .attachmentCount(safeFiles.size())
 			       .build();
 	}
 }
