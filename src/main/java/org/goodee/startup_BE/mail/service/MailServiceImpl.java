@@ -237,72 +237,6 @@ public class MailServiceImpl implements MailService{
 		return MailSendResponseDTO.toDTO(mail, toCount, ccCount, bccCount, uploadFiles == null ? 0 : uploadFiles.size());
 	}
 	
-	
-	// 메일 수정
-	@Override
-	public MailSendResponseDTO updateMail(Long mailId, MailUpdateRequestDTO requestDTO, String username, List<MultipartFile> multipartFile) {
-		// 0. 수정 권한 확인 (메일 정보의 직원 ID 와 접속중인 사용자의 ID를 비교)
-		Employee employee = employeeRepository.findByUsername(username).orElseThrow(() -> new ResourceNotFoundException("직원이 존재하지 않습니다."));
-		Mail mail = mailRepository.findById(mailId).orElseThrow(() -> new ResourceNotFoundException("메일이 존재하지 않습니다."));
-		if(!mail.getEmployee().getEmployeeId().equals(employee.getEmployeeId())) {
-			throw new AccessDeniedException("수정 권한이 없습니다.");
-		}
-		
-		// 1. 분류 코드 가져오기
-		CommonCode toCode = firstOrNotFound(
-			commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(ReceiverType.PREFIX, ReceiverType.TO.name()),"TO 코드 없음"
-		);
-		CommonCode ccCode  = firstOrNotFound(
-			commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(ReceiverType.PREFIX, ReceiverType.CC.name()), "CC 코드 없음"
-		);
-		CommonCode bccCode = firstOrNotFound(
-			commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(ReceiverType.PREFIX, ReceiverType.BCC.name()), "BCC 코드 없음"
-		);
-		CommonCode ownerType = firstOrNotFound(
-			commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.MAIL.name()), "분류 코드가 존재하지 않습니다."
-		);
-		
-		// 2. 제목/ 본문 변경사항 업데이트
-		if(requestDTO.getTitle() != null) mail.updateTitle(requestDTO.getTitle());
-		if(requestDTO.getContent() != null) mail.updateContent(requestDTO.getContent());
-		
-		// 3. 수신자 변경사항 반영 (TO, CC, BCC)
-		List<MailReceiver> currentTo = mailReceiverRepository.findAllByMailAndType(mail, toCode);
-		List<MailReceiver> currentCc = mailReceiverRepository.findAllByMailAndType(mail, ccCode);
-		List<MailReceiver> currentBcc = mailReceiverRepository.findAllByMailAndType(mail, bccCode);
-		
-		receiverChange(mail, toCode, currentTo, requestDTO.getTo());
-		receiverChange(mail, ccCode, currentCc, requestDTO.getCc());
-		receiverChange(mail, bccCode, currentBcc, requestDTO.getBcc());
-		
-		// 4. 첨부 삭제 -> 추가
-		if (requestDTO.getDeleteAttachmentFileIds() != null && !requestDTO.getDeleteAttachmentFileIds().isEmpty()) {
-			for (Long id : requestDTO.getDeleteAttachmentFileIds()) {
-				if (id == null) continue;
-				attachmentFileService.deleteFile(id);
-			}
-		}
-		if (multipartFile != null && !multipartFile.isEmpty()) {
-			attachmentFileService.uploadFiles(multipartFile, ownerType.getCommonCodeId(), mail.getMailId());
-		}
-		
-		// 5. 최신 수신자 목록 재조회
-		List<String> toList  = mapEmails(mailReceiverRepository.findAllByMailAndType(mail, toCode));
-		List<String> ccList  = mapEmails(mailReceiverRepository.findAllByMailAndType(mail, ccCode));
-		List<String> bccList = mapEmails(mailReceiverRepository.findAllByMailAndType(mail, bccCode));
-		int attachmentCount = attachmentFileService
-			                      .listFiles(ownerType.getCommonCodeId(), mail.getMailId()).size();
-		
-		// 6. EML 생성
-		String emlPath = emlService.generate(mail, toList, ccList, bccList,
-			attachmentFileService.listFiles(ownerType.getCommonCodeId(), mail.getMailId()), // 최신 목록 전달
-			employee);
-		mail.updateEmlPath(emlPath);
-		
-		return MailSendResponseDTO.toDTO(mail, toList.size(), ccList.size(), bccList.size(), attachmentCount);
-	}
-	
-	
 	// 메일 상세 조회 및 읽음 처리
 	@Override
 	public MailDetailResponseDTO getMailDetail(Long mailId, String username, boolean isRead) {
@@ -408,17 +342,38 @@ public class MailServiceImpl implements MailService{
 		byte deleted = (byte) ("TRASH".equals(type) ? 1 : 0);
 		
 		Page<Mailbox> mailboxList = mailboxRepository
-			                       .findByEmployeeUsernameAndTypeIdValue1AndDeletedStatus(
-				                       username, boxType.toUpperCase(), deleted, pageable);
+			                            .findByEmployeeUsernameAndTypeIdValue1AndDeletedStatus(
+				                            username, boxType.toUpperCase(), deleted, pageable);
 		
-		return mailboxList.map(mb -> MailboxListDTO.builder()
-			                             .boxId(mb.getBoxId())
-			                             .mailId(mb.getMail().getMailId())
-			                             .senderName(mb.getMail().getEmployee().getName())
-			                             .title(mb.getMail().getTitle())
-			                             .receivedAt(mb.getMail().getSendAt())
-			                             .isRead(Boolean.TRUE.equals(mb.getIsRead()))
-			                             .build()
-			                      );
+		CommonCode toCode = commonCodeRepository
+			                    .findByCodeStartsWithAndKeywordExactMatchInValues(ReceiverType.PREFIX, ReceiverType.TO.name())
+			                    .get(0);
+		
+		return mailboxList.map(mb -> {
+			Mail mail = mb.getMail();
+			
+			CommonCode code = commonCodeRepository
+				                    .findByCodeStartsWithAndKeywordExactMatchInValues(
+					                    ReceiverType.PREFIX,
+					                    ReceiverType.TO.name()
+				                    )
+				                    .get(0);
+			
+			List<String> receivers = mailReceiverRepository
+				                         .findAllByMailAndType(mail, code)
+				                         .stream()
+				                         .map(r -> r.getEmail())
+				                         .toList();
+			
+			return MailboxListDTO.builder()
+				       .boxId(mb.getBoxId())
+				       .mailId(mail.getMailId())
+				       .senderName(mail.getEmployee().getName())
+				       .title(mail.getTitle())
+				       .receivedAt(mail.getSendAt())
+				       .isRead(Boolean.TRUE.equals(mb.getIsRead()))
+				       .receivers(receivers)
+				       .build();
+		});
 	}
 }
