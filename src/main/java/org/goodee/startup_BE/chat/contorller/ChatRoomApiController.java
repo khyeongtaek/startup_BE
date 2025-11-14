@@ -94,7 +94,7 @@ public class ChatRoomApiController {
     public ResponseEntity<Void> updateLastRead(
             Authentication authentication,
             @PathVariable Long roomId,
-            @RequestParam("lastMessageId") Long lastMessageId
+            @RequestParam(value = "lastMessageId", required = false) Long lastMessageId
     ) {
         String username = authentication.getName();
         chatService.updateLastReadMessageId(username, roomId, lastMessageId);
