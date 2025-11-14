@@ -46,7 +46,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
      * @param lastReadMessageId   마지막으로 읽은 메시지의 ID
      * @return 안 읽은 메시지 개수
      */
-    long countByChatRoomAndChatMessageIdGreaterThan(
+    long countByChatRoomAndChatMessageIdGreaterThanAndEmployeeIsNotNull(
             ChatRoom chatRoom,
             Long lastReadMessageId
     );
@@ -59,7 +59,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
      * @param joinedAt  사용자가 채팅방에 참여한 시각
      * @return 메시지 개수
      */
-    long countByChatRoomAndCreatedAtAfter(
+    long countByChatRoomAndCreatedAtAfterAndEmployeeIsNotNull(
             ChatRoom chatRoom,
             LocalDateTime joinedAt
     );

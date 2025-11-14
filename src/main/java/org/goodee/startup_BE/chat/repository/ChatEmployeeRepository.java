@@ -120,7 +120,7 @@ public interface ChatEmployeeRepository extends JpaRepository<ChatEmployee, Long
              FROM ChatMessage m
              WHERE m.chatRoom = ce.chatRoom
              AND m.chatMessageId > ce.lastReadMessage.chatMessageId
-             AND (m.employee IS NULL OR m.employee.employeeId <> :employeeId))
+             AND m.employee IS NOT NULL AND m.employee.employeeId <> :employeeId)
         ), 0)
         FROM ChatEmployee ce
         WHERE ce.employee.employeeId = :employeeId
@@ -128,5 +128,4 @@ public interface ChatEmployeeRepository extends JpaRepository<ChatEmployee, Long
     """)
     long sumTotalUnreadMessagesByEmployeeId(@Param("employeeId") Long employeeId);
 
-    Optional<Object> findByChatRoomChatRoomIdAndEmployeeUsername(Long chatRoomChatRoomId, String employeeUsername);
 }
