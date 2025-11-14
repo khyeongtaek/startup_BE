@@ -512,4 +512,23 @@ class ChatEmployeeRepositoryTest {
         // room2의 안 읽은 메시지 1개만 카운트됨
         assertThat(totalUnreadAfterLeft).isEqualTo(1);
     }
+
+    @Test
+    @DisplayName("Custom: findAllByChatRoomChatRoomId 테스트 (isLeft 무관)")
+    void findAllByChatRoomChatRoomIdTest() {
+        // given (@BeforeEach에서 user1, user2가 room1에 참여)
+        // user1이 room1을 나간(left) 상황을 추가합니다.
+        ce_user1_room1.leftChatRoom(); // ce_user1_room1의 isLeft = true
+        chatEmployeeRepository.save(ce_user1_room1);
+
+        // when
+        // isLeft 상태와 관계없이 room1의 모든 멤버를 조회합니다.
+        List<ChatEmployee> allMembersInRoom1 = chatEmployeeRepository.findAllByChatRoomChatRoomId(room1.getChatRoomId()); //
+
+        // then
+        // room1의 모든 멤버 (활성 + 나감)는 user1, user2여야 합니다.
+        // isLeft=false만 조회하는 findAllByChatRoomChatRoomIdAndIsLeftFalseTest와 달리, 2명이 조회되어야 합니다.
+        assertThat(allMembersInRoom1).hasSize(2);
+        assertThat(allMembersInRoom1).containsExactlyInAnyOrder(ce_user1_room1, ce_user2_room1);
+    }
 }
