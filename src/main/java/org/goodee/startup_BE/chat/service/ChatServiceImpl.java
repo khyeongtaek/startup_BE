@@ -387,6 +387,9 @@ public class ChatServiceImpl implements ChatService {
             return; // 이미 더 최신 메시지를 읽었으므로 갱신 안 함
         }
 
+        membership.updateLastReadMessage(finalMessageToRead);
+        chatEmployeeRepository.save(membership);
+
         // 읽음 브로드캐스트: 프론트는 해당 방의 메시지들 중 msg.id 이하의 미읽음 카운트만 감소
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
@@ -525,8 +528,10 @@ public class ChatServiceImpl implements ChatService {
                     listDto
             );
 
-            // 총 안 읽은 메시지 개수 전송
-            calculateAndSendTotalUnreadCount(recipient.getEmployeeId(), recipient.getUsername());
+            if (senderId == null || !recipient.getEmployeeId().equals(senderId)) {
+                // 총 안 읽은 메시지 개수 전송
+                calculateAndSendTotalUnreadCount(recipient.getEmployeeId(), recipient.getUsername());
+            }
         }
     }
 
