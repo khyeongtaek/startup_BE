@@ -8,7 +8,7 @@ import java.util.List;
 public interface CommonCodeService {
 
     // 전체 부서 조회
-    List<CommonCode> getAllDepartments();
+    List<CommonCodeResponseDTO> getAllDepartments();
 
     // 전체 재직상태 조회
     List<CommonCodeResponseDTO> getAllEmployeeStatus();

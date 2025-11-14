@@ -46,7 +46,7 @@ class CommonCodeServiceImplTest {
 
     // when
     // 테스트할 서비스 메서드 호출
-    List<CommonCode> result = commonCodeService.getAllDepartments();
+    List<CommonCodeResponseDTO> result = commonCodeService.getAllDepartments();
 
     // then
     // 결과 검증
