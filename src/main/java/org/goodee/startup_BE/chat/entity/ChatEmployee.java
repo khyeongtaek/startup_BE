@@ -91,6 +91,7 @@ public class ChatEmployee {
     // 채팅방 다시 참여
     public void rejoinChatRoom() {
         this.isLeft = false;
+        this.joinedAt = LocalDateTime.now();
     }
 
     // 마지막 읽은 메시지 업데이트
