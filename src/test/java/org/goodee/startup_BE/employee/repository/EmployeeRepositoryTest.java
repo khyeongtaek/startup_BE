@@ -256,6 +256,34 @@ class EmployeeRepositoryTest {
     }
 
     @Test
+    @DisplayName("Custom: existsByUsername 테스트 - 성공 (존재함)")
+    void existsByUsernameSuccessTest() {
+        // given
+        employeeRepository.save(
+                createPersistableEmployee("user789", "user789@test.com", roleUser, deptDev, posJunior)
+        );
+
+        // when
+        Boolean exists = employeeRepository.existsByUsername("user789");
+
+        // then
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    @DisplayName("Custom: existsByUsername 테스트 - 실패 (존재하지 않음)")
+    void existsByUsernameFailureTest() {
+        // given
+        // "nonexistentUser"는 저장하지 않음
+
+        // when
+        Boolean exists = employeeRepository.existsByUsername("nonexistentUser");
+
+        // then
+        assertThat(exists).isFalse();
+    }
+
+    @Test
     @DisplayName("Custom: findByDepartmentCommonCodeIdOrderByPositionSortOrderDesc 테스트")
     void findByDepartmentAndOrderByPositionTest() {
         // given
