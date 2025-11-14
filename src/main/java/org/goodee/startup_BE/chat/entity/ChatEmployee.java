@@ -88,6 +88,11 @@ public class ChatEmployee {
         this.isLeft = true;
     }
 
+    // 채팅방 다시 참여
+    public void rejoinChatRoom() {
+        this.isLeft = false;
+    }
+
     // 마지막 읽은 메시지 업데이트
     public void updateLastReadMessage(ChatMessage lastReadMessage) {
         this.lastReadMessage = lastReadMessage;
