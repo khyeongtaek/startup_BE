@@ -244,22 +244,7 @@ VALUES
     ('OT05', '출처 모듈 : 채팅 초대', 'TEAMCHATNOTI', '', '', 0, NULL, NOW(), NOW(), false),
     ('OT06', '출처 모듈 : 일정 초대', 'SCHEDULEINVITE', '', '', 0, NULL, NOW(), NOW(), false);
 /*
-* =============================================
-* Schedule Color (일정 색상)
-* code: CL + 번호 (Color)
-* value1: 색상 코드 (영문)
-* value2: HEX 코드
-* =============================================
-*/
 
-INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
-VALUES
-    ('CL01', '색상 코드 - 파란색', 'BLUE', '#3498db', NULL, 1, NULL, NOW(), NOW(), false),
-    ('CL02', '색상 코드 - 빨간색', 'RED', '#e74c3c', NULL, 2, NULL, NOW(), NOW(), false),
-    ('CL03', '색상 코드 - 초록색', 'GREEN', '#27ae60', NULL, 3, NULL, NOW(), NOW(), false),
-    ('CL04', '색상 코드 - 노란색', 'YELLOW', '#f1c40f', NULL, 4, NULL, NOW(), NOW(), false),
-    ('CL05', '색상 코드 - 회색', 'GRAY', '#7f8c8d', NULL, 5, NULL, NOW(), NOW(), false);
 
 
 
@@ -665,5 +650,23 @@ VALUES
 INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
 VALUES
-    ('AT1', '결재 양식', '휴가 신청서', 'VACATION', '/forms/vacation', 1, NULL, NOW(), NOW(), false),
-    ('AT2', '결재 양식', '출장 계획서', 'BUSINESS_TRIP', '/forms/biztrip', 2, NULL, NOW(), NOW(), false);
+    ('AT01', '결재 양식', '휴가 신청서', 'VACATION', '/forms/vacation', 1, NULL, NOW(), NOW(), false),
+    ('AT02', '결재 양식', '출장 신청서', 'BUSINESS_TRIP', '/forms/biztrip', 2, NULL, NOW(), NOW(), false);
+
+
+/*
+* =============================================
+* Vacation Type (휴가 종류)
+* code: VT + 번호 (Vacation Type)
+* value1: 상태 코드 (영문)
+* value2: 상태 이름 (한글)
+* =============================================
+*/
+
+INSERT INTO tbl_common_code
+(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+VALUES
+    ('VT1', '휴가 종류 - 연차', 'ANNUAL', '연차', NULL, 1, NULL, NOW(), NOW(), false),
+    ('VT2', '휴가 종류 - 오전반차', 'MORNING_HALF', '오전 반차', NULL, 2, NULL, NOW(), NOW(), false),
+    ('VT3', '휴가 종류 - 오후반차', 'AFTERNOON_HALF', '오후 반차', NULL, 3, NULL, NOW(), NOW(), false);
+
