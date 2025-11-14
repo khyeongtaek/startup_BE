@@ -496,12 +496,12 @@ public class ChatServiceImpl implements ChatService {
             long unreadCount = 0;
             if (membership.getLastReadMessage() != null &&
                 membership.getLastReadMessage().getCreatedAt().isAfter(membership.getJoinedAt())) {
-                unreadCount = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(
+                unreadCount = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThanAndEmployeeIsNotNull(
                         room,
                         membership.getLastReadMessage().getChatMessageId()
                 );
             } else {
-                unreadCount = chatMessageRepository.countByChatRoomAndCreatedAtAfter(room, membership.getJoinedAt());
+                unreadCount = chatMessageRepository.countByChatRoomAndCreatedAtAfterAndEmployeeIsNotNull(room, membership.getJoinedAt());
             }
 
             // 3. 서비스 로직을 DTO 팩토리 메소드 호출로 대체 (하드코딩 제거)
@@ -568,12 +568,12 @@ public class ChatServiceImpl implements ChatService {
             long unreadCount = 0;
             if (participant.getLastReadMessage() != null &&
                 participant.getLastReadMessage().getCreatedAt().isAfter(participant.getJoinedAt())) {
-                unreadCount = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(
+                unreadCount = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThanAndEmployeeIsNotNull(
                         room,
                         participant.getLastReadMessage().getChatMessageId()
                 );
             } else {
-                unreadCount = chatMessageRepository.countByChatRoomAndCreatedAtAfter(room, participant.getJoinedAt());
+                unreadCount = chatMessageRepository.countByChatRoomAndCreatedAtAfterAndEmployeeIsNotNull(room, participant.getJoinedAt());
             }
 
             ChatRoomListResponseDTO listDto;
@@ -656,12 +656,12 @@ public class ChatServiceImpl implements ChatService {
         long unreadCount = 0;
         if (membership.getLastReadMessage() != null &&
             membership.getLastReadMessage().getCreatedAt().isAfter(membership.getJoinedAt())) {
-            unreadCount = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(
+            unreadCount = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThanAndEmployeeIsNotNull(
                     room,
                     membership.getLastReadMessage().getChatMessageId()
             );
         } else {
-            unreadCount = chatMessageRepository.countByChatRoomAndCreatedAtAfter(room, membership.getJoinedAt());
+            unreadCount = chatMessageRepository.countByChatRoomAndCreatedAtAfterAndEmployeeIsNotNull(room, membership.getJoinedAt());
         }
 
         // findRoomsByUsername와 동일한 DTO 변환 로직 수행
