@@ -29,11 +29,11 @@ public class CommonCodeController {
           @ApiResponse(responseCode = "200", description = "부서 목록 조회 성공")
   })
   @GetMapping("/department")
-  public ResponseEntity<APIResponseDTO<List<CommonCode>>> getDepartments() {
+  public ResponseEntity<APIResponseDTO<List<CommonCodeResponseDTO>>> getDepartments() {
 
-    List<CommonCode> list = commonCodeService.getAllDepartments();
+    List<CommonCodeResponseDTO> list = commonCodeService.getAllDepartments();
 
-    return ResponseEntity.ok(APIResponseDTO.<List<CommonCode>>builder()
+    return ResponseEntity.ok(APIResponseDTO.<List<CommonCodeResponseDTO>>builder()
             .message("부서 목록 조회 성공")
             .data(list)
             .build());

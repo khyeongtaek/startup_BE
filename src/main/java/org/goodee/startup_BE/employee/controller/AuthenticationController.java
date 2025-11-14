@@ -18,12 +18,13 @@ import org.goodee.startup_BE.employee.dto.EmployeePWChangeRequestDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeRequestDTO;
 import org.goodee.startup_BE.employee.dto.EmployeeResponseDTO;
 import org.goodee.startup_BE.employee.service.AuthenticationService;
-import org.goodee.startup_BE.employee.validation.EmployeeValidationGroup;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -37,6 +38,7 @@ public class AuthenticationController {
 
     // 회원가입
     @PostMapping("/signup")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "직원 등록 (회원가입)", description = "관리자가 새로운 직원을 등록")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "직원 등록 성공",
@@ -52,6 +54,18 @@ public class AuthenticationController {
     ) {
         return ResponseEntity.ok(
                 authenticationService.signup(authentication, employeeRequestDTO));
+    }
+
+    @PostMapping("/synchr")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<APIResponseDTO<Map<String, Object>>> syncHR(
+            @Parameter(hidden = true) Authentication authentication,
+            @RequestParam("multipartFile") MultipartFile multipartFile
+    ) {
+        return ResponseEntity.ok(APIResponseDTO.<Map<String, Object>>builder()
+                .message("인사정보 연동 성공")
+                .data(authenticationService.syncHR(authentication, multipartFile))
+                .build());
     }
 
     // 로그인

@@ -18,8 +18,12 @@ public class CommonCodeServiceImpl implements CommonCodeService {
   private final CommonCodeRepository commonCodeRepository;
 
   @Override
-  public List<CommonCode>  getAllDepartments() {
-    return commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse("DP");
+  public List<CommonCodeResponseDTO>  getAllDepartments() {
+    return commonCodeRepository
+            .findByCodeStartsWithAndIsDeletedFalse("DP")
+            .stream()
+            .map(CommonCodeResponseDTO::toDTO)
+            .toList();
   }
 
   @Override
