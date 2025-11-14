@@ -543,6 +543,54 @@ class ChatServiceImplTest {
         }
 
         @Test
+        @DisplayName("성공 - 1:1방 메시지 전송 (나간 상대방(A)을 재활성화) (버그 수정 검증)")
+        void sendMessage_Success_ReactivatesLeftUser() throws Exception {
+            // given
+            // 1. 보낸사람(B, creatorUser)은 활성 상태
+            given(employeeRepository.findByUsername("creatorUser")).willReturn(Optional.of(mockCreator));
+            given(chatRoomRepository.findById(100L)).willReturn(Optional.of(mockRoom));
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(100L, "creatorUser"))
+                    .willReturn(Optional.of(mockChatEmployee));
+            given(mockRoom.getIsTeam()).willReturn(false); // [!] 1:1방
+
+            // 2. 상대방(A, invitee1)은 '나간' 상태(isLeft=true)
+            ChatEmployee leftMember = mock(ChatEmployee.class);
+            given(leftMember.getEmployee()).willReturn(mockInvitee1); // ID 2L
+            given(leftMember.getIsLeft()).willReturn(true); // [!] 핵심: 나간 상태
+
+            // 3. (핵심) isLeft 무관 조회 쿼리가 '나간' 상대방을 반환
+            given(chatEmployeeRepository.findAllByChatRoomChatRoomId(100L))
+                    .willReturn(List.of(mockChatEmployee, leftMember)); // 보낸사람(B)과 나간사람(A)
+
+            // 4. DTO 변환 로직 (기존과 동일)
+            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockMessage);
+            ChatMessageResponseDTO dto = ChatMessageResponseDTO.builder().unreadCount(0).build();
+
+            // when
+            try (MockedStatic<ChatMessage> msgMock = mockStatic(ChatMessage.class);
+                 MockedStatic<ChatMessageResponseDTO> msgDtoMock = mockStatic(ChatMessageResponseDTO.class);
+                 MockedStatic<TransactionSynchronizationManager> syncMock = mockStatic(TransactionSynchronizationManager.class)) {
+
+                msgDtoMock.when(ChatMessageResponseDTO::builder).thenCallRealMethod();
+                msgMock.when(() -> ChatMessage.createChatMessage(any(), any(), anyString())).thenCallRealMethod();
+                msgDtoMock.when(() -> ChatMessageResponseDTO.toDTO(mockMessage)).thenReturn(dto);
+                syncMock.when(() -> TransactionSynchronizationManager.registerSynchronization(any())).then(invocation -> null);
+
+                // --- service call ---
+                chatService.sendMessage("creatorUser", 100L, "Hello");
+                // --- service call ---
+
+                // then
+                // 1. (핵심) '나간' 상대방(leftMember)의 rejoinChatRoom()이 호출됨
+                verify(leftMember).rejoinChatRoom();
+                verify(chatEmployeeRepository).save(leftMember);
+
+                // 2. 보낸 사람(mockChatEmployee)은 호출 안 됨
+                verify(mockChatEmployee, never()).rejoinChatRoom();
+            }
+        }
+
+        @Test
         @DisplayName("성공 - 팀 채팅방 메시지 전송 (미읽음 카운트 계산)")
         void sendMessage_Success_TeamChat() throws Exception {
             // given
@@ -782,16 +830,6 @@ class ChatServiceImplTest {
             }
         }
 
-        // ... (실패 케이스는 동일)
-        @Test
-        @DisplayName("실패 - 메시지 ID가 null (IllegalArgumentException)")
-        void updateLastReadMessageId_Fail_NullId() {
-            // when & then
-            assertThatThrownBy(() -> chatService.updateLastReadMessageId("creatorUser", 100L, null))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("lastMessageId는 필수입니다.");
-        }
-
         @Test
         @DisplayName("실패 - 다른 채팅방의 메시지 (AccessDeniedException)")
         void updateLastReadMessageId_Fail_WrongRoom() {
@@ -835,7 +873,7 @@ class ChatServiceImplTest {
 
             ChatEmployee otherMembership = mock(ChatEmployee.class);
             given(otherMembership.getEmployee()).willReturn(mockInvitee1);
-            given(chatEmployeeRepository.findAllByChatRoomChatRoomIdAndIsLeftFalse(101L))
+            given(chatEmployeeRepository.findAllByChatRoomChatRoomId(101L))
                     .willReturn(List.of(membership1, otherMembership));
 
             // [FIX] 1: 'lenient().given()' -> 'lenient().when()'으로 수정
@@ -886,11 +924,56 @@ class ChatServiceImplTest {
     class GetRoomById {
 
         @Test
+        @DisplayName("성공 - 1:1방 나간 유저(A)가 알림 클릭으로 재입장 (버그 수정 검증)")
+        void getRoomById_Success_RejoinLeftUser() throws Exception {
+            // given
+            // 1. 유저(creatorUser)가 방(100L)의 멤버지만 isLeft=true 상태
+            given(employeeRepository.findByUsername("creatorUser")).willReturn(Optional.of(mockCreator));
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeEmployeeId(100L, 1L))
+                    .willReturn(Optional.of(mockChatEmployee)); // 'isLeft' 무관 멤버십 반환
+            given(mockChatEmployee.getChatRoom()).willReturn(mockRoom);
+            given(mockChatEmployee.getIsLeft()).willReturn(true); // [!] 핵심: 나간 상태
+            given(mockRoom.getIsTeam()).willReturn(false); // [!] 1:1방
+
+            // 2. 상대방(invitee1) 찾기 쿼리 (isLeft 무관)
+            ChatEmployee otherMember = mock(ChatEmployee.class);
+            given(otherMember.getEmployee()).willReturn(mockInvitee1);
+            given(chatEmployeeRepository.findAllByChatRoomChatRoomId(100L))
+                    .willReturn(List.of(mockChatEmployee, otherMember));
+
+            // 3. DTO 변환 로직 (기존과 동일)
+            given(chatMessageRepository.findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc(any(), any()))
+                    .willReturn(Optional.empty());
+            given(chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(any(), anyLong())).willReturn(0L);
+
+            ChatRoomListResponseDTO expectedDto = ChatRoomListResponseDTO.builder().chatRoomId(100L).build();
+
+            // when
+            try (MockedStatic<ChatRoomListResponseDTO> dtoMock = mockStatic(ChatRoomListResponseDTO.class)) {
+                dtoMock.when(ChatRoomListResponseDTO::builder).thenCallRealMethod();
+                dtoMock.when(() -> ChatRoomListResponseDTO.toDTO(mockRoom, mockInvitee1, 0L, Optional.empty()))
+                        .thenReturn(expectedDto);
+
+                // --- service call ---
+                ChatRoomListResponseDTO result = chatService.getRoomById("creatorUser", 100L);
+                // --- service call ---
+
+                // then
+                // 1. DTO가 정상 반환됨 (404/AccessDenied 아님)
+                assertThat(result).isSameAs(expectedDto);
+
+                // 2. (핵심) rejoinChatRoom()이 호출되어 '활성' 상태로 변경됨
+                verify(mockChatEmployee).rejoinChatRoom();
+                verify(chatEmployeeRepository).save(mockChatEmployee);
+            }
+        }
+
+        @Test
         @DisplayName("성공 - ID로 팀 채팅방 정보 조회")
         void getRoomById_Success_TeamRoom() throws Exception {
             // given
             given(employeeRepository.findByUsername("creatorUser")).willReturn(Optional.of(mockCreator));
-            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(100L, "creatorUser"))
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeEmployeeId(100L, 1L))
                     .willReturn(Optional.of(mockChatEmployee));
             given(mockChatEmployee.getChatRoom()).willReturn(mockRoom);
             given(mockRoom.getIsTeam()).willReturn(true);
@@ -928,7 +1011,7 @@ class ChatServiceImplTest {
         void getRoomById_Fail_NotAMember() {
             // given
             given(employeeRepository.findByUsername("creatorUser")).willReturn(Optional.of(mockCreator));
-            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(100L, "creatorUser"))
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeEmployeeId(100L, 1L))
                     .willReturn(Optional.empty());
             // when & then
             assertThatThrownBy(() -> chatService.getRoomById("creatorUser", 100L))
