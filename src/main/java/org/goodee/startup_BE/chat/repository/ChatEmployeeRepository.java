@@ -32,6 +32,15 @@ public interface ChatEmployeeRepository extends JpaRepository<ChatEmployee, Long
     List<ChatEmployee> findAllByChatRoomChatRoomIdAndIsLeftFalse(Long roomId);
 
     /**
+     * 특정 채팅방의 모든 (isLeft 무관) 멤버 정보를 조회합니다.
+     * 1:1 채팅방에서 '나간' 상대방을 찾거나 재활성화할 때 사용됩니다.
+     *
+     * @param roomId 채팅방 ID
+     * @return ChatEmployee 목록
+     */
+    List<ChatEmployee> findAllByChatRoomChatRoomId(Long roomId);
+
+    /**
      * 특정 채팅방과 특정 사원ID 참여 정보 조회
      * 권한 확인, 상태 업데이트 등에 사용됩니다.
      *
@@ -118,4 +127,6 @@ public interface ChatEmployeeRepository extends JpaRepository<ChatEmployee, Long
         AND ce.isLeft = false
     """)
     long sumTotalUnreadMessagesByEmployeeId(@Param("employeeId") Long employeeId);
+
+    Optional<Object> findByChatRoomChatRoomIdAndEmployeeUsername(Long chatRoomChatRoomId, String employeeUsername);
 }
