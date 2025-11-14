@@ -221,12 +221,8 @@ public class ScheduleServiceImpl implements  ScheduleService{
                         .content(content)
                         .build();
 
-                //  ChatServiceImpl과 동일하게 즉시 알림 생성
                 notificationService.create(notificationRequestDTO);
             }
-
-            log.info(" 일정 초대 및 알림 전송 완료 (scheduleId={}, recipients={})",
-                    scheduleId, newInvitees.size());
         }
     }
 

@@ -42,7 +42,7 @@ public class ScheduleParticipantResponseDTO {
                 .scheduleId(scheduleParticipant.getSchedule().getScheduleId())
                 .participantEmployeeId(scheduleParticipant.getParticipant().getEmployeeId())
                 .participantName(scheduleParticipant.getParticipant().getName())
-                .participantStatusName(scheduleParticipant.getParticipantStatus().getCodeDescription())
+                .participantStatusName(scheduleParticipant.getParticipantStatus().getValue2())
                 .createdAt(scheduleParticipant.getCreatedAt())
                 .updatedAt(scheduleParticipant.getUpdatedAt())
                 .build();
