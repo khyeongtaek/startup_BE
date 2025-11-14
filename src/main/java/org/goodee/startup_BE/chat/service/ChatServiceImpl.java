@@ -81,6 +81,48 @@ public class ChatServiceImpl implements ChatService {
         // 팀 채팅방 여부 ( invitees.size() == 0이면 false = 1:1 채팅방, invitees.size() >= 1이면 true = 팀 채팅방)
         boolean isTeamChat = invitees.size() >= 2; // 초대 대상이 2명 이상이면 팀방
 
+        if (!isTeamChat && invitees.size() == 1) {
+            Employee invitee = invitees.get(0); // 1:1 채팅의 상대방
+
+            Optional<ChatRoom> existingRoomOpt = chatRoomRepository.findExistingOneOnOneRoom(creator.getEmployeeId(), invitee.getEmployeeId());
+
+            if (existingRoomOpt.isPresent()) {
+                ChatRoom existingRoom = existingRoomOpt.get();
+                Long existingRoomId = existingRoom.getChatRoomId();
+
+                // 두 참가자의 ChatEmployee 정보를 모두 가져와서 재활성화
+                List<ChatEmployee> members = chatEmployeeRepository.findAllByChatRoomChatRoomId(existingRoomId);
+                ChatMessage lastMessageForNotify = null;
+
+                for (ChatEmployee member : members) {
+                    if (Boolean.TRUE.equals(member.getIsLeft())) {
+                        member.rejoinChatRoom(); // isLeft = false, joinedAt = now()
+                        chatEmployeeRepository.save(member);
+                    }
+                    // 알림에 사용할 마지막 메시지를 찾기 위해
+                    lastMessageForNotify = member.getLastReadMessage();
+                }
+
+                // 프론트엔드가 이 방으로 이동할 수 있도록 DTO 반환
+                ChatRoomResponseDTO roomDTO = ChatRoomResponseDTO.toDTO(existingRoom);
+
+                // 두 참가자에게 기존 방이 재활성화되었음을 알림 (채팅 목록 갱신)
+                // (findRoomsByUsername의 로직과 유사하게 DTO를 만들어 전송)
+                final ChatMessage finalLastMessage = lastMessageForNotify;
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        // notifyParticipantsOfNewMessage를 직접 호출하기보다,
+                        // createRoom의 응답을 받은 프론트가 해당 방으로 이동할 것을 기대함.
+                        // 다만, 상대방(invitee)의 목록 갱신을 위해 알림을 보냄.
+                        notifyParticipantsOfNewMessage(existingRoom, finalLastMessage, creator.getEmployeeId());
+                    }
+                });
+
+                return roomDTO; // 새 방을 만들지 않고 기존 방 DTO를 반환
+            }
+        }
+
         // chatRoom에 저장
         ChatRoom chatRoom = ChatRoom.createChatRoom(creator, roomName, isTeamChat);
         ChatRoom savedChatRoom = chatRoomRepository.save(chatRoom);
@@ -171,32 +213,58 @@ public class ChatServiceImpl implements ChatService {
             throw new EntityNotFoundException("초대 대상 중 존재하지 않는 사원 ID가 있습니다.");
         }
 
-        // 3) 이미 멤버인 인원 제외
-        Set<Long> existing = new HashSet<>(chatEmployeeRepository.findActiveEmployeeIdsByRoomId(chatRoomId));
-        List<Employee> newInvitees = candidates.stream()
-                .filter(e -> !existing.contains(e.getEmployeeId()))
-                .toList();
-        if (newInvitees.isEmpty()) return;
+        Map<Long, ChatEmployee> existingMembersMap = chatEmployeeRepository
+                .findAllByChatRoomChatRoomId(chatRoomId)
+                .stream()
+                .collect(Collectors.toMap(ce -> ce.getEmployee().getEmployeeId(), ce -> ce));
+
+        List<Employee> newInvitees = new ArrayList<>();  // 진짜 새로운 사원
+        List<ChatEmployee> rejoiningMembers = new ArrayList<>();  // 재참여 사원
+
+        for (Employee candidate : candidates) {
+            ChatEmployee existingMember = existingMembersMap.get(candidate.getEmployeeId());
+
+            if (existingMember == null) {
+                // 새로운 초대
+                newInvitees.add(candidate);
+            } else if (Boolean.TRUE.equals(existingMember.getIsLeft())) {
+                // 재 참여
+                existingMember.rejoinChatRoom();
+                rejoiningMembers.add(existingMember);
+            }
+            // 이미 방에 있는 사원이라 자동으로 걸러짐
+        }
+
+        // 초대할 대상이 아무도 없으면 종료
+        if (newInvitees.isEmpty() && rejoiningMembers.isEmpty()) return;
+
 
         // 4) 1:1 → 팀 채팅방 변경
         if (Boolean.FALSE.equals(room.getIsTeam()) && !newInvitees.isEmpty()) {
             room.updateToTeamRoom();
         }
 
-        // 5) 시스템 메시지 + 멤버 추가
-        String names = newInvitees.stream().map(Employee::getName).collect(Collectors.joining(", "));
+        // 5) 시스템 메시지 + (신규 + 재 참여 모두 포함)
+        List<Employee> allAffectedInvitees = new ArrayList<>(newInvitees);
+        allAffectedInvitees.addAll(rejoiningMembers.stream().map(ChatEmployee::getEmployee).toList());
+
+        String names = allAffectedInvitees.stream().map(Employee::getName).collect(Collectors.joining(", "));
         ChatMessage systemMsg = chatMessageRepository.save(
                 ChatMessage.createChatMessage(room, null, inviter.getName() + "님이 " + names + "님을 초대했습니다.")
         );
 
-        List<ChatEmployee> links = newInvitees.stream()
+        List<ChatEmployee> newLinks = newInvitees.stream()
                 .map(emp -> ChatEmployee.createChatEmployee(emp, room, room.getName(), systemMsg))
                 .toList();
-        chatEmployeeRepository.saveAll(links);
+
+        chatEmployeeRepository.saveAll(newLinks);
+        chatEmployeeRepository.saveAll(rejoiningMembers);
 
         Long finalRoomId = room.getChatRoomId();
 
+
         // 6) 커밋 후 알림
+        List<Employee> notificationTargets = allAffectedInvitees;
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
@@ -212,7 +280,7 @@ public class ChatServiceImpl implements ChatService {
                             .orElseThrow(() -> new EntityNotFoundException("채팅 초대 CommonCode 없음"))
                             .getCommonCodeId();
 
-                    for (Employee target : newInvitees) {
+                    for (Employee target : notificationTargets) {
                         notificationService.create(
                                 NotificationRequestDTO.builder()
                                         .employeeId(target.getEmployeeId())
@@ -426,7 +494,8 @@ public class ChatServiceImpl implements ChatService {
                     .findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc(room, membership.getJoinedAt());
 
             long unreadCount = 0;
-            if (membership.getLastReadMessage() != null) {
+            if (membership.getLastReadMessage() != null &&
+                membership.getLastReadMessage().getCreatedAt().isAfter(membership.getJoinedAt())) {
                 unreadCount = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(
                         room,
                         membership.getLastReadMessage().getChatMessageId()
@@ -496,10 +565,16 @@ public class ChatServiceImpl implements ChatService {
             Employee recipient = participant.getEmployee();
 
             // 채팅방 목록 DTO
-            long unreadCount = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(
-                    room,
-                    participant.getLastReadMessage().getChatMessageId()
-            );
+            long unreadCount = 0;
+            if (participant.getLastReadMessage() != null &&
+                participant.getLastReadMessage().getCreatedAt().isAfter(participant.getJoinedAt())) {
+                unreadCount = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(
+                        room,
+                        participant.getLastReadMessage().getChatMessageId()
+                );
+            } else {
+                unreadCount = chatMessageRepository.countByChatRoomAndCreatedAtAfter(room, participant.getJoinedAt());
+            }
 
             ChatRoomListResponseDTO listDto;
             if (Boolean.FALSE.equals(room.getIsTeam())) {
@@ -579,7 +654,8 @@ public class ChatServiceImpl implements ChatService {
 
         // findRoomsByUsername와 동일한 로직 수행 (안 읽은 개수)
         long unreadCount = 0;
-        if (membership.getLastReadMessage() != null) {
+        if (membership.getLastReadMessage() != null &&
+            membership.getLastReadMessage().getCreatedAt().isAfter(membership.getJoinedAt())) {
             unreadCount = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(
                     room,
                     membership.getLastReadMessage().getChatMessageId()
