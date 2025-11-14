@@ -291,6 +291,19 @@ public class ChatServiceImpl implements ChatService {
                 .findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(roomId, senderUsername)
                 .orElseThrow(() -> new AccessDeniedException("채팅방 멤버가 아니거나 이미 나간 사용자입니다."));
 
+        if (Boolean.FALSE.equals(room.getIsTeam())) {
+            // 나간 사용자를 포함하여 모든 멤버를 조회합니다.
+            List<ChatEmployee> allMembers = chatEmployeeRepository.findAllByChatRoomChatRoomId(roomId);
+
+            for (ChatEmployee member : allMembers) {
+                // 상대방이 나간 상태라면
+                if (!member.getEmployee().getEmployeeId().equals(sender.getEmployeeId()) && Boolean.TRUE.equals(member.getIsLeft())) {
+                    member.rejoinChatRoom();
+                    chatEmployeeRepository.save(member);
+                }
+            }
+        }
+
         ChatMessage message = chatMessageRepository.save(
                 ChatMessage.createChatMessage(room, sender, content.trim())
         );
@@ -343,10 +356,6 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public void updateLastReadMessageId(String username, Long roomId, Long lastMessageId) {
-        if (lastMessageId == null) {
-            throw new IllegalArgumentException("lastMessageId는 필수입니다.");
-        }
-
         Employee reader = employeeRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("존재하지 않는 사원 입니다"));
 
@@ -354,15 +363,29 @@ public class ChatServiceImpl implements ChatService {
                 .findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(roomId, reader.getUsername())
                 .orElseThrow(() -> new AccessDeniedException("채팅방 멤버가 아니거나 이미 나간 사용자입니다."));
 
-        ChatMessage message = chatMessageRepository.findById(lastMessageId)
-                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 메시지입니다."));
+        ChatMessage finalMessageToRead;
 
-        if (!Objects.equals(message.getChatRoom().getChatRoomId(), roomId)) {
-            throw new AccessDeniedException("해당 채팅방의 메시지가 아닙니다.");
+        if (lastMessageId == null) {
+            finalMessageToRead = chatMessageRepository
+                    .findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc(
+                            membership.getChatRoom(),
+                            membership.getJoinedAt()
+                    )
+                    .orElse(null);
+        } else {
+            finalMessageToRead = chatMessageRepository.findById(lastMessageId)
+                    .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 메시지입니다."));
+
+            if (!Objects.equals(finalMessageToRead.getChatRoom().getChatRoomId(), roomId)) {
+                throw new AccessDeniedException("해당 채팅방의 메시지가 아닙니다.");
+            }
         }
+        if (finalMessageToRead == null) return;
 
-        membership.updateLastReadMessage(message);
-        chatEmployeeRepository.save(membership);
+        if (membership.getLastReadMessage() != null &&
+                membership.getLastReadMessage().getCreatedAt().isAfter(finalMessageToRead.getCreatedAt())) {
+            return; // 이미 더 최신 메시지를 읽었으므로 갱신 안 함
+        }
 
         // 읽음 브로드캐스트: 프론트는 해당 방의 메시지들 중 msg.id 이하의 미읽음 카운트만 감소
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -370,7 +393,7 @@ public class ChatServiceImpl implements ChatService {
             public void afterCommit() {
                 simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + roomId + "/reads",
                         Map.of("lastMessageId", membership.getEmployee().getEmployeeId(),
-                                "readUpToMessageId", message.getChatMessageId()));
+                                "readUpToMessageId", finalMessageToRead.getChatMessageId()));
 
                 calculateAndSendTotalUnreadCount(reader.getEmployeeId(), reader.getUsername());
             }
@@ -412,7 +435,7 @@ public class ChatServiceImpl implements ChatService {
             // 3. 서비스 로직을 DTO 팩토리 메소드 호출로 대체 (하드코딩 제거)
             if (Boolean.FALSE.equals(room.getIsTeam())) {
                 // 1:1 채팅방
-                List<ChatEmployee> allMembers = chatEmployeeRepository.findAllByChatRoomChatRoomIdAndIsLeftFalse(room.getChatRoomId());
+                List<ChatEmployee> allMembers = chatEmployeeRepository.findAllByChatRoomChatRoomId(room.getChatRoomId());
 
                 Optional<Employee> otherUserOpt = allMembers.stream()
                         .map(ChatEmployee::getEmployee)
@@ -469,10 +492,6 @@ public class ChatServiceImpl implements ChatService {
         for (ChatEmployee participant : participants) {
             Employee recipient = participant.getEmployee();
 
-            // 메시지 전송자 본인에게는 알림을 보내지 않음
-            if (senderId != null && recipient.getEmployeeId().equals(senderId)) {
-                continue;
-            }
             // 채팅방 목록 DTO
             long unreadCount = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(
                     room,
@@ -538,8 +557,14 @@ public class ChatServiceImpl implements ChatService {
 
         // 채팅방 멤버십 확인 (권한 확인)
         ChatEmployee membership = chatEmployeeRepository
-                .findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(roomId, username)
+                .findByChatRoomChatRoomIdAndEmployeeEmployeeId(roomId, user.getEmployeeId())
                 .orElseThrow(() -> new AccessDeniedException("채팅방 멤버가 아니거나 이미 나간 사용자입니다."));
+
+        // 1:1 채팅방이고, A가 '나간' 상태에서 알림을 클릭한 경우, 방에 입장하는 즉시 '활성'으로 변경
+        if (Boolean.FALSE.equals(membership.getChatRoom().getIsTeam()) && Boolean.TRUE.equals(membership.getIsLeft())) {
+            membership.rejoinChatRoom();
+            chatEmployeeRepository.save(membership);
+        }
 
         ChatRoom room = membership.getChatRoom();
 
@@ -561,7 +586,7 @@ public class ChatServiceImpl implements ChatService {
         // findRoomsByUsername와 동일한 DTO 변환 로직 수행
         if (Boolean.FALSE.equals(room.getIsTeam())) {
             // 1:1 채팅방: 상대방 정보 필요
-            List<ChatEmployee> allMembers = chatEmployeeRepository.findAllByChatRoomChatRoomIdAndIsLeftFalse(room.getChatRoomId());
+            List<ChatEmployee> allMembers = chatEmployeeRepository.findAllByChatRoomChatRoomId(room.getChatRoomId());
 
             Optional<Employee> otherUserOpt = allMembers.stream()
                     .map(ChatEmployee::getEmployee)
