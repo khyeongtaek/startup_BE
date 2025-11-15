@@ -59,6 +59,17 @@ public class ApprovalDocResponseDTO {
     // 첨부 파일 목록
     private List<AttachmentFileResponseDTO> attachmentFiles;
 
+    // 휴가
+    private CommonCodeResponseDTO vacationType;
+    private Integer vacationDays;
+    private String vacationReason;
+
+    // 출장
+    private String tripLocation;
+    private String transportation;
+    private String tripPurpose;
+    private String tripRemark;
+
     /**
      * 엔티티와 DTO 리스트를 조합하여 최종 Response DTO를 생성
      * (서비스 레이어에서 사용)
@@ -71,7 +82,8 @@ public class ApprovalDocResponseDTO {
     public static ApprovalDocResponseDTO toDTO(
             ApprovalDoc doc,
             List<ApprovalLineResponseDTO> lineList,
-            List<ApprovalReferenceResponseDTO> referenceList
+            List<ApprovalReferenceResponseDTO> referenceList,
+            List<AttachmentFileResponseDTO> attachmentFiles
     ) {
         return ApprovalDocResponseDTO.builder()
                 .docId(doc.getDocId())
@@ -85,8 +97,19 @@ public class ApprovalDocResponseDTO {
                 .endDate(doc.getEndDate())
                 .creator(EmployeeResponseDTO.toDTO(doc.getCreator()))
                 .updater(doc.getUpdater() != null ? EmployeeResponseDTO.toDTO(doc.getUpdater()) : null)
+                // 휴가
+                .vacationType(doc.getVacationType() != null ? CommonCodeResponseDTO.toDTO(doc.getVacationType()) : null)
+                .vacationDays(doc.getVacationDays())
+                .vacationReason(doc.getVacationReason())
+                // 출장
+                .tripLocation(doc.getTripLocation())
+                .tripPurpose(doc.getTripPurpose())
+                .transportation(doc.getTransportation())
+                .tripRemark(doc.getTripRemark())
+                // 결재선, 참조자
                 .approvalLines(lineList)
                 .approvalReferences(referenceList)
+                .attachmentFiles(attachmentFiles)
                 .build();
     }
 }

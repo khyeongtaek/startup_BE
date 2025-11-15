@@ -10,9 +10,11 @@ import org.goodee.startup_BE.approval.entity.ApprovalReference;
 import org.goodee.startup_BE.approval.enums.ApprovalDocStatus;
 import org.goodee.startup_BE.approval.enums.ApprovalLineStatus;
 import org.goodee.startup_BE.approval.enums.ApprovalTemplate;
+import org.goodee.startup_BE.approval.enums.VacationType;
 import org.goodee.startup_BE.approval.repository.ApprovalDocRepository;
 import org.goodee.startup_BE.approval.repository.ApprovalLineRepository;
 import org.goodee.startup_BE.approval.repository.ApprovalReferenceRepository;
+import org.goodee.startup_BE.common.dto.AttachmentFileResponseDTO;
 import org.goodee.startup_BE.common.dto.CommonCodeResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.enums.OwnerType;
@@ -53,6 +55,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     private static final String DOC_STATUS_PREFIX = ApprovalDocStatus.PREFIX;
     private static final String LINE_STATUS_PREFIX = ApprovalLineStatus.PREFIX;
     private static final String TEMPLATE_PREFIX = ApprovalTemplate.PREFIX;
+    private static final String VACATION_TYPE_PREFIX = VacationType.PREFIX;
 
     // --- 공통 코드 Value1 정의 ---
     // 문서 상태
@@ -64,6 +67,10 @@ public class ApprovalServiceImpl implements ApprovalService {
     private static final String LINE_STATUS_AWAITING = ApprovalLineStatus.AWAITING.name(); // 대기 (AL2)
     private static final String LINE_STATUS_APPROVED = ApprovalLineStatus.APPROVED.name(); // 승인 (AL3)
     private static final String LINE_STATUS_REJECTED = ApprovalLineStatus.REJECTED.name(); // 반려 (AL4)
+    // --- 휴가 타입
+    private static final String VACATION_TYPE_ANNUAL = VacationType.ANNUAL.name(); // ANNUAL
+    private static final String VACATION_TYPE_MORNING_HALF = VacationType.MORNING_HALF.name(); // MORNING_HALF
+    private static final String VACATION_TYPE_AFTERNOON_HALF = VacationType.AFTERNOON_HALF.name(); // AFTERNOON_HALF
 
     /**
      * 결재 양식 전체 조회
@@ -95,12 +102,19 @@ public class ApprovalServiceImpl implements ApprovalService {
                 .get(0);
 
         // 1-2 양식 조회
-        Long templateId = request.getTemplateCode();
-        CommonCode template = commonCodeRepository.findById(templateId)
-                .orElseThrow(() -> new EntityNotFoundException("결재 양식을 찾을 수 없습니다."));
+        String templateId = request.getTemplateCode();
+        CommonCode template = commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse(templateId).get(0);
+
+        // 1-3 휴가 코드 조회 (휴가 양식 일때만)
+        CommonCode vacationTypeCodeEntity = null;
+        if (ApprovalTemplate.VACATION.name().equals(template.getValue2())
+                && request.getVacationTypeCode() != null) {
+            vacationTypeCodeEntity = commonCodeRepository.findById(request.getVacationTypeCode())
+                    .orElseThrow(() -> new EntityNotFoundException("휴가 종류 코드를 찾을 수 없습니다."));
+        }
 
         // 2. 문서(Doc) 생성 및 저장 (ID 자동 생성)
-        ApprovalDoc doc = approvalDocRepository.save(request.toEntity(creator, template, docStatus));
+        ApprovalDoc doc = approvalDocRepository.save(request.toEntity(creator, template, docStatus, vacationTypeCodeEntity));
 
         // 3. 결재선(Lines) 생성
         List<ApprovalLineRequestDTO> lineRequests = request.getApprovalLines();
@@ -253,7 +267,6 @@ public class ApprovalServiceImpl implements ApprovalService {
         ApprovalDocResponseDTO approvalDocResponseDTO = convertToDocResponseDTO(doc);
 
         // 결재 상세 조회는 첨부파일을 포함하여 반환
-
         // 결재 모듈 조회
         CommonCode ownerCode = commonCodeRepository
                 .findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.APPROVAL.name())
@@ -386,8 +399,21 @@ public class ApprovalServiceImpl implements ApprovalService {
                         .map(ApprovalReferenceResponseDTO::toDTO)
                         .collect(Collectors.toList());
 
-        // 3. 최종 DTO 조합
-        return ApprovalDocResponseDTO.toDTO(doc, lineDTOs, refDTOs);
+        // 3. ownerType 조회 (결재 모듈)
+        Long ownerTypeId = commonCodeRepository
+                .findByCodeStartsWithAndKeywordExactMatchInValues(
+                        OwnerType.PREFIX,
+                        OwnerType.APPROVAL.name()
+                )
+                .get(0)
+                .getCommonCodeId();
+
+        // 4. 첨부 파일 조회
+        List<AttachmentFileResponseDTO> files =
+                attachmentFileService.listFiles(ownerTypeId, doc.getDocId());
+
+        // 5. 최종 DTO 조합
+        return ApprovalDocResponseDTO.toDTO(doc, lineDTOs, refDTOs, files);
     }
 
     /**
@@ -500,7 +526,7 @@ public class ApprovalServiceImpl implements ApprovalService {
         }
 
         // 참조자 목록은 불필요
-        return ApprovalDocResponseDTO.toDTO(doc, filteredLines, null);
+        return ApprovalDocResponseDTO.toDTO(doc, filteredLines, null, null);
     }
 
     /**
@@ -543,7 +569,7 @@ public class ApprovalServiceImpl implements ApprovalService {
                 .map(ApprovalReferenceResponseDTO::toDTO)
                 .collect(Collectors.toList());
 
-        return ApprovalDocResponseDTO.toDTO(doc, lineDTOs, refDTOs);
+        return ApprovalDocResponseDTO.toDTO(doc, lineDTOs, refDTOs,null);
     }
 
     /**
@@ -572,7 +598,7 @@ public class ApprovalServiceImpl implements ApprovalService {
                 .collect(Collectors.toList());
 
 
-        return ApprovalDocResponseDTO.toDTO(doc, lineDTOs, null);
+        return ApprovalDocResponseDTO.toDTO(doc, lineDTOs, null, null);
     }
 
     /**
@@ -612,7 +638,7 @@ public class ApprovalServiceImpl implements ApprovalService {
                 .collect(Collectors.toList());
 
         // 기안 목록에서는 참조자 목록 불필요
-        return ApprovalDocResponseDTO.toDTO(doc, lineDTOs, null);
+        return ApprovalDocResponseDTO.toDTO(doc, lineDTOs, null,null);
     }
 
 }

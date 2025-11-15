@@ -175,8 +175,8 @@ class AttendanceServiceImplTest {
             // ✅ CLOCK_OUT 과 EARLY_LEAVE 둘 다 Mock
             given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "CLOCK_OUT"))
                     .willReturn(List.of(mockWorkStatusOut));
-            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "EARLY_LEAVE"))
-                    .willReturn(List.of(mockWorkStatusEarlyLeave));
+//            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "EARLY_LEAVE"))
+//                    .willReturn(List.of(mockWorkStatusEarlyLeave));
 
             given(attendanceRepository.save(any(Attendance.class)))
                     .willAnswer(invocation -> invocation.getArgument(0));

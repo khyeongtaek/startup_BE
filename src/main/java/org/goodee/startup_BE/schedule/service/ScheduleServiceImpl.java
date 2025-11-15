@@ -272,7 +272,7 @@ public class ScheduleServiceImpl implements  ScheduleService{
                     .scheduleId(schedule.getScheduleId())
                     .participantEmployeeId(schedule.getEmployee().getEmployeeId())
                     .participantName(schedule.getEmployee().getName())
-                    .participantStatusName("주최자")  //  상태명을 직접 지정
+                    .participantStatusName("주최자")
                     .createdAt(schedule.getCreatedAt())
                     .updatedAt(schedule.getUpdatedAt())
                     .build());

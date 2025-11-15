@@ -18,4 +18,7 @@ public interface CommonCodeService {
 
     // 전체 권한 조회
     List<CommonCodeResponseDTO> getAllRole();
+
+    // 휴가 목록 조회
+    List<CommonCodeResponseDTO> getVacationTypes();
 }

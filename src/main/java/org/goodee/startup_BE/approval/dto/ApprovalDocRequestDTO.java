@@ -32,7 +32,7 @@ public class ApprovalDocRequestDTO {
     private Long docId;
 
     @NotNull(message = "양식 코드는 필수 입니다.", groups = {ValidationGroups.Create.class})
-    private Long templateCode;
+    private String templateCode;
 
     @NotEmpty(message = "제목은 필수입니다.", groups = {ValidationGroups.Create.class, ValidationGroups.Update.class})
     private String title;
@@ -43,6 +43,17 @@ public class ApprovalDocRequestDTO {
     private LocalDateTime startDate;
 
     private LocalDateTime endDate;
+
+    // 휴가(AT1)
+    private Long vacationTypeCode;   // CommonCode ID
+    private Integer vacationDays;
+    private String vacationReason;
+
+    // 출장(AT2)
+    private String tripLocation;
+    private String transportation;
+    private String tripPurpose;
+    private String tripRemark;
 
 
     @Valid // 이 리스트 내부의 DTO들도 유효성 검사를 수행
@@ -69,9 +80,10 @@ public class ApprovalDocRequestDTO {
     public ApprovalDoc toEntity(
             Employee creator,
             CommonCode template,
-            CommonCode docStatus
+            CommonCode docStatus,
+            CommonCode vacationTypeCodeEntity  // 휴가 종류 코드(연차, 오전 반차, 오후 반차)
     ) {
-        return ApprovalDoc.createApprovalDoc(
+        ApprovalDoc doc = ApprovalDoc.createApprovalDoc(
                 this.title,
                 this.content,
                 creator,
@@ -80,5 +92,25 @@ public class ApprovalDocRequestDTO {
                 this.endDate,
                 docStatus
         );
+
+        // 휴가 신청서
+        if (template.getCode().equals("AT1")){
+            doc.updateVacationInfo(
+                    vacationTypeCodeEntity,
+                    this.vacationDays,
+                    this.vacationReason
+            );
+        }
+
+        // 출장 신청서
+        if (template.getCode().equals("AT2")){
+            doc.updateTripInfo(
+                    this.tripLocation,
+                    this.transportation,
+                    this.tripPurpose,
+                    this.tripRemark
+            );
+        }
+        return doc;
     }
 }

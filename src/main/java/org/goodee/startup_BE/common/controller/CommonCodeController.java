@@ -83,4 +83,19 @@ public class CommonCodeController {
             .data(list)
             .build());
   }
+
+    @Operation(summary = "휴가 종류 목록 조회", description = "연차/반차 등 휴가 종류 CommonCode 조회")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "휴가 종류 조회 성공")
+    })
+    @GetMapping("/vacation-types")
+    public ResponseEntity<APIResponseDTO<List<CommonCodeResponseDTO>>> getVacationTypes() {
+
+        List<CommonCodeResponseDTO> list = commonCodeService.getVacationTypes();
+
+        return ResponseEntity.ok(APIResponseDTO.<List<CommonCodeResponseDTO>>builder()
+                .message("휴가 종류 조회 성공")
+                .data(list)
+                .build());
+    }
 }
