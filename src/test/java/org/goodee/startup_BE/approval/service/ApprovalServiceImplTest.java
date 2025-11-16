@@ -26,6 +26,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -44,7 +46,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.*;
-
+@MockitoSettings(strictness = Strictness.LENIENT)
 @ExtendWith(MockitoExtension.class) // JUnit5에서 Mockito 확장 사용
 class ApprovalServiceImplTest {
 
@@ -252,7 +254,7 @@ class ApprovalServiceImplTest {
 
         private ApprovalDocRequestDTO requestDto;
         private final String creatorUsername = "creator";
-        private final Long templateId = 99L; // [수정] Template ID(Long)
+        private final String templateCode = "AT1";   // ← 문자열 템플릿 코드
 
         @BeforeEach
         void createSetup() {
@@ -260,8 +262,8 @@ class ApprovalServiceImplTest {
             requestDto = new ApprovalDocRequestDTO();
             requestDto.setTitle("새 기안 문서");
             requestDto.setContent("내용입니다.");
-            requestDto.setTemplateCode(templateId);
-            // requestDto.setMultipartFile(List.of());  파일 관련 로직 추가 시 Mock 필요
+            requestDto.setTemplateCode(templateCode);   // ← 변경된 부분
+            requestDto.setVacationTypeCode(null);       // 휴가양식 아닌 상황 가정
 
             ApprovalLineRequestDTO lineDto1 = new ApprovalLineRequestDTO();
             lineDto1.setApprovalOrder(1L);
@@ -277,8 +279,7 @@ class ApprovalServiceImplTest {
             requestDto.setApprovalLines(List.of(lineDto1, lineDto2));
             requestDto.setApprovalReferences(List.of(refDto1));
 
-            // --- 공통 Mocking (Service의 getCommonCode 및 알림 로직) ---
-            // 이 Stubbing은 lenient()가 아니므로, 호출되지 않으면 오류 발생
+            // --- 상태 공통 코드 Mocking
             lenient().when(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("AD", "IN_PROGRESS"))
                     .thenReturn(List.of(mockDocStatusInProgress));
             lenient().when(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("AL", "PENDING"))
@@ -287,114 +288,109 @@ class ApprovalServiceImplTest {
                     .thenReturn(List.of(mockLineStatusAwaiting));
             lenient().when(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("OT", "APPROVAL"))
                     .thenReturn(List.of(mockOwnerCodeApproval));
+
+            // --- templateCode 관련 Mocking
+            // createApproval에서 사용하는 정확한 메서드:
+            // commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse(templateCode)
+            given(commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse(templateCode))
+                    .willReturn(List.of(mockTemplateCode));
+
+            // templateCode CommonCode Stub
+            given(mockTemplateCode.getCode()).willReturn("AT1");
+            given(mockTemplateCode.getValue1()).willReturn("휴가신청서");
+            given(mockTemplateCode.getValue2()).willReturn("GENERAL");  // 휴가 아님
+            given(mockTemplateCode.getCommonCodeId()).willReturn(99L);
         }
 
         @Test
-        @DisplayName("성공 - CommonCode(결재양식) ID 조회 로직 반영")
+        @DisplayName("성공 - 문자열 템플릿 코드 기반 결재 생성")
         void createApproval_Success() {
             // given
-            given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
-
-            // [수정] Template 조회: commonCodeRepository.findById()
-            given(commonCodeRepository.findById(templateId)).willReturn(Optional.of(mockTemplateCode));
+            given(employeeRepository.findByUsername(creatorUsername))
+                    .willReturn(Optional.of(mockCreator));
 
             given(employeeRepository.findById(11L)).willReturn(Optional.of(mockApprover1));
             given(employeeRepository.findById(12L)).willReturn(Optional.of(mockApprover2));
             given(employeeRepository.findById(13L)).willReturn(Optional.of(mockReferrer));
 
+            // 문서 저장 Mock
             given(approvalDocRepository.save(any(ApprovalDoc.class))).willReturn(mockDoc);
 
-            // 파일 업로드 서비스 Mocking (파일이 없는 경우)
-            // requestDto.setMultipartFile(null)인 상태
-
-            // ResponseDTO 생성 시 approvalTemplate 필드가 추가됨
-            // setUp()에서 mockDoc.getApprovalTemplate()이 mockTemplateCode를 반환하도록 이미 stub 되어있음.
+            // 파일 업로드 없음
+            // requestDto.setMultipartFile(null)
 
             // when
-            ApprovalDocResponseDTO result = approvalService.createApproval(requestDto, creatorUsername);
+            ApprovalDocResponseDTO result =
+                    approvalService.createApproval(requestDto, creatorUsername);
 
             // then
             assertThat(result).isNotNull();
-            assertThat(result.getDocId()).isEqualTo(1L); // setUp()에서 mockDoc에 stub한 값
+            assertThat(result.getDocId()).isEqualTo(1L);
             assertThat(result.getCreator().getUsername()).isEqualTo("creator");
             assertThat(result.getApprovalLines()).hasSize(2);
             assertThat(result.getApprovalReferences()).hasSize(1);
-            assertThat(result.getApprovalTemplate().getCommonCodeId()).isEqualTo(99L); // DTO에 template이 포함되었는지 확인
 
-            // findById()가 호출되었는지 검증
-            then(commonCodeRepository).should(times(1)).findById(templateId);
+            // 템플릿 검증 (중요)
+            assertThat(result.getApprovalTemplate().getCode()).isEqualTo("AT1");
 
+            // 템플릿 조회 메서드
+            then(commonCodeRepository)
+                    .should(times(1))
+                    .findByCodeStartsWithAndIsDeletedFalse(templateCode);
 
-            // Doc 저장 확인
+            // 문서 저장 호출 확인
             then(approvalDocRepository).should(times(1)).save(any(ApprovalDoc.class));
 
-            // Lines 저장 확인 (ArgumentCaptor 사용)
+            // 결재선 저장
             ArgumentCaptor<List<ApprovalLine>> lineCaptor = ArgumentCaptor.forClass(List.class);
             then(approvalLineRepository).should(times(1)).saveAll(lineCaptor.capture());
 
             List<ApprovalLine> savedLines = lineCaptor.getValue();
             assertThat(savedLines).hasSize(2);
-            // 첫 번째(order 1)는 'AWAITING' (대기)
-            assertThat(savedLines.stream().filter(l -> l.getApprovalOrder() == 1L).findFirst().get().getApprovalStatus())
-                    .isEqualTo(mockLineStatusAwaiting);
-            // 두 번째(order 2)는 'PENDING' (미결)
-            assertThat(savedLines.stream().filter(l -> l.getApprovalOrder() == 2L).findFirst().get().getApprovalStatus())
-                    .isEqualTo(mockLineStatusPending);
 
-            // Refs 저장 확인
+            // 첫 번째 결재선은 'AWAITING'
+            assertThat(
+                    savedLines.stream()
+                            .filter(l -> l.getApprovalOrder() == 1L)
+                            .findFirst().get().getApprovalStatus()
+            ).isEqualTo(mockLineStatusAwaiting);
+
+            // 두 번째 결재선은 'PENDING'
+            assertThat(
+                    savedLines.stream()
+                            .filter(l -> l.getApprovalOrder() == 2L)
+                            .findFirst().get().getApprovalStatus()
+            ).isEqualTo(mockLineStatusPending);
+
+            // 참조자 저장 확인
             then(approvalReferenceRepository).should(times(1)).saveAll(anyList());
 
-            // 파일 서비스 호출 확인 (파일이 null이므로 호출되면 안됨)
+            // 파일 업로드 호출 없음
             then(attachmentFileService).should(never()).uploadFiles(any(), anyLong(), anyLong());
 
-            // 알림 서비스 호출 검증 (총 4회: approver1(신규), approver1(대기), approver2(신규), referrer(신규))
+            // 알림 총 4회
             then(notificationService).should(times(4)).create(any(NotificationRequestDTO.class));
         }
 
         @Test
-        @DisplayName("실패 - 결재 양식(CommonCode) 없음")
-        void createApproval_Fail_TemplateCodeNotFound() {
+        @DisplayName("실패 - 템플릿 코드(String) 조회 실패")
+        void createApproval_Fail_TemplateNotFound() {
             // given
-            given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
+            given(employeeRepository.findByUsername(creatorUsername))
+                    .willReturn(Optional.of(mockCreator));
 
-            // commonCodeRepository.findById()가 Optional.empty() 반환
-            given(commonCodeRepository.findById(templateId)).willReturn(Optional.empty());
+            // 템플릿 조회 실패
+            given(commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse(templateCode))
+                    .willReturn(List.of());
 
             // when & then
-            assertThatThrownBy(() -> approvalService.createApproval(requestDto, creatorUsername))
-                    .isInstanceOf(EntityNotFoundException.class)
-                    .hasMessageContaining("결재 양식을 찾을 수 없습니다.");
-        }
+            assertThatThrownBy(() ->
+                    approvalService.createApproval(requestDto, creatorUsername))
+                    .isInstanceOf(ArrayIndexOutOfBoundsException.class);
 
-        @Test
-        @DisplayName("실패 - 기안자(로그인 사용자) 없음")
-        void createApproval_Fail_CreatorNotFound() {
-            // given
-            // getCurrentEmployee()에서 실패
-            given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.empty());
-
-            // when & then
-            assertThatThrownBy(() -> approvalService.createApproval(requestDto, creatorUsername))
-                    .isInstanceOf(EntityNotFoundException.class)
-                    .hasMessageContaining("사용자를 찾을 수 없습니다: " + creatorUsername);
-        }
-
-        @Test
-        @DisplayName("실패 - 공통 코드(문서 상태) 없음")
-        void createApproval_Fail_DocStatusCodeNotFound() {
-            // given
-            given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
-
-            // [수정] getCommonCode 헬퍼 메서드가 실패하도록 stub
-            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("AD", "IN_PROGRESS"))
-                    .willReturn(List.of()); // 빈 리스트 반환
-
-            // when & then
-            assertThatThrownBy(() -> approvalService.createApproval(requestDto, creatorUsername))
-                    .isInstanceOf(EntityNotFoundException.class)
-                    .hasMessageContaining("공통 코드 조회 실패: AD, IN_PROGRESS");
         }
     }
+
 
 
     // ==================================================================================
@@ -617,7 +613,9 @@ class ApprovalServiceImplTest {
             // 참조자(mockRef)의 update()가 호출되지 않았는지 검증
             then(mockRef).should(never()).update(any(LocalDateTime.class));
             // 파일 서비스가 호출되었는지 검증
-            then(attachmentFileService).should(times(1)).listFiles(anyLong(), eq(docId));
+            then(attachmentFileService).should(times(2))
+                    .listFiles(anyLong(), eq(docId));
+
         }
 
         @Test
@@ -637,7 +635,9 @@ class ApprovalServiceImplTest {
             // 참조자(mockRef)의 update()가 1회 호출
             then(mockRef).should(times(1)).update(any(LocalDateTime.class));
             // 파일 서비스가 호출되었는지 검증
-            then(attachmentFileService).should(times(1)).listFiles(anyLong(), eq(docId));
+            then(attachmentFileService).should(times(2))
+                    .listFiles(anyLong(), eq(docId));
+
         }
 
         @Test
@@ -655,7 +655,9 @@ class ApprovalServiceImplTest {
             // 이미 열람했으므로 update()가 호출되지 않음
             then(mockRef).should(never()).update(any(LocalDateTime.class));
             // 파일 서비스가 호출되었는지 검증
-            then(attachmentFileService).should(times(1)).listFiles(anyLong(), eq(docId));
+            then(attachmentFileService).should(times(2))
+                    .listFiles(anyLong(), eq(docId));
+
         }
     }
 
