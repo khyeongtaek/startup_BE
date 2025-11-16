@@ -51,14 +51,14 @@ class ScheduleRepositoryTest {
         commonCodeRepository.deleteAll();
 
         // --- 공통 코드 (status, role, dept, pos) 생성 ---
-        CommonCode statusActive = CommonCode.createCommonCode("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null);
-        CommonCode roleUser = CommonCode.createCommonCode("ROLE_USER", "사용자", "USER", null, null, 1L, null);
-        CommonCode deptDev = CommonCode.createCommonCode("DEPT_DEV", "개발팀", "DEV", null, null, 1L, null);
-        CommonCode posJunior = CommonCode.createCommonCode("POS_JUNIOR", "사원", "JUNIOR", null, null, 1L, null);
+        CommonCode statusActive = CommonCode.createCommonCode("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null, false);
+        CommonCode roleUser = CommonCode.createCommonCode("ROLE_USER", "사용자", "USER", null, null, 1L, null, false);
+        CommonCode deptDev = CommonCode.createCommonCode("DEPT_DEV", "개발팀", "DEV", null, null, 1L, null, false);
+        CommonCode posJunior = CommonCode.createCommonCode("POS_JUNIOR", "사원", "JUNIOR", null, null, 1L, null, false);
 
         // --- 일정용 공통 코드 (카테고리/색상) 생성 ---
-        categoryWork = CommonCode.createCommonCode("SC_WORK", "업무", "WORK", null, null, 1L, null);
-        colorBlue = CommonCode.createCommonCode("CL_BLUE", "파란색", "BLUE", null, null, 1L, null);
+        categoryWork = CommonCode.createCommonCode("SC_WORK", "업무", "WORK", null, null, 1L, null, false);
+        colorBlue = CommonCode.createCommonCode("CL_BLUE", "파란색", "BLUE", null, null, 1L, null, false);
 
         commonCodeRepository.saveAll(List.of(statusActive, roleUser, deptDev, posJunior, categoryWork, colorBlue));
 

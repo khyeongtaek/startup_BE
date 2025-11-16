@@ -8,11 +8,13 @@ import org.goodee.startup_BE.chat.dto.ChatRoomCreateRequestDTO;
 import org.goodee.startup_BE.chat.dto.ChatRoomListResponseDTO;
 import org.goodee.startup_BE.chat.dto.ChatRoomResponseDTO;
 import org.goodee.startup_BE.chat.service.ChatService;
+import org.goodee.startup_BE.employee.entity.Employee;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -107,5 +109,23 @@ public class ChatRoomApiController {
 
     public static class InviteRequest {
         public List<Long> inviteeEmployeeIds;
+    }
+
+    /**
+     * 특정 채팅방 상세 정보 조회 (알림 클릭 시 사용)
+     * GET /api/chat/rooms/{roomId}
+     */
+    @GetMapping("/rooms/{roomId}")
+    public ResponseEntity<ChatRoomListResponseDTO> getRoomById(
+            @AuthenticationPrincipal Employee employee,
+            @PathVariable("roomId") Long roomId) {
+
+        // 1. 서비스 레이어에서 방금 만든 메소드 호출
+        ChatRoomListResponseDTO roomDetails = chatService.getRoomById(
+                employee.getUsername(), // 현재 로그인한 사용자 username
+                roomId                   // URL에서 받은 채팅방 ID
+        );
+
+        return ResponseEntity.ok(roomDetails);
     }
 }

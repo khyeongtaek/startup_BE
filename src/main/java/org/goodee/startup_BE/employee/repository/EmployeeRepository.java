@@ -12,6 +12,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     Boolean existsByEmail(String email);
 
+    Boolean existsByUsername(String username);
+
     // 부서(CommonCode)로 직원 목록을 조회, 직급(position)의 정렬순서(sortOrder)를 내림차순(Desc)으로 정렬
     List<Employee> findByDepartmentCommonCodeIdOrderByPositionSortOrderDesc(Long departmentId);
 

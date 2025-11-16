@@ -4,10 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
 
@@ -48,9 +44,14 @@ public class CommonCode {
     private Long sortOrder;
 
     @Comment("작성자 (직원 ID)")
-    @JoinColumn(name = "employee_id")
+    @JoinColumn(name = "creator_id")
     @ManyToOne(fetch = FetchType.LAZY)
-    private Employee employee;
+    private Employee creator;
+
+    @Comment("수정자 (직원 ID)")
+    @JoinColumn(name = "updater_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Employee updater;
 
     @Column(nullable = false, updatable = false)
     @Comment("생성일")
@@ -61,8 +62,8 @@ public class CommonCode {
     private LocalDateTime updatedAt;
 
     @Column(nullable = false)
-    @Comment("삭제여부")
-    private boolean isDeleted = false;
+    @Comment("활성화 여부")
+    private Boolean isDisabled;
 
     public static CommonCode createCommonCode(
             String code
@@ -72,6 +73,7 @@ public class CommonCode {
             , String value3
             , Long sortOrder
             , Employee employee
+            , Boolean isDisabled
     ) {
         CommonCode commonCode = new CommonCode();
         commonCode.code = code;
@@ -80,14 +82,16 @@ public class CommonCode {
         commonCode.value2 = value2;
         commonCode.value3 = value3;
         commonCode.sortOrder = sortOrder;
-        commonCode.employee = employee;
+        commonCode.creator = employee;
+        commonCode.updater = employee;
         commonCode.createdAt = LocalDateTime.now();
         commonCode.updatedAt = LocalDateTime.now();
+        commonCode.isDisabled = isDisabled;
         return commonCode;
     }
 
     public void delete() {
-        this.isDeleted = true;
+        this.isDisabled = true;
     }
 
     public void update(
@@ -97,7 +101,8 @@ public class CommonCode {
             , String value2
             , String value3
             , Long sortOrder
-            , Employee employee
+            , Employee updater
+            , Boolean isDisabled
     ){
         this.code = code;
         this.codeDescription = codeDescription;
@@ -105,8 +110,9 @@ public class CommonCode {
         this.value2 = value2;
         this.value3 = value3;
         this.sortOrder = sortOrder;
-        this.employee = employee;
+        this.updater = updater;
         this.updatedAt = LocalDateTime.now();
+        this.isDisabled = isDisabled;
 
     }
 

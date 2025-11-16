@@ -66,4 +66,13 @@ public interface ChatService {
      * @return 해당 사용자가 속한 채팅방 DTO 목록
      */
     List<ChatRoomListResponseDTO> findRoomsByUsername(String username);
+
+    /**
+     * ID로 특정 채팅방 정보 조회 (알림 클릭 시 사용)
+     *
+     * @param username 조회 요청한 사용자 (권한 확인용)
+     * @param roomId 조회할 채팅방 ID
+     * @return 채팅방 상세 정보 DTO
+     */
+    ChatRoomListResponseDTO getRoomById(String username, Long roomId);
 }

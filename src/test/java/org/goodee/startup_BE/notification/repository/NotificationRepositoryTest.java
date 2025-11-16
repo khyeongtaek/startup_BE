@@ -58,13 +58,13 @@ class NotificationRepositoryTest {
         commonCodeRepository.deleteAll();
 
         // --- given: CommonCode 생성 ---
-        statusActive = CommonCode.createCommonCode("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null);
-        roleUser = CommonCode.createCommonCode("ROLE_USER", "사용자", "USER", null, null, 2L, null);
-        deptDev = CommonCode.createCommonCode("DEPT_DEV", "개발팀", "DEV", null, null, 1L, null);
-        posJunior = CommonCode.createCommonCode("POS_JUNIOR", "사원", "JUNIOR", null, null, 1L, null);
+        statusActive = CommonCode.createCommonCode("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null, false);
+        roleUser = CommonCode.createCommonCode("ROLE_USER", "사용자", "USER", null, null, 2L, null, false);
+        deptDev = CommonCode.createCommonCode("DEPT_DEV", "개발팀", "DEV", null, null, 1L, null, false);
+        posJunior = CommonCode.createCommonCode("POS_JUNIOR", "사원", "JUNIOR", null, null, 1L, null, false);
         // 알림용 CommonCode
-        ownerMail = CommonCode.createCommonCode("OT_MAIL", "메일", "MAIL", null, null, 1L, null);
-        ownerApproval = CommonCode.createCommonCode("OT_APPROVAL", "결재", "APPROVAL", null, null, 2L, null);
+        ownerMail = CommonCode.createCommonCode("OT_MAIL", "메일", "MAIL", null, null, 1L, null, false);
+        ownerApproval = CommonCode.createCommonCode("OT_APPROVAL", "결재", "APPROVAL", null, null, 2L, null, false);
 
         commonCodeRepository.saveAll(List.of(statusActive, roleUser, deptDev, posJunior, ownerMail, ownerApproval));
 

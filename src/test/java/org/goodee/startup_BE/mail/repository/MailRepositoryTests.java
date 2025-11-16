@@ -40,7 +40,7 @@ class MailRepositoryTests {
 	private Employee admin, dev1;
 	
 	private CommonCode cc(String code, String desc, String v1, String v2, String v3, long sort) {
-		return org.goodee.startup_BE.common.entity.CommonCode.createCommonCode(code, desc, v1, v2, v3, sort, null);
+		return org.goodee.startup_BE.common.entity.CommonCode.createCommonCode(code, desc, v1, v2, v3, sort, null, false);
 	}
 	
 	private void seedCommonCodes() {
