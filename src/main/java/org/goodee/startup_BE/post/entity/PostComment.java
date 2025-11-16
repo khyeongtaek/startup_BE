@@ -32,7 +32,7 @@ public class PostComment {
     private String content;
 
     @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted = false;
+    private Boolean isDeleted;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -49,17 +49,22 @@ public class PostComment {
                 .post(post)
                 .employee(employee)
                 .content(content)
+                .isDeleted(false)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
                 .build();
     }
 
     // 댓글 수정
     public void update (String content) {
         this.content = content;
+        this.updatedAt = LocalDateTime.now();
     }
 
     // 댓글 삭제
     public void  delete () {
         this.isDeleted = true;
+        this.updatedAt = LocalDateTime.now();
     }
 
 }

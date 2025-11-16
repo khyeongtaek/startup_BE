@@ -319,6 +319,53 @@ VALUES
 
 
 /*
+* =============================================
+* Post Category (게시판 카테고리)
+* code: PC + 번호 (Post Category)
+* value1: 게시판 코드 (영문)
+* value2: 게시판 이름 (한글)
+* =============================================
+*/
+
+INSERT INTO tbl_common_code
+(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+VALUES
+    ('PC1', '게시판 카테고리', 'NOTICE', '공지사항', NULL, 1, NULL, NOW(), NOW(), false),
+    ('PC2', '게시판 카테고리', 'FREE', '자유게시판', NULL, 2, NULL, NOW(), NOW(), false),
+    ('PC3', '게시판 카테고리', 'QNA', 'Q&A', NULL, 3, NULL, NOW(), NOW(), false),
+    ('PC4', '게시판 카테고리', 'DATA', '자료실', NULL, 4, NULL, NOW(), NOW(), false);
+
+/*
+* =============================================
+* Post (게시글)
+* code: PO + 번호 (Post)
+* value1: 게시글 제목 (영문 또는 약칭)
+* value2: 게시글 제목 (한글)
+* value3: 게시글 카테고리 코드 (PC1~PC4)
+* =============================================
+*/
+
+INSERT INTO tbl_common_code
+(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+VALUES
+    -- 공지사항 게시글
+    ('PO01', '게시글 - 공지사항', 'SYSTEM_CHECK', '시스템 점검 안내', 'PC1', 1, NULL, NOW(), NOW(), false),
+    ('PO02', '게시글 - 공지사항', 'WEEKLY_SCHEDULE', '주간 일정 공지', 'PC1', 2, NULL, NOW(), NOW(), false),
+
+    -- 자유게시판 게시글
+    ('PO03', '게시글 - 자유게시판', 'HELLO_FREEBOARD', '자유게시판 첫 글이에요!', 'PC2', 3, NULL, NOW(), NOW(), false),
+    ('PO04', '게시글 - 자유게시판', 'LUNCH_RECOMMEND', '오늘 점심 추천받습니다', 'PC2', 4, NULL, NOW(), NOW(), false),
+
+    -- Q&A 게시글
+    ('PO05', '게시글 - Q&A', 'SPRING_JPA_ISSUE', 'Spring Boot JPA 관련 질문', 'PC3', 5, NULL, NOW(), NOW(), false),
+    ('PO06', '게시글 - Q&A', 'REACT_EFFECT_HELP', 'React useEffect 질문 있습니다', 'PC3', 6, NULL, NOW(), NOW(), false),
+
+    -- 자료실 게시글
+    ('PO07', '게시글 - 자료실', 'SPRING_CONFIG_EXAMPLES', 'Spring 설정 파일 예시 모음', 'PC4', 7, NULL, NOW(), NOW(), false),
+    ('PO08', '게시글 - 자료실', 'UI_GUIDELINE_V2', 'UI 디자인 가이드라인 v2', 'PC4', 8, NULL, NOW(), NOW(), false);
+
+
+/*
 * Employee (직원) 데이터 삽입 (스네이크 케이스)
 * - 모든 부서(DP1~DP16)에 직원 배정
 * - 2명의 관리자(AU1) 포함 (admin, ceo)
