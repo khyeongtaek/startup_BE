@@ -49,29 +49,6 @@ public class MailController {
 		return ResponseEntity.ok(response);
 	}
 	
-	// 메일 수정
-	@Operation(
-		summary = "메일 수정 후 재발송",
-		description = "기존 메일을 수정 후 다시 발송합니다."
-	)
-	@ApiResponse(
-		responseCode = "200",
-		description = "수정/재발송 성공",
-		content = @Content(schema = @Schema(implementation = MailSendResponseDTO.class))
-	)
-	@PutMapping(value = "/{mailId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<APIResponseDTO<MailSendResponseDTO>> updateMail(@PathVariable Long mailId, @Valid @ModelAttribute MailUpdateRequestDTO requestDTO, Authentication auth, List<MultipartFile> multipartFile) {
-		String username = auth.getName();
-		
-		MailSendResponseDTO responseDTO = mailService.updateMail(mailId, requestDTO, username, multipartFile);
-		
-		APIResponseDTO<MailSendResponseDTO> response = APIResponseDTO.<MailSendResponseDTO>builder()
-			                                               .message("수정 메일 발송 성공")
-			                                               .data(responseDTO)
-			                                               .build();
-		return ResponseEntity.ok(response);
-	}
-	
 	// 메일 상세 조회
 	@Operation(
 		summary = "메일 상세 조회",
@@ -102,9 +79,9 @@ public class MailController {
 		description = "선택한 메일함 항목을 지정한 타입으로 이동합니다."
 	)
 	@ApiResponse(responseCode = "200", description = "이동 성공")
-	@PostMapping("/mailboxes/move")
+	@PostMapping("/move")
 	public ResponseEntity<APIResponseDTO<Void>> moveMail(
-		@PathVariable @Validated(ValidationGroups.Mail.Move.class) MailMoveRequestDTO requestDTO, Authentication auth
+		@RequestBody @Validated MailMoveRequestDTO requestDTO, Authentication auth
 	) {
 		String username = auth.getName();
 		
@@ -123,9 +100,9 @@ public class MailController {
 		description = "선택한 메일함 항목을 삭제(소프트 삭제 또는 상태 변경)합니다."
 	)
 	@ApiResponse(responseCode = "200", description = "삭제 성공")
-	@DeleteMapping("/mailboxes")
+	@DeleteMapping("/delete")
 	public ResponseEntity<APIResponseDTO<Void>> deleteMail(
-		@PathVariable @Validated(ValidationGroups.Mail.Delete.class) MailMoveRequestDTO requestDTO, Authentication auth
+		@RequestBody @Validated MailMoveRequestDTO requestDTO, Authentication auth
 	) {
 		String username = auth.getName();
 		

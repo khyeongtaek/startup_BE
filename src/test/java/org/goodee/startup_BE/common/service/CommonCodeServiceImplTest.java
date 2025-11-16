@@ -35,18 +35,18 @@ class CommonCodeServiceImplTest {
     // given
     // 테스트용 데이터 생성
     CommonCode dept1 = CommonCode.createCommonCode(
-            "DP1", "개발부", "DEV", null, null, 1L, null
+            "DP1", "개발부", "DEV", null, null, 1L, null, false
     );
     CommonCode dept2 = CommonCode.createCommonCode(
-            "DP2", "인사부", "HR", null, null, 2L, null
+            "DP2", "인사부", "HR", null, null, 2L, null, false
     );
 
     // 레포지토리 메서드 호출 시 반환될 값 설정
-    given(commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse("DP")).willReturn(List.of(dept1, dept2));
+    given(commonCodeRepository.findByCodeStartsWithAndIsDisabledFalse("DP")).willReturn(List.of(dept1, dept2));
 
     // when
     // 테스트할 서비스 메서드 호출
-    List<CommonCode> result = commonCodeService.getAllDepartments();
+    List<CommonCodeResponseDTO> result = commonCodeService.getAllDepartments();
 
     // then
     // 결과 검증
@@ -55,7 +55,7 @@ class CommonCodeServiceImplTest {
     assertThat(result.get(1).getCodeDescription()).isEqualTo("인사부");
 
     // 메서드가 1번 호출되었는지 검증
-    verify(commonCodeRepository, times(1)).findByCodeStartsWithAndIsDeletedFalse("DP");
+    verify(commonCodeRepository, times(1)).findByCodeStartsWithAndIsDisabledFalse("DP");
   }
 
   @Test
@@ -64,15 +64,15 @@ class CommonCodeServiceImplTest {
     // given
     // 테스트용 데이터 생성 (ES: EmployeeStatus)
     CommonCode status1 = CommonCode.createCommonCode(
-            "ES1", "재직", "ACTIVE", null, null, 1L, null
+            "ES1", "재직", "ACTIVE", null, null, 1L, null, false
     );
     CommonCode status2 = CommonCode.createCommonCode(
-            "ES2", "휴직", "ON_LEAVE", null, null, 2L, null
+            "ES2", "휴직", "ON_LEAVE", null, null, 2L, null, false
     );
     List<CommonCode> mockList = List.of(status1, status2);
 
     // 레포지토리 메서드 호출 시 반환될 값 설정 (PREFIX 사용)
-    given(commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse(EmployeeStatus.PREFIX))
+    given(commonCodeRepository.findByCodeStartsWithAndIsDisabledFalse(EmployeeStatus.PREFIX))
             .willReturn(mockList);
 
     // when
@@ -89,7 +89,7 @@ class CommonCodeServiceImplTest {
 
     // 메서드가 올바른 PREFIX로 1번 호출되었는지 검증
     verify(commonCodeRepository, times(1))
-            .findByCodeStartsWithAndIsDeletedFalse(EmployeeStatus.PREFIX);
+            .findByCodeStartsWithAndIsDisabledFalse(EmployeeStatus.PREFIX);
   }
 
   @Test
@@ -98,15 +98,15 @@ class CommonCodeServiceImplTest {
     // given
     // 테스트용 데이터 생성 (PS: Position)
     CommonCode pos1 = CommonCode.createCommonCode(
-            "PS1", "사원", "STAFF", null, null, 1L, null
+            "PS1", "사원", "STAFF", null, null, 1L, null, false
     );
     CommonCode pos2 = CommonCode.createCommonCode(
-            "PS2", "주임", "SENIOR_STAFF", null, null, 2L, null
+            "PS2", "주임", "SENIOR_STAFF", null, null, 2L, null, false
     );
     List<CommonCode> mockList = List.of(pos1, pos2);
 
     // 레포지토리 메서드 호출 시 반환될 값 설정
-    given(commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse(Position.PREFIX))
+    given(commonCodeRepository.findByCodeStartsWithAndIsDisabledFalse(Position.PREFIX))
             .willReturn(mockList);
 
     // when
@@ -123,7 +123,7 @@ class CommonCodeServiceImplTest {
 
     // 메서드가 올바른 PREFIX로 1번 호출되었는지 검증
     verify(commonCodeRepository, times(1))
-            .findByCodeStartsWithAndIsDeletedFalse(Position.PREFIX);
+            .findByCodeStartsWithAndIsDisabledFalse(Position.PREFIX);
   }
 
   @Test
@@ -132,15 +132,15 @@ class CommonCodeServiceImplTest {
     // given
     // 테스트용 데이터 생성 (AU: Role - 아마도 Authority에서 따온 듯)
     CommonCode role1 = CommonCode.createCommonCode(
-            "AU1", "일반사용자", "ROLE_USER", null, null, 1L, null
+            "AU1", "일반사용자", "ROLE_USER", null, null, 1L, null, false
     );
     CommonCode role2 = CommonCode.createCommonCode(
-            "AU2", "관리자", "ROLE_ADMIN", null, null, 2L, null
+            "AU2", "관리자", "ROLE_ADMIN", null, null, 2L, null, false
     );
     List<CommonCode> mockList = List.of(role1, role2);
 
     // 레포지토리 메서드 호출 시 반환될 값 설정
-    given(commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse(Role.PREFIX))
+    given(commonCodeRepository.findByCodeStartsWithAndIsDisabledFalse(Role.PREFIX))
             .willReturn(mockList);
 
     // when
@@ -157,6 +157,6 @@ class CommonCodeServiceImplTest {
 
     // 메서드가 올바른 PREFIX로 1번 호출되었는지 검증
     verify(commonCodeRepository, times(1))
-            .findByCodeStartsWithAndIsDeletedFalse(Role.PREFIX);
+            .findByCodeStartsWithAndIsDisabledFalse(Role.PREFIX);
   }
 }

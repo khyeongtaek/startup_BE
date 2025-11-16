@@ -6,13 +6,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.common.dto.APIResponseDTO;
+import org.goodee.startup_BE.common.dto.CommonCodeRequestDTO;
 import org.goodee.startup_BE.common.dto.CommonCodeResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.service.CommonCodeService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -29,11 +29,11 @@ public class CommonCodeController {
           @ApiResponse(responseCode = "200", description = "부서 목록 조회 성공")
   })
   @GetMapping("/department")
-  public ResponseEntity<APIResponseDTO<List<CommonCode>>> getDepartments() {
+  public ResponseEntity<APIResponseDTO<List<CommonCodeResponseDTO>>> getDepartments() {
 
-    List<CommonCode> list = commonCodeService.getAllDepartments();
+    List<CommonCodeResponseDTO> list = commonCodeService.getAllDepartments();
 
-    return ResponseEntity.ok(APIResponseDTO.<List<CommonCode>>builder()
+    return ResponseEntity.ok(APIResponseDTO.<List<CommonCodeResponseDTO>>builder()
             .message("부서 목록 조회 성공")
             .data(list)
             .build());
@@ -81,6 +81,52 @@ public class CommonCodeController {
     return ResponseEntity.ok(APIResponseDTO.<List<CommonCodeResponseDTO>>builder()
             .message("권한 목록 조회 성공")
             .data(list)
+            .build());
+  }
+
+  @GetMapping
+  public ResponseEntity<APIResponseDTO<List<CommonCodeResponseDTO>>> getAllPrefix() {
+
+    return ResponseEntity.ok(APIResponseDTO.<List<CommonCodeResponseDTO>>builder()
+            .message("전체 대분류 코드 조회 성공")
+            .data(commonCodeService.getAllCodePrefixes())
+            .build());
+  }
+
+
+  @GetMapping("/prefix/{prefix}")
+  public ResponseEntity<APIResponseDTO<List<CommonCodeResponseDTO>>> getAllCodeOnPrefix(@PathVariable String prefix) {
+    return ResponseEntity.ok(APIResponseDTO.<List<CommonCodeResponseDTO>>builder()
+            .message("전체 소분류 코드 조회 성공")
+            .data(commonCodeService.getCommonCodeByPrefix(prefix))
+            .build());
+  }
+
+
+  @Operation(summary = "공통 코드 생성", description = "새로운 공통 코드를 시스템에 등록합니다. (관리자용)")
+  @ApiResponses(value = {
+          @ApiResponse(responseCode = "200", description = "공통 코드 생성 성공")
+  })
+  @PostMapping
+  public ResponseEntity<APIResponseDTO<CommonCodeResponseDTO>> createCode(
+          Authentication authentication, @RequestBody CommonCodeRequestDTO request) {
+    return ResponseEntity.ok(APIResponseDTO.<CommonCodeResponseDTO>builder()
+            .message("공용 코드 저장 성공")
+            .data(commonCodeService.createCode(authentication.getName(), request))
+            .build());
+  }
+
+  @Operation(summary = "공통 코드 수정", description = "기존 공통 코드의 정보를 수정합니다. (관리자용)")
+  @ApiResponses(value = {
+          @ApiResponse(responseCode = "200", description = "공통 코드 수정 성공")
+  })
+  @PatchMapping("/{id}")
+  public ResponseEntity<APIResponseDTO<CommonCodeResponseDTO>> updateCode(
+          Authentication authentication, @PathVariable Long id, @RequestBody CommonCodeRequestDTO request) {
+    request.setCommonCodeId(id);
+    return ResponseEntity.ok(APIResponseDTO.<CommonCodeResponseDTO>builder()
+            .message("공용 코드 수정 성공")
+            .data(commonCodeService.updateCode(authentication.getName(), request))
             .build());
   }
 }

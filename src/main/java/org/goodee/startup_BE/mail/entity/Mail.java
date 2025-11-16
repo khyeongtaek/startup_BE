@@ -60,6 +60,9 @@ public class Mail {
 	@Comment("회신 스레드에 사용")
 	private List<Mail> replies = new ArrayList<>();
 	
+	@OneToMany(mappedBy = "mail", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<MailReceiver> mailReceivers = new ArrayList<>();
+	
 	
 	@PrePersist
 	protected void onPrePersist() {

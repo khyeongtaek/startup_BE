@@ -56,7 +56,7 @@ class ScheduleServiceImplTest {
         );
         mockEmployee.updateInitPassword("1234", null);
 
-        mockCategoryWork = CommonCode.createCommonCode("SC01", "업무", "업무", null, null, 1L, mockEmployee);
+        mockCategoryWork = CommonCode.createCommonCode("SC01", "업무", "업무", null, null, 1L, mockEmployee, false);
 
         mockSchedule = Schedule.createSchedule(
                 mockEmployee, "회의", "오전 회의", mockCategoryWork,

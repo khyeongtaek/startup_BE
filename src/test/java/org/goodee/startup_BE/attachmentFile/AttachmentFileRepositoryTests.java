@@ -50,8 +50,8 @@ class AttachmentFileRepositoryTests {
 		attachmentFileRepository.deleteAll();
 		commonCodeRepository.deleteAll();
 		
-		OT_MAIL = CommonCode.createCommonCode("OT_MAIL", "OwnerType.Mail", "MAIL", null, null, 1L, null);
-		OT_WORKLOG = CommonCode.createCommonCode("OT_WORKLOG", "OwnerType.WorkLog", "WORKLOG", null, null, 2L, null);
+		OT_MAIL = CommonCode.createCommonCode("OT_MAIL", "OwnerType.Mail", "MAIL", null, null, 1L, null, false);
+		OT_WORKLOG = CommonCode.createCommonCode("OT_WORKLOG", "OwnerType.WorkLog", "WORKLOG", null, null, 2L, null, false);
 		commonCodeRepository.saveAll(List.of(OT_MAIL, OT_WORKLOG));
 	}
 	

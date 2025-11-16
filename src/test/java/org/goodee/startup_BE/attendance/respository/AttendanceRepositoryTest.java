@@ -56,10 +56,10 @@ class AttendanceRepositoryTest {
         commonCodeRepository.deleteAll();
 
         // --- 공통 코드 (부서, 역할, 직급, 상태) 생성 ---
-        CommonCode deptDev = CommonCode.createCommonCode("DEPT_DEV", "개발팀", "DEV", null, null, 1L, null);
-        CommonCode roleUser = CommonCode.createCommonCode("ROLE_USER", "사용자", "USER", null, null, 1L, null);
-        CommonCode posJunior = CommonCode.createCommonCode("POS_JUNIOR", "사원", "JUNIOR", null, null, 1L, null);
-        CommonCode statusActive = CommonCode.createCommonCode("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null);
+        CommonCode deptDev = CommonCode.createCommonCode("DEPT_DEV", "개발팀", "DEV", null, null, 1L, null, false);
+        CommonCode roleUser = CommonCode.createCommonCode("ROLE_USER", "사용자", "USER", null, null, 1L, null, false);
+        CommonCode posJunior = CommonCode.createCommonCode("POS_JUNIOR", "사원", "JUNIOR", null, null, 1L, null, false);
+        CommonCode statusActive = CommonCode.createCommonCode("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null, false);
         commonCodeRepository.saveAll(List.of(deptDev, roleUser, posJunior, statusActive));
 
         // --- 테스트용 직원 생성 ---
@@ -71,8 +71,8 @@ class AttendanceRepositoryTest {
         employeeRepository.save(employee);
 
         // --- 근무 상태 코드 생성 ---
-        wsNormal = CommonCode.createCommonCode("WS_NORMAL", "정상근무", "NORMAL", null, null, 1L, employee);
-        wsClockOut = CommonCode.createCommonCode("WS_CLOCK_OUT", "퇴근", "CLOCK_OUT", null, null, 2L, employee);
+        wsNormal = CommonCode.createCommonCode("WS_NORMAL", "정상근무", "NORMAL", null, null, 1L, employee, false);
+        wsClockOut = CommonCode.createCommonCode("WS_CLOCK_OUT", "퇴근", "CLOCK_OUT", null, null, 2L, employee, false);
         commonCodeRepository.saveAll(List.of(wsNormal, wsClockOut));
     }
 
