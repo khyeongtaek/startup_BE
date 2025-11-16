@@ -62,7 +62,7 @@ class AttachmentFileServiceTests {
 		
 		// CommonCode 준비 (파일 경로 생성 시 value1 사용됨)
 		ownerTypeMail = CommonCode.createCommonCode(
-			"OT_MAIL", "OwnerType.Mail", "MAIL", null, null, 1L, null
+			"OT_MAIL", "OwnerType.Mail", "MAIL", null, null, 1L, null, false
 		);
 		commonCodeRepository.save(ownerTypeMail);
 	}
