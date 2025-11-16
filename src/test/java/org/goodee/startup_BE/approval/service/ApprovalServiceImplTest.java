@@ -224,7 +224,7 @@ class ApprovalServiceImplTest {
     void getAllApprovalTemplates_Success() {
         // given
         // '결재 양식'으로 조회 시 mockTemplateCode 반환
-        given(commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse(ApprovalTemplate.PREFIX))
+        given(commonCodeRepository.findByCodeStartsWithAndIsDisabledFalse(ApprovalTemplate.PREFIX))
                 .willReturn(List.of(mockTemplateCode));
         // DTO 변환을 위한 stub
         given(mockTemplateCode.getCommonCodeId()).willReturn(99L);
@@ -239,7 +239,7 @@ class ApprovalServiceImplTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getCommonCodeId()).isEqualTo(99L);
         assertThat(result.get(0).getValue1()).isEqualTo("휴가신청서");
-        then(commonCodeRepository).should(times(1)).findByCodeStartsWithAndIsDeletedFalse(ApprovalTemplate.PREFIX);
+        then(commonCodeRepository).should(times(1)).findByCodeStartsWithAndIsDisabledFalse(ApprovalTemplate.PREFIX);
     }
 
 
