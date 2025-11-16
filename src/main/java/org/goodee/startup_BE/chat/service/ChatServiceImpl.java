@@ -525,4 +525,63 @@ public class ChatServiceImpl implements ChatService {
                 new TotalUnreadCountResponseDTO(totalUnread)
         );
     }
+
+    /**
+     * ID로 특정 채팅방 정보 조회 (알림 클릭 시 사용)
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public ChatRoomListResponseDTO getRoomById(String username, Long roomId) {
+        // 사용자 조회
+        Employee user = employeeRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("존재하지 않는 사원 입니다"));
+
+        // 채팅방 멤버십 확인 (권한 확인)
+        ChatEmployee membership = chatEmployeeRepository
+                .findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(roomId, username)
+                .orElseThrow(() -> new AccessDeniedException("채팅방 멤버가 아니거나 이미 나간 사용자입니다."));
+
+        ChatRoom room = membership.getChatRoom();
+
+        // findRoomsByUsername와 동일한 로직 수행 (마지막 메시지)
+        Optional<ChatMessage> optLastMessage = chatMessageRepository
+                .findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc(room, membership.getJoinedAt());
+
+        // findRoomsByUsername와 동일한 로직 수행 (안 읽은 개수)
+        long unreadCount = 0;
+        if (membership.getLastReadMessage() != null) {
+            unreadCount = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(
+                    room,
+                    membership.getLastReadMessage().getChatMessageId()
+            );
+        } else {
+            unreadCount = chatMessageRepository.countByChatRoomAndCreatedAtAfter(room, membership.getJoinedAt());
+        }
+
+        // findRoomsByUsername와 동일한 DTO 변환 로직 수행
+        if (Boolean.FALSE.equals(room.getIsTeam())) {
+            // 1:1 채팅방: 상대방 정보 필요
+            List<ChatEmployee> allMembers = chatEmployeeRepository.findAllByChatRoomChatRoomIdAndIsLeftFalse(room.getChatRoomId());
+
+            Optional<Employee> otherUserOpt = allMembers.stream()
+                    .map(ChatEmployee::getEmployee)
+                    .filter(emp -> !emp.getEmployeeId().equals(user.getEmployeeId()))
+                    .findFirst();
+
+            if (otherUserOpt.isPresent()) {
+                return ChatRoomListResponseDTO.toDTO(
+                        room, otherUserOpt.get(), unreadCount, optLastMessage
+                );
+            } else {
+                // (예외: 상대방이 나간 1:1 방) - findRoomsByUsername의 로직을 그대로 따름
+                // DTO에 정적 메소드 (ofLeftUserRoom 등)가 있다면 그것을 사용
+                throw new EntityNotFoundException("1:1 채팅방의 상대방 정보를 찾을 수 없습니다.");
+            }
+        } else {
+            // 팀 채팅방
+            return ChatRoomListResponseDTO.toDTO(
+                    room, unreadCount, optLastMessage
+            );
+        }
+    }
 }

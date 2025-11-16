@@ -226,7 +226,7 @@ class ApprovalServiceImplTest {
     void getAllApprovalTemplates_Success() {
         // given
         // '결재 양식'으로 조회 시 mockTemplateCode 반환
-        given(commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse(ApprovalTemplate.PREFIX))
+        given(commonCodeRepository.findByCodeStartsWithAndIsDisabledFalse(ApprovalTemplate.PREFIX))
                 .willReturn(List.of(mockTemplateCode));
         // DTO 변환을 위한 stub
         given(mockTemplateCode.getCommonCodeId()).willReturn(99L);
@@ -241,7 +241,7 @@ class ApprovalServiceImplTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getCommonCodeId()).isEqualTo(99L);
         assertThat(result.get(0).getValue1()).isEqualTo("휴가신청서");
-        then(commonCodeRepository).should(times(1)).findByCodeStartsWithAndIsDeletedFalse(ApprovalTemplate.PREFIX);
+        then(commonCodeRepository).should(times(1)).findByCodeStartsWithAndIsDisabledFalse(ApprovalTemplate.PREFIX);
     }
 
 
@@ -292,7 +292,7 @@ class ApprovalServiceImplTest {
             // --- templateCode 관련 Mocking
             // createApproval에서 사용하는 정확한 메서드:
             // commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse(templateCode)
-            given(commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse(templateCode))
+            given(commonCodeRepository.findByCodeStartsWithAndIsDisabledFalse(templateCode))
                     .willReturn(List.of(mockTemplateCode));
 
             // templateCode CommonCode Stub
@@ -336,7 +336,7 @@ class ApprovalServiceImplTest {
             // 템플릿 조회 메서드
             then(commonCodeRepository)
                     .should(times(1))
-                    .findByCodeStartsWithAndIsDeletedFalse(templateCode);
+                    .findByCodeStartsWithAndIsDisabledFalse(templateCode);
 
             // 문서 저장 호출 확인
             then(approvalDocRepository).should(times(1)).save(any(ApprovalDoc.class));
@@ -380,7 +380,7 @@ class ApprovalServiceImplTest {
                     .willReturn(Optional.of(mockCreator));
 
             // 템플릿 조회 실패
-            given(commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse(templateCode))
+            given(commonCodeRepository.findByCodeStartsWithAndIsDisabledFalse(templateCode))
                     .willReturn(List.of());
 
             // when & then

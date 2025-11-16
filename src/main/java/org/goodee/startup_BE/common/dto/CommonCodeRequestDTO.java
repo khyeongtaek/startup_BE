@@ -20,9 +20,10 @@ public class CommonCodeRequestDTO {
     private String value3;
     private Long sortOrder;
     private Long employeeId;
+    private Boolean isDisabled;
 
     public CommonCode toEntity(Employee employee) {
-        return CommonCode.createCommonCode(code, codeDescription, value1, value2, value3, sortOrder, employee);
+        return CommonCode.createCommonCode(code, codeDescription, value1, value2, value3, sortOrder, employee, isDisabled);
     }
 
 

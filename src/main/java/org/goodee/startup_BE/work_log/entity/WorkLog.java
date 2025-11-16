@@ -52,11 +52,11 @@ public class WorkLog {
     @Comment("삭제 여부")
     private Boolean isDeleted;
 
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = true, updatable = false)
     @Comment("생성시각")
     private LocalDateTime createdAt;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     @Comment("수정시각")
     private LocalDateTime updatedAt;
 
@@ -64,13 +64,13 @@ public class WorkLog {
     @PrePersist
     protected void onPrePersist() {
         if(isDeleted == null) isDeleted = false;
-        if(createdAt == null) createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
+//        if(createdAt == null) createdAt = LocalDateTime.now();
+//        updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
     protected void onPreUpdate() {
-        updatedAt = LocalDateTime.now();
+//        updatedAt = LocalDateTime.now();
     }
 
     protected WorkLog() {}

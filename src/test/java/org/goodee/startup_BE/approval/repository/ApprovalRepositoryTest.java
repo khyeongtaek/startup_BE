@@ -77,19 +77,19 @@ class ApprovalRepositoryTest {
         commonCodeRepository.deleteAll();
 
         // --- given: 공통 코드 데이터 생성 ---
-        statusActive = commonCodeRepository.save(CommonCode.createCommonCode("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null));
-        roleUser = commonCodeRepository.save(CommonCode.createCommonCode("ROLE_USER", "사용자", "USER", null, null, 2L, null));
-        deptDev = commonCodeRepository.save(CommonCode.createCommonCode("DEPT_DEV", "개발팀", "DEV", null, null, 1L, null));
-        posJunior = commonCodeRepository.save(CommonCode.createCommonCode("POS_JUNIOR", "사원", "JUNIOR", null, null, 1L, null));
-        posSenior = commonCodeRepository.save(CommonCode.createCommonCode("POS_SENIOR", "대리", "SENIOR", null, null, 2L, null));
+        statusActive = commonCodeRepository.save(CommonCode.createCommonCode("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null, false));
+        roleUser = commonCodeRepository.save(CommonCode.createCommonCode("ROLE_USER", "사용자", "USER", null, null, 2L, null, false));
+        deptDev = commonCodeRepository.save(CommonCode.createCommonCode("DEPT_DEV", "개발팀", "DEV", null, null, 1L, null, false));
+        posJunior = commonCodeRepository.save(CommonCode.createCommonCode("POS_JUNIOR", "사원", "JUNIOR", null, null, 1L, null, false));
+        posSenior = commonCodeRepository.save(CommonCode.createCommonCode("POS_SENIOR", "대리", "SENIOR", null, null, 2L, null, false));
 
         // 결재 관련 공통 코드
-        docStatusInProgress = commonCodeRepository.save(CommonCode.createCommonCode("AD_IN_PROGRESS", "진행중", "IN_PROGRESS", "AD", null, 1L, null));
-        lineStatusPending = commonCodeRepository.save(CommonCode.createCommonCode("AL_PENDING", "미결", "PENDING", "AL", null, 1L, null));
-        lineStatusAwaiting = commonCodeRepository.save(CommonCode.createCommonCode("AL_AWAITING", "대기", "AWAITING", "AL", null, 2L, null));
+        docStatusInProgress = commonCodeRepository.save(CommonCode.createCommonCode("AD_IN_PROGRESS", "진행중", "IN_PROGRESS", "AD", null, 1L, null, false));
+        lineStatusPending = commonCodeRepository.save(CommonCode.createCommonCode("AL_PENDING", "미결", "PENDING", "AL", null, 1L, null, false));
+        lineStatusAwaiting = commonCodeRepository.save(CommonCode.createCommonCode("AL_AWAITING", "대기", "AWAITING", "AL", null, 2L, null, false));
 
         // 테스트용 양식 생성
-        testTemplate = commonCodeRepository.save(CommonCode.createCommonCode("TPL_001", "결재 양식", "휴가신청서", null, null, 1L, null));
+        testTemplate = commonCodeRepository.save(CommonCode.createCommonCode("TPL_001", "결재 양식", "휴가신청서", null, null, 1L, null, false));
 
         // --- given: 직원 데이터 생성 ---
         creator = createAndSaveEmployee("creator", "creator@test.com", posJunior, null); // 최초 생성자

@@ -43,23 +43,23 @@ class CommonCodeRepositoryTest {
         // '부서' 2개 생성 (정렬 순서 2, 1)
         dept1 = CommonCode.createCommonCode(
                 "DP1", "부서", "DEV",
-                "Development", "개발팀", 2L, (Employee) null
+                "Development", "개발팀", 2L, (Employee) null, false
         );
 
         dept2 = CommonCode.createCommonCode(
                 "DP2", "부서", "HR",
-                "Human Resources", "인사팀", 1L, (Employee) null
+                "Human Resources", "인사팀", 1L, (Employee) null, false
         );
 
         // '직위' 2개 생성
         pos1 = CommonCode.createCommonCode(
                 "PO1", "직위", "STAFF",
-                "Employee", "사원", 1L, (Employee) null
+                "Employee", "사원", 1L, (Employee) null, false
         );
 
         pos2 = CommonCode.createCommonCode(
                 "PO2", "직위", "MANAGER",
-                "Team Leader", "팀장", 2L, (Employee) null
+                "Team Leader", "팀장", 2L, (Employee) null, false
         );
 
         // 총 4개의 데이터 저장
@@ -79,7 +79,7 @@ class CommonCodeRepositoryTest {
             CommonCode saved = commonCodeRepository.save(
                     CommonCode.createCommonCode(
                             "DP3", "부서 코드 - 총무팀", "GEN",
-                            null, null, 3L, null
+                            null, null, 3L, null, false
                     )
             );
 
@@ -114,7 +114,7 @@ class CommonCodeRepositoryTest {
 
             // dept1의 내용 수정
             found.update("DP1", "부서 코드 - 개발팀(수정)", "DEVOPS",
-                    null, null, 1L, null);
+                    null, null, 1L, null, false);
 
             CommonCode updated = commonCodeRepository.save(found);
             assertThat(updated.getValue1()).isEqualTo("DEVOPS");
@@ -148,7 +148,7 @@ class CommonCodeRepositoryTest {
             // setUp에서 "DP1" 코드가 이미 저장됨
             CommonCode duplicate = CommonCode.createCommonCode(
                     "DP1", "중복 부서", "DUP",
-                    null, null, 3L, null
+                    null, null, 3L, null, false
             );
 
             // 동일한 code("DP1")로 저장 시도 시 예외 발생 (Unique 제약 조건)
@@ -161,7 +161,7 @@ class CommonCodeRepositoryTest {
         void missingRequiredField() {
             CommonCode invalid = CommonCode.createCommonCode(
                     null, "부서 코드 누락", "MISSING", // code 필드가 null
-                    null, null, 5L, null
+                    null, null, 5L, null, false
             );
 
             // code는 @Column(nullable = false)이므로 예외 발생
@@ -185,19 +185,19 @@ class CommonCodeRepositoryTest {
         @DisplayName("findByCodeStartsWithAndIsDeletedFalse: codePrefix로 시작하는 코드 조회")
         void testFindByCodeStartsWithAndIsDeletedFalse() {
             // when: "DP"로 시작하는 코드 조회
-            List<CommonCode> dpList = commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse("DP");
+            List<CommonCode> dpList = commonCodeRepository.findByCodeStartsWithAndIsDisabledFalse("DP");
             // then: dept1, dept2 조회
             assertThat(dpList).hasSize(2);
             assertThat(dpList).containsExactlyInAnyOrder(dept1, dept2);
 
             // when: "PO"로 시작하는 코드 조회
-            List<CommonCode> poList = commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse("PO");
+            List<CommonCode> poList = commonCodeRepository.findByCodeStartsWithAndIsDisabledFalse("PO");
             // then: pos1, pos2 조회
             assertThat(poList).hasSize(2);
             assertThat(poList).containsExactlyInAnyOrder(pos1, pos2);
 
             // when: "XX"로 시작하는 코드 조회
-            List<CommonCode> xxList = commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse("XX");
+            List<CommonCode> xxList = commonCodeRepository.findByCodeStartsWithAndIsDisabledFalse("XX");
             // then: 조회 결과 없음
             assertThat(xxList).isEmpty();
         }

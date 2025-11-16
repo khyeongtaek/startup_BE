@@ -78,7 +78,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     @Override
     public List<CommonCodeResponseDTO> getAllApprovalTemplates() {
         List<CommonCode> templateList = commonCodeRepository
-                .findByCodeStartsWithAndIsDeletedFalse(TEMPLATE_PREFIX);
+                .findByCodeStartsWithAndIsDisabledFalse(TEMPLATE_PREFIX);
 
         return templateList.stream()
                 .map(CommonCodeResponseDTO::toDTO)
@@ -103,7 +103,7 @@ public class ApprovalServiceImpl implements ApprovalService {
 
         // 1-2 양식 조회
         String templateId = request.getTemplateCode();
-        CommonCode template = commonCodeRepository.findByCodeStartsWithAndIsDeletedFalse(templateId).get(0);
+        CommonCode template = commonCodeRepository.findByCodeStartsWithAndIsDisabledFalse(templateId).get(0);
 
         // 1-3 휴가 코드 조회 (휴가 양식 일때만)
         CommonCode vacationTypeCodeEntity = null;

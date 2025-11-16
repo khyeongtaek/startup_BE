@@ -1,4 +1,4 @@
-# SET FOREIGN_KEY_CHECKS = 0;
+SET FOREIGN_KEY_CHECKS = 0;
 #
 # DROP TABLE IF EXISTS tbl_approval_doc;
 # DROP TABLE IF EXISTS tbl_approval_line;
@@ -7,7 +7,6 @@
 # DROP TABLE IF EXISTS tbl_employee;
 # DROP TABLE IF EXISTS tbl_login_history;
 #
-# SET FOREIGN_KEY_CHECKS = 1;
 
 /*
 * =============================================
@@ -18,12 +17,13 @@
 */
 
 INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
-    ('AD1', '문서 상태 - 임시저장', 'DRAFT', NULL, NULL, 1, NULL, NOW(), NOW(), false),
-    ('AD2', '문서 상태 - 진행중', 'IN_PROGRESS', NULL, NULL, 2, NULL, NOW(), NOW(), false),
-    ('AD3', '문서 상태 - 최종 승인', 'APPROVED', NULL, NULL, 3, NULL, NOW(), NOW(), false),
-    ('AD4', '문서 상태 - 최종 반려', 'REJECTED', NULL, NULL, 4, NULL, NOW(), NOW(), false);
+    ('AD0', '문서 상태', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('AD1', '임시저장', 'DRAFT', NULL, NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('AD2', '진행중', 'IN_PROGRESS', NULL, NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('AD3', '최종 승인', 'APPROVED', NULL, NULL, 3, 1, 1, NOW(), NOW(), false),
+    ('AD4', '최종 반려', 'REJECTED', NULL, NULL, 4, 1, 1, NOW(), NOW(), false);
 
 
 /*
@@ -35,12 +35,13 @@ VALUES
 */
 
 INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
-    ('AL1', '결재선 상태 - 미결', 'PENDING', NULL, NULL, 1, NULL, NOW(), NOW(), false),
-    ('AL2', '결재선 상태 - 대기', 'AWAITING', NULL, NULL, 4, NULL, NOW(), NOW(), false),
-    ('AL3', '결재선 상태 - 승인', 'APPROVED', NULL, NULL, 2, NULL, NOW(), NOW(), false),
-    ('AL4', '결재선 상태 - 반려', 'REJECTED', NULL, NULL, 3, NULL, NOW(), NOW(), false);
+    ('AL0', '결재선 상태', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('AL1', '미결', 'PENDING', NULL, NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('AL2', '대기', 'AWAITING', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('AL3', '승인', 'APPROVED', NULL, NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('AL4', '반려', 'REJECTED', NULL, NULL, 3, 1, 1, NOW(), NOW(), false);
 
 
 /*
@@ -52,64 +53,67 @@ VALUES
 */
 
 INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
-    ('ES1', '재직 상태 - 재직중', 'ACTIVE', '재직', NULL, 1, NULL, NOW(), NOW(), false),
-    ('ES2', '재직 상태 - 휴직', 'ON_LEAVE', '휴직', NULL, 2, NULL, NOW(), NOW(), false),
-    ('ES3', '재직 상태 - 계정 잠김', 'LOCKED', '계정 잠김', NULL, 3, NULL, NOW(), NOW(), false);
+    ('ES0', '재직 상태', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('ES1', '재직중', 'ACTIVE', '재직', NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('ES2', '휴직', 'ON_LEAVE', '휴직', NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('ES3', '계정 잠김', 'LOCKED', '계정 잠김', NULL, 3, 1, 1, NOW(), NOW(), false);
 
 
 /*
 * =============================================
 * Department (부서) - '스타트업' 최상위 루트로 추가
 * code: DP + 번호
-* code_description: '부서' (카테고리명)
+* code_description: 부서명 (DP0은 '부서' 카테고리명)
 * value1: 부서명
 * value2: 상위 부서의 code (DP1이 최상위)
 * =============================================
 */
 
 INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
-    ('DP1', '부서', '스타트업', NULL, NULL, 1, NULL, NOW(), NOW(), false),
-    ('DP2', '부서', '경영지원본부', 'DP1', NULL, 2, NULL, NOW(), NOW(), false),
-    ('DP3', '부서', '인사팀', 'DP2', NULL, 3, NULL, NOW(), NOW(), false),
-    ('DP4', '부서', '재무회계팀', 'DP2', NULL, 4, NULL, NOW(), NOW(), false),
-    ('DP5', '부서', '총무팀', 'DP2', NULL, 5, NULL, NOW(), NOW(), false),
-    ('DP6', '부서', 'R&D 본부', 'DP1', NULL, 10, NULL, NOW(), NOW(), false),
-    ('DP7', '부서', '백엔드개발팀', 'DP6', NULL, 11, NULL, NOW(), NOW(), false),
-    ('DP8', '부서', '프론트엔드개발팀', 'DP6', NULL, 12, NULL, NOW(), NOW(), false),
-    ('DP9', '부서', 'UI/UX 디자인팀', 'DP6', NULL, 13, NULL, NOW(), NOW(), false),
-    ('DP10', '부서', 'QA팀', 'DP6', NULL, 14, NULL, NOW(), NOW(), false),
-    ('DP11', '부서', '사업본부', 'DP1', NULL, 20, NULL, NOW(), NOW(), false),
-    ('DP12', '부서', '영업1팀', 'DP11', NULL, 21, NULL, NOW(), NOW(), false),
-    ('DP13', '부서', '영업2팀', 'DP11', NULL, 22, NULL, NOW(), NOW(), false),
-    ('DP14', '부서', '마케팅팀', 'DP11', NULL, 23, NULL, NOW(), NOW(), false),
-    ('DP15', '부서', 'C-Level', 'DP1', NULL, 30, NULL, NOW(), NOW(), false),
-    ('DP16', '부서', '대표이사', 'DP15', NULL, 31, NULL, NOW(), NOW(), false);
+    ('DP0', '부서', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('DP1', '스타트업', '스타트업', NULL, NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('DP2', '경영지원본부', '경영지원본부', 'DP1', NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('DP3', '인사팀', '인사팀', 'DP2', NULL, 3, 1, 1, NOW(), NOW(), false),
+    ('DP4', '재무회계팀', '재무회계팀', 'DP2', NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('DP5', '총무팀', '총무팀', 'DP2', NULL, 5, 1, 1, NOW(), NOW(), false),
+    ('DP6', 'R&D 본부', 'R&D 본부', 'DP1', NULL, 10, 1, 1, NOW(), NOW(), false),
+    ('DP7', '백엔드개발팀', '백엔드개발팀', 'DP6', NULL, 11, 1, 1, NOW(), NOW(), false),
+    ('DP8', '프론트엔드개발팀', '프론트엔드개발팀', 'DP6', NULL, 12, 1, 1, NOW(), NOW(), false),
+    ('DP9', 'UI/UX 디자인팀', 'UI/UX 디자인팀', 'DP6', NULL, 13, 1, 1, NOW(), NOW(), false),
+    ('DP10', 'QA팀', 'QA팀', 'DP6', NULL, 14, 1, 1, NOW(), NOW(), false),
+    ('DP11', '사업본부', '사업본부', 'DP1', NULL, 20, 1, 1, NOW(), NOW(), false),
+    ('DP12', '영업1팀', '영업1팀', 'DP11', NULL, 21, 1, 1, NOW(), NOW(), false),
+    ('DP13', '영업2팀', '영업2팀', 'DP11', NULL, 22, 1, 1, NOW(), NOW(), false),
+    ('DP14', '마케팅팀', '마케팅팀', 'DP11', NULL, 23, 1, 1, NOW(), NOW(), false),
+    ('DP15', 'C-Level', 'C-Level', 'DP1', NULL, 30, 1, 1, NOW(), NOW(), false),
+    ('DP16', '대표이사', '대표이사', 'DP15', NULL, 31, 1, 1, NOW(), NOW(), false);
 
 
 /*
 * =============================================
 * Position (직급)
 * code: PS + 번호
-* code_description: '직급' (카테고리명)
+* code_description: 직급명 (PS0은 '직급' 카테고리명)
 * value1: 직급명
 * =============================================
 */
 
 INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
-    ('PS1', '직급', '사원', NULL, NULL, 1, NULL, NOW(), NOW(), false),
-    ('PS2', '직급', '주임', NULL, NULL, 2, NULL, NOW(), NOW(), false),
-    ('PS3', '직급', '대리', NULL, NULL, 3, NULL, NOW(), NOW(), false),
-    ('PS4', '직급', '과장', NULL, NULL, 4, NULL, NOW(), NOW(), false),
-    ('PS5', '직급', '차장', NULL, NULL, 5, NULL, NOW(), NOW(), false),
-    ('PS6', '직급', '부장', NULL, NULL, 6, NULL, NOW(), NOW(), false),
-    ('PS7', '직급', '이사', NULL, NULL, 7, NULL, NOW(), NOW(), false),
-    ('PS8', '직급', '대표이사', NULL, NULL, 8, NULL, NOW(), NOW(), false);
+    ('PS0', '직급', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('PS1', '사원', '사원', NULL, NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('PS2', '주임', '주임', NULL, NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('PS3', '대리', '대리', NULL, NULL, 3, 1, 1, NOW(), NOW(), false),
+    ('PS4', '과장', '과장', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('PS5', '차장', '차장', NULL, NULL, 5, 1, 1, NOW(), NOW(), false),
+    ('PS6', '부장', '부장', NULL, NULL, 6, 1, 1, NOW(), NOW(), false),
+    ('PS7', '이사', '이사', NULL, NULL, 7, 1, 1, NOW(), NOW(), false),
+    ('PS8', '대표이사', '대표이사', NULL, NULL, 8, 1, 1, NOW(), NOW(), false);
 
 
 /*
@@ -121,10 +125,11 @@ VALUES
 */
 
 INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
-    ('AU1', '권한 - 관리자', 'ROLE_ADMIN', '관리자', NULL, 1, NULL, NOW(), NOW(), false),
-    ('AU2', '권한 - 일반 사용자', 'ROLE_USER', '사용자', NULL, 2, NULL, NOW(), NOW(), false);
+    ('AU0', '권한', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('AU1', '관리자', 'ROLE_ADMIN', '관리자', NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('AU2', '일반 사용자', 'ROLE_USER', '사용자', NULL, 2, 1, 1, NOW(), NOW(), false);
 
 
 /*
@@ -136,10 +141,11 @@ VALUES
 */
 
 INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
-    ('LS1', '로그인 상태 - 성공', 'SUCCESS', NULL, NULL, 1, NULL, NOW(), NOW(), false),
-    ('LS2', '로그인 상태 - 실패', 'FAIL', NULL, NULL, 2, NULL, NOW(), NOW(), false);
+    ('LS0', '로그인 상태', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('LS1', '성공', 'SUCCESS', NULL, NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('LS2', '실패', 'FAIL', NULL, NULL, 2, 1, 1, NOW(), NOW(), false);
 
 
 
@@ -152,11 +158,12 @@ VALUES
 */
 
 INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
-    ('RT1', '수신', 'TO', NULL, NULL, 1, NULL, NOW(), NOW(), false),
-    ('RT2', '참조', 'CC', NULL, NULL, 2, NULL, NOW(), NOW(), false),
-    ('RT3', '숨은 참조', 'BCC', NULL, NULL, 3, NULL, NOW(), NOW(), false);
+    ('RT0', '수신자 타입', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('RT1', '수신', 'TO', NULL, NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('RT2', '참조', 'CC', NULL, NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('RT3', '숨은 참조', 'BCC', NULL, NULL, 3, 1, 1, NOW(), NOW(), false);
 
 
 /*
@@ -168,12 +175,13 @@ VALUES
 */
 
 INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
-    ('MT1', '수신함', 'INBOX', NULL, NULL, 1, NULL, NOW(), NOW(), false),
-    ('MT2', '발신함', 'SENT', NULL, NULL, 2, NULL, NOW(), NOW(), false),
-    ('MT3', '개인 보관함', 'MYBOX', NULL, NULL, 3, NULL, NOW(), NOW(), false),
-    ('MT4', '휴지통', 'TRASH', NULL, NULL, 4, NULL, NOW(), NOW(), false);
+    ('MT0', '메일함 타입', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('MT1', '수신함', 'INBOX', NULL, NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('MT2', '발신함', 'SENT', NULL, NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('MT3', '개인 보관함', 'MYBOX', NULL, NULL, 3, 1, 1, NOW(), NOW(), false),
+    ('MT4', '휴지통', 'TRASH', NULL, NULL, 4, 1, 1, NOW(), NOW(), false);
 
 
 /*
@@ -186,12 +194,13 @@ VALUES
 */
 
 INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
-    ('WT1', '업무 분류 : 프로젝트', 'PROJECT', '프로젝트', NULL, 1, NULL, NOW(), NOW(), false),
-    ('WT2', '업무 분류 : 연구', 'STUDY', '연구', NULL, 0, NULL, NOW(), NOW(), false),
-    ('WT3', '업무 분류 : 회의', 'MEETING', '회의', NULL, 0, NULL, NOW(), NOW(), false),
-    ('WT4', '업무 분류 : 기타 업무', 'ETC', '기타 업무', NULL, 0, NULL, NOW(), NOW(), false);
+    ('WT0', '업무 분류', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('WT1', '프로젝트', 'PROJECT', '프로젝트', NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('WT2', '연구', 'STUDY', '연구', NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('WT3', '회의', 'MEETING', '회의', NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('WT4', '기타 업무', 'ETC', '기타 업무', NULL, 0, 1, 1, NOW(), NOW(), false);
 
 
 /*
@@ -205,25 +214,26 @@ VALUES
 */
 
 INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
-    ('WO1', '메일 기능 개발', 'MAIL', '메일', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO2', '업무일지 기능 개발', 'WORKLOG', '업무일지', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO3', '게시판 기능 개발', 'BOARD', '게시판', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO4', '조직도 기능 개발', 'ORGANIZATION', '조직도', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO5', '회원가입 기능 개발', 'SIGNUP', '회원가입', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO6', '로그인 기능 개발', 'LOGIN', '로그인', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO7', '전자결재 기능 개발', 'APPROVAL', '전자결재', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO8', '메신저 기능 개발', 'CHAT', '메신저', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO9', '알림 기능 개발', 'NOTIFICATION', '알림', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO10', '일정 기능 개발', 'CALENDAR', '일정', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO11', '근태관리 기능 개발', 'ATTENDANCE', '근태관리', 'WT01', 0, NULL, NOW(), NOW(), false),
-    ('WO12', '옵션 더미 데이터', 'TECH_STUDY', '기술 스터디', 'WT02', 0, NULL, NOW(), NOW(), false),
-    ('WO13', '옵션 더미 데이터', 'DOC', '문서 정리', 'WT02', 0, NULL, NOW(), NOW(), false),
-    ('WO14', '옵션 더미 데이터', 'MEETING_PREP', '회의 준비', 'WT03', 0, NULL, NOW(), NOW(), false),
-    ('WO15', '옵션 더미 데이터', 'MINUTES', '회의록 작성', 'WT03', 0, NULL, NOW(), NOW(), false),
-    ('WO16', '옵션 더미 데이터', 'REPORT', '보고서 작성', 'WT04', 0, NULL, NOW(), NOW(), false),
-    ('WO17', '옵션 더미 데이터', 'SUPPORT', '업무 지원', 'WT04', 0, NULL, NOW(), NOW(), false);
+    ('WO0', '업무 분류별 세무 항목', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('WO1', '메일 기능 개발', 'MAIL', '메일', 'WT1', 0, 1, 1, NOW(), NOW(), false),
+    ('WO2', '업무일지 기능 개발', 'WORKLOG', '업무일지', 'WT1', 0, 1, 1, NOW(), NOW(), false),
+    ('WO3', '게시판 기능 개발', 'BOARD', '게시판', 'WT1', 0, 1, 1, NOW(), NOW(), false),
+    ('WO4', '조직도 기능 개발', 'ORGANIZATION', '조직도', 'WT1', 0, 1, 1, NOW(), NOW(), false),
+    ('WO5', '회원가입 기능 개발', 'SIGNUP', '회원가입', 'WT1', 0, 1, 1, NOW(), NOW(), false),
+    ('WO6', '로그인 기능 개발', 'LOGIN', '로그인', 'WT1', 0, 1, 1, NOW(), NOW(), false),
+    ('WO7', '전자결재 기능 개발', 'APPROVAL', '전자결재', 'WT1', 0, 1, 1, NOW(), NOW(), false),
+    ('WO8', '메신저 기능 개발', 'CHAT', '메신저', 'WT1', 0, 1, 1, NOW(), NOW(), false),
+    ('WO9', '알림 기능 개발', 'NOTIFICATION', '알림', 'WT1', 0, 1, 1, NOW(), NOW(), false),
+    ('WO10', '일정 기능 개발', 'CALENDAR', '일정', 'WT1', 0, 1, 1, NOW(), NOW(), false),
+    ('WO11', '근태관리 기능 개발', 'ATTENDANCE', '근태관리', 'WT1', 0, 1, 1, NOW(), NOW(), false),
+    ('WO12', '기술 스터디', 'TECH_STUDY', '기술 스터디', 'WT2', 0, 1, 1, NOW(), NOW(), false),
+    ('WO13', '문서 정리', 'DOC', '문서 정리', 'WT2', 0, 1, 1, NOW(), NOW(), false),
+    ('WO14', '회의 준비', 'MEETING_PREP', '회의 준비', 'WT3', 0, 1, 1, NOW(), NOW(), false),
+    ('WO15', '회의록 작성', 'MINUTES', '회의록 작성', 'WT3', 0, 1, 1, NOW(), NOW(), false),
+    ('WO16', '보고서 작성', 'REPORT', '보고서 작성', 'WT4', 0, 1, 1, NOW(), NOW(), false),
+    ('WO17', '업무 지원', 'SUPPORT', '업무 지원', 'WT4', 0, 1, 1, NOW(), NOW(), false);
 
 
 /*
@@ -235,15 +245,15 @@ VALUES
 */
 
 INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
-    ('OT01', '출처 모듈 : 메일', 'MAIL', '', '', 0, NULL, NOW(), NOW(), false),
-    ('OT02', '출처 모듈 : 업무일지', 'WORKLOG', '', '', 0, NULL, NOW(), NOW(), false),
-    ('OT03', '출처 모듈 : 사원', 'EMPLOYEE', '', '', 0, NULL, NOW(), NOW(), false),
-    ('OT04', '출처 모듈 : 전자결재', 'APPROVAL', '', '', 0, NULL, NOW(), NOW(), false),
-    ('OT05', '출처 모듈 : 채팅 초대', 'TEAMCHATNOTI', '', '', 0, NULL, NOW(), NOW(), false),
-    ('OT06', '출처 모듈 : 일정 초대', 'SCHEDULEINVITE', '', '', 0, NULL, NOW(), NOW(), false);
-/*
+    ('OT0', '출처 모듈 타입', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('OT1', '메일', 'MAIL', '', '', 0, 1, 1, NOW(), NOW(), false),
+    ('OT2', '업무일지', 'WORKLOG', '', '', 0, 1, 1, NOW(), NOW(), false),
+    ('OT3', '사원', 'EMPLOYEE', '', '', 0, 1, 1, NOW(), NOW(), false),
+    ('OT4', '전자결재', 'APPROVAL', '', '', 0, 1, 1, NOW(), NOW(), false),
+    ('OT5', '채팅 초대', 'TEAMCHATNOTI', '', '', 0, 1, 1, NOW(), NOW(), false),
+    ('OT6', '일정 초대', 'SCHEDULEINVITE', '', '', 0, 1, 1, NOW(), NOW(), false);
 
 
 
@@ -258,15 +268,16 @@ VALUES
 */
 
 INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
-    ('WS01', '근무 상태 - 정상근무', 'NORMAL', '정상근무', NULL, 1, NULL, NOW(), NOW(), false),
-    ('WS02', '근무 상태 - 지각', 'LATE', '지각', NULL, 2, NULL, NOW(), NOW(), false),
-    ('WS03', '근무 상태 - 조퇴', 'EARLY_LEAVE', '조퇴', NULL, 3, NULL, NOW(), NOW(), false),
-    ('WS04', '근무 상태 - 결근', 'ABSENT', '결근', NULL, 4, NULL, NOW(), NOW(), false),
-    ('WS05', '근무 상태 - 휴가', 'VACATION', '휴가', NULL, 5, NULL, NOW(), NOW(), false),
-    ('WS06','근무 상태 - 외근', 'OUT_ON_BUSINESS', '외근', NULL , 6 , NULL, NOW(), NOW(), false ),
-    ('WS07','근무 상태 - 퇴근', 'CLOCK_OUT', '퇴근', NULL , 6 , NULL, NOW(), NOW(), false );
+    ('WS0', '근무 상태', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('WS1', '정상근무', 'NORMAL', '정상근무', NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('WS2', '지각', 'LATE', '지각', NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('WS3', '조퇴', 'EARLY_LEAVE', '조퇴', NULL, 3, 1, 1, NOW(), NOW(), false),
+    ('WS4', '결근', 'ABSENT', '결근', NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('WS5', '휴가', 'VACATION', '휴가', NULL, 5, 1, 1, NOW(), NOW(), false),
+    ('WS6', '외근', 'OUT_ON_BUSINESS', '외근', NULL , 6 , 1, 1, NOW(), NOW(), false ),
+    ('WS7', '퇴근', 'CLOCK_OUT', '퇴근', NULL , 6 , 1, 1, NOW(), NOW(), false );
 
 
 /*
@@ -279,28 +290,30 @@ VALUES
 */
 
 INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
-    ('SC01', '일정 카테고리 - 회의', 'MEETING', '회의', NULL, 1, NULL, NOW(), NOW(), false),
-    ('SC02', '일정 카테고리 - 출장', 'BUSINESS_TRIP', '출장', NULL, 2, NULL, NOW(), NOW(), false),
-    ('SC03', '일정 카테고리 - 휴가', 'VACATION', '휴가', NULL, 3, NULL, NOW(), NOW(), false),
-    ('SC04', '일정 카테고리 - 프로젝트', 'PROJECT', '프로젝트', NULL, 4, NULL, NOW(), NOW(), false),
-    ('SC05', '일정 카테고리 - 기타', 'ETC', '기타', NULL, 5, NULL, NOW(), NOW(), false);
+    ('SC0', '일정 카테고리', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('SC1', '회의', 'MEETING', '회의', NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('SC2', '출장', 'BUSINESS_TRIP', '출장', NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('SC3', '휴가', 'VACATION', '휴가', NULL, 3, 1, 1, NOW(), NOW(), false),
+    ('SC4', '프로젝트', 'PROJECT', '프로젝트', NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('SC5', '기타', 'ETC', '기타', NULL, 5, 1, 1, NOW(), NOW(), false);
 /*
 * =============================================
 * Participant Status (참여 상태)
-* code: PS + 번호 (Participant Status)
+* code: SP + 번호 (Schedule Participant Status)
 * value1: 상태 코드 (영문)
 * value2: 상태 이름 (한글)
 * =============================================
 */
 
 INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
-    ('SP01', '참여 상태 - 참석', 'ATTEND', '참석', NULL, 1, NULL, NOW(), NOW(), false),
-    ('SP02', '참여 상태 - 거절', 'REJECT', '거절', NULL, 2, NULL, NOW(), NOW(), false),
-    ('SP03', '참여 상태 - 미응답', 'PENDING', '미응답', NULL, 3, NULL, NOW(), NOW(), false);
+    ('SP0', '참여 상태', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('SP1', '참석', 'ATTEND', '참석', NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('SP2', '거절', 'REJECT', '거절', NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('SP3', '미응답', 'PENDING', '미응답', NULL, 3, 1, 1, NOW(), NOW(), false);
 
 
 /*
@@ -641,6 +654,7 @@ VALUES
 * =============================================
 * Approval Type (결재 양식)
 * code: AT + 번호 (Approval Template)
+* code_description: 양식 명 (AT0은 '결재 양식' 카테고리명)
 * value1: 양식 명 (한글, UI에 노출될 이름)
 * value2: 양식 타입 (영문, Enum 또는 식별자로 사용)
 * value3: 양식 폼 컴포넌트 경로
@@ -648,25 +662,20 @@ VALUES
 */
 
 INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
-    ('AT01', '결재 양식', '휴가 신청서', 'VACATION', '/forms/vacation', 1, NULL, NOW(), NOW(), false),
-    ('AT02', '결재 양식', '출장 신청서', 'BUSINESS_TRIP', '/forms/biztrip', 2, NULL, NOW(), NOW(), false);
-
-
-/*
-* =============================================
-* Vacation Type (휴가 종류)
-* code: VT + 번호 (Vacation Type)
-* value1: 상태 코드 (영문)
-* value2: 상태 이름 (한글)
-* =============================================
-*/
+    ('AT0', '결재 양식', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('AT1', '휴가 신청서', '휴가 신청서', 'VACATION', '/forms/vacation', 1, 1, 1, NOW(), NOW(), false),
+    ('AT2', '출장 계획서', '출장 계획서', 'BUSINESS_TRIP', '/forms/biztrip', 2, 1, 1, NOW(), NOW(), false);
 
 INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, employee_id, created_at, updated_at, is_deleted)
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
-    ('VT1', '휴가 종류 - 연차', 'ANNUAL', '연차', NULL, 1, NULL, NOW(), NOW(), false),
-    ('VT2', '휴가 종류 - 오전반차', 'MORNING_HALF', '오전 반차', NULL, 2, NULL, NOW(), NOW(), false),
-    ('VT3', '휴가 종류 - 오후반차', 'AFTERNOON_HALF', '오후 반차', NULL, 3, NULL, NOW(), NOW(), false);
+    ('VT0', '휴가 종류', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('VT1', '연차', 'ANNUAL', '연차', NULL, 1, NULL, NOW(), NOW(), false),
+    ('VT2', '오전반차', 'MORNING_HALF', '오전 반차', NULL, 2, NULL, NOW(), NOW(), false),
+    ('VT3', '오후반차', 'AFTERNOON_HALF', '오후 반차', NULL, 3, NULL, NOW(), NOW(), false);
 
+
+# 이구문이 반드시 최하단에 있어야함
+SET FOREIGN_KEY_CHECKS = 1;

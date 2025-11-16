@@ -54,13 +54,13 @@ class EmployeeRepositoryTest {
         commonCodeRepository.deleteAll();
 
         // --- given: 공통 코드 데이터 생성 ---
-        statusActive = CommonCode.createCommonCode("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null);
-        roleAdmin = CommonCode.createCommonCode("ROLE_ADMIN", "관리자", "ADMIN", null, null, 1L, null);
-        roleUser = CommonCode.createCommonCode("ROLE_USER", "사용자", "USER", null, null, 2L, null);
-        deptDev = CommonCode.createCommonCode("DEPT_DEV", "개발팀", "DEV", null, null, 1L, null);
-        deptHr = CommonCode.createCommonCode("DEPT_HR", "인사팀", "HR", null, null, 2L, null);
-        posJunior = CommonCode.createCommonCode("POS_JUNIOR", "사원", "JUNIOR", null, null, 1L, null);
-        posSenior = CommonCode.createCommonCode("POS_SENIOR", "대리", "SENIOR", null, null, 2L, null);
+        statusActive = CommonCode.createCommonCode("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null, false);
+        roleAdmin = CommonCode.createCommonCode("ROLE_ADMIN", "관리자", "ADMIN", null, null, 1L, null, false);
+        roleUser = CommonCode.createCommonCode("ROLE_USER", "사용자", "USER", null, null, 2L, null, false);
+        deptDev = CommonCode.createCommonCode("DEPT_DEV", "개발팀", "DEV", null, null, 1L, null, false);
+        deptHr = CommonCode.createCommonCode("DEPT_HR", "인사팀", "HR", null, null, 2L, null, false);
+        posJunior = CommonCode.createCommonCode("POS_JUNIOR", "사원", "JUNIOR", null, null, 1L, null, false);
+        posSenior = CommonCode.createCommonCode("POS_SENIOR", "대리", "SENIOR", null, null, 2L, null, false);
 
         commonCodeRepository.saveAll(List.of(statusActive, roleAdmin, roleUser, deptDev, deptHr, posJunior, posSenior));
 
@@ -250,6 +250,34 @@ class EmployeeRepositoryTest {
 
         // when
         Boolean exists = employeeRepository.existsByEmail("nonexistent@test.com");
+
+        // then
+        assertThat(exists).isFalse();
+    }
+
+    @Test
+    @DisplayName("Custom: existsByUsername 테스트 - 성공 (존재함)")
+    void existsByUsernameSuccessTest() {
+        // given
+        employeeRepository.save(
+                createPersistableEmployee("user789", "user789@test.com", roleUser, deptDev, posJunior)
+        );
+
+        // when
+        Boolean exists = employeeRepository.existsByUsername("user789");
+
+        // then
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    @DisplayName("Custom: existsByUsername 테스트 - 실패 (존재하지 않음)")
+    void existsByUsernameFailureTest() {
+        // given
+        // "nonexistentUser"는 저장하지 않음
+
+        // when
+        Boolean exists = employeeRepository.existsByUsername("nonexistentUser");
 
         // then
         assertThat(exists).isFalse();
