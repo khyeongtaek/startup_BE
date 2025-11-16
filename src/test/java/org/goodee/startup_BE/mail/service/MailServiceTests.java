@@ -143,7 +143,7 @@ class MailServiceTests {
 	// ===== 유틸 메서드 =====
 	
 	private CommonCode cc(String code, String desc, String v1, String v2, String v3, long sort) {
-		return CommonCode.createCommonCode(code, desc, v1, v2, v3, sort, null);
+		return CommonCode.createCommonCode(code, desc, v1, v2, v3, sort, null, false);
 	}
 	
 	private Employee newEmp(String username, String name, String email,

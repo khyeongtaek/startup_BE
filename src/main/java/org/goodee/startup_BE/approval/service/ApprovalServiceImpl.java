@@ -71,7 +71,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     @Override
     public List<CommonCodeResponseDTO> getAllApprovalTemplates() {
         List<CommonCode> templateList = commonCodeRepository
-                .findByCodeStartsWithAndIsDeletedFalse(TEMPLATE_PREFIX);
+                .findByCodeStartsWithAndIsDisabledFalse(TEMPLATE_PREFIX);
 
         return templateList.stream()
                 .map(CommonCodeResponseDTO::toDTO)
