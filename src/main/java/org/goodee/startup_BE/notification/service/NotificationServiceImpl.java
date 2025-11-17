@@ -63,6 +63,9 @@ public class NotificationServiceImpl implements NotificationService {
         // 공통 메소드 호출
         sendNotificationCounts(employee.getUsername());
 
+        // 생성된 알림 객체 전송
+        simpMessagingTemplate.convertAndSendToUser(employee.getUsername(), "/queue/new-notifications", dto);
+
         return dto;
     }
 
