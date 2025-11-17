@@ -15,29 +15,25 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-
-@DataJpaTest(
-        // Repository와 Entity 스캔 범위를 명시적으로 설정
-        properties = {
-                "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.datasource.driver-class-name=org.h2.Driver",
-                "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1",
-                "spring.datasource.username=sa",
-                "spring.datasource.password=",
-                "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect"
-        }
-)
+// EmployeeRepositoryTest와 동일한 H2 테스트 환경 설정
+@DataJpaTest(properties = {
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1",
+        "spring.datasource.username=sa",
+        "spring.datasource.password=",
+        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect"
+})
+// Post, Employee, CommonCode 엔티티를 스캔
 @EntityScan(basePackages = "org.goodee.startup_BE")
 class PostRepositoryTest {
 
@@ -45,292 +41,408 @@ class PostRepositoryTest {
     private PostRepository postRepository;
 
     @Autowired
-    private CommonCodeRepository commonCodeRepository;
-
-    @Autowired
     private EmployeeRepository employeeRepository;
 
-    // 테스트 환경에서 필수적으로 사용되는 불변 필드만 유지하여 경고를 제거합니다.
-    private Employee creator;
-    private Long noticeCategoryId;
-    private Long freeCategoryId;
+    @Autowired
+    private CommonCodeRepository commonCodeRepository;
 
-    private static final String TEST_PASSWORD = "testPassword123!"; // 상수(static final)로 변환
+    // --- 테스트용 공통 데이터 ---
+    private Employee testUser1, testUser2;
+    private CommonCode categoryNotice, categoryFree, categoryQa;
+    private CommonCode statusActive, roleUser, deptDev, deptHr, posJunior;
+    private final String TEST_PASSWORD = "testPassword123!";
 
-    /**
-     * @BeforeEach: 테스트 실행 전 환경 설정 및 데이터 초기화
-     * CommonCode 객체들은 지역 변수로 선언하여 경고를 제거합니다.
-     */
+    // searchPost 테스트용 데이터
+    private Post post1, post2, post3, post4_deleted;
+
     @BeforeEach
     void setUp() {
-        // H2 DB 초기화
+        // 의존성 순서에 맞게 삭제 (Post -> Employee -> CommonCode)
         postRepository.deleteAll();
         employeeRepository.deleteAll();
         commonCodeRepository.deleteAll();
 
-        // 1. Employee 및 Post 생성에 필요한 공통 코드 객체 (지역 변수로 선언)
-        final CommonCode statusActive = CommonCode.createCommonCode("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null,false);
-        final CommonCode roleAdmin = CommonCode.createCommonCode("ROLE_ADMIN", "관리자", "ADMIN", null, null, 1L, null,false);
-        final CommonCode deptDev = CommonCode.createCommonCode("DEPT_DEV", "개발팀", "DEV", null, null, 1L, null,false);
-        final CommonCode posSenior = CommonCode.createCommonCode("POS_SENIOR", "대리", "SENIOR", null, null, 2L, null,false);
+        // --- given: 공통 코드 데이터 생성 (Employee용) ---
+        statusActive = CommonCode.createCommonCode("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null, false);
+        roleUser = CommonCode.createCommonCode("ROLE_USER", "사용자", "USER", null, null, 2L, null, false);
+        deptDev = CommonCode.createCommonCode("DEPT_DEV", "개발팀", "DEV", null, null, 1L, null, false);
+        deptHr = CommonCode.createCommonCode("DEPT_HR", "인사팀", "HR", null, null, 2L, null, false);
+        posJunior = CommonCode.createCommonCode("POS_JUNIOR", "사원", "JUNIOR", null, null, 1L, null, false);
 
-        final CommonCode postCategoryNotice = CommonCode.createCommonCode("PC1", "게시판 카테고리", "NOTICE", "공지사항", null, 1L, null,false);
-        final CommonCode postCategoryFree = CommonCode.createCommonCode("PC2", "게시판 카테고리", "FREE", "자유게시판", null, 2L, null,false);
+        // --- given: 공통 코드 데이터 생성 (Post용) ---
+        categoryNotice = CommonCode.createCommonCode("CAT_NOTICE", "공지사항", "NOTICE", null, null, 1L, null, false);
+        categoryFree = CommonCode.createCommonCode("CAT_FREE", "자유게시판", "FREE", null, null, 2L, null, false);
+        categoryQa = CommonCode.createCommonCode("CAT_QA", "Q&A", "QA", null, null, 3L, null, false);
 
-        // CommonCode 저장 및 ID 저장 (ID는 @Test 메서드에서 필요하므로 필드로 저장)
         commonCodeRepository.saveAll(List.of(
-                statusActive, roleAdmin, deptDev, posSenior
+                statusActive, roleUser, deptDev, deptHr, posJunior,
+                categoryNotice, categoryFree, categoryQa
         ));
-        noticeCategoryId = commonCodeRepository.save(postCategoryNotice).getCommonCodeId();
-        freeCategoryId = commonCodeRepository.save(postCategoryFree).getCommonCodeId();
 
-        // 2. Creator Employee 생성
-        creator = Employee.createEmployee(
-                "admin", "관리자", "admin@test.com", "010-0000-0000",
-                LocalDate.now(), statusActive, roleAdmin, deptDev, posSenior,
-                null
-        );
-        creator.updateInitPassword(TEST_PASSWORD, null);
-        employeeRepository.save(creator);
+        // --- given: 직원(Employee) 데이터 생성 ---
+        testUser1 = createPersistableEmployee("user1", "테스트유저1", "user1@test.com", deptDev);
+        testUser2 = createPersistableEmployee("user2", "테스트유저2", "user2@test.com", deptHr);
+        employeeRepository.saveAll(List.of(testUser1, testUser2));
+
+        // --- given: searchPost 테스트용 게시글 데이터 생성 ---
+        post1 = createPersistablePost("공지-제목A-유저1", "검색용 내용입니다", testUser1, categoryNotice, true);
+        post2 = createPersistablePost("자유-제목B-유저1", "검색용 내용입니다", testUser1, categoryFree, false);
+        post3 = createPersistablePost("공지-제목C-유저2", "특별한 검색어", testUser2, categoryNotice, false);
+        post4_deleted = createPersistablePost("삭제된글-유저1", "삭제된 내용", testUser1, categoryNotice, false);
+        post4_deleted.delete(); // soft delete
+
+        postRepository.saveAll(List.of(post1, post2, post3, post4_deleted));
     }
 
     /**
-     * DB에서 CommonCode를 조회하여 유효한 Post 엔티티를 생성하는 헬퍼 메서드
-     * CommonCode 객체 대신 ID를 받아 내부에서 조회하여 CommonCode 필드 사용 경고를 제거합니다.
+     * 테스트용 직원 엔티티 생성 헬퍼 (EmployeeRepositoryTest 형식 준수)
      */
-    private Post createValidPost(Long categoryId, String title, String content) {
-        final CommonCode category = commonCodeRepository.findById(categoryId)
-                .orElseThrow(() -> new RuntimeException("Test setup error: CommonCode not found"));
+    private Employee createPersistableEmployee(String username, String name, String email, CommonCode dept) {
+        Employee employee = Employee.createEmployee(
+                username, name, email, "010-1234-5678",
+                LocalDate.now(), statusActive, roleUser, dept, posJunior,
+                null // 테스트상 creator는 null로 통일
+        );
+        employee.updateInitPassword(TEST_PASSWORD, null);
+        return employee;
+    }
 
+    /**
+     * 테스트용 게시글 엔티티 생성 헬퍼
+     */
+    private Post createPersistablePost(String title, String content, Employee author, CommonCode category, Boolean isNotification) {
         return Post.create(
                 category,
-                creator, // 필드 유지
+                author,
                 title,
                 content,
-                true, // isNotification
+                isNotification,
                 false // alert
         );
     }
 
-    // -------------------------------------------------------------------------------- //
-    // ------------------------------------ C. Create & R. Read ----------------------- //
-    // -------------------------------------------------------------------------------- //
+    // --- CRUD Tests ---
 
     @Test
-    @DisplayName("C, R: Post 생성 후 ID로 조회 테스트")
-    void saveAndFindByIdTest() {
+    @DisplayName("C: 게시글 생성(save) 테스트")
+    void savePostTest() {
         // given
-        Post newPost = createValidPost(noticeCategoryId, "첫 게시글", "내용입니다.");
+        Post newPost = createPersistablePost("새 게시글", "내용입니다", testUser1, categoryQa, false);
 
         // when
         Post savedPost = postRepository.save(newPost);
-        Optional<Post> foundPost = postRepository.findById(savedPost.getPostId());
+
+        // then
+        assertThat(savedPost).isNotNull();
+        assertThat(savedPost.getPostId()).isNotNull();
+        assertThat(savedPost.getTitle()).isEqualTo("새 게시글");
+        assertThat(savedPost.getEmployee()).isEqualTo(testUser1);
+        // Post.create()가 employee.getName()을 저장하는지 확인
+        assertThat(savedPost.getEmployeeName()).isEqualTo(testUser1.getName());
+        assertThat(savedPost.getCommonCode()).isEqualTo(categoryQa);
+        assertThat(savedPost.getIsDeleted()).isFalse();
+        assertThat(savedPost.getIsNotification()).isFalse();
+        assertThat(savedPost.getCreatedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("R: 게시글 ID로 조회(findById) 테스트 - 성공")
+    void findByIdSuccessTest() {
+        // given (setUp에서 post1이 저장됨)
+
+        // when
+        Optional<Post> foundPost = postRepository.findById(post1.getPostId());
 
         // then
         assertThat(foundPost).isPresent();
-        assertThat(foundPost.get().getTitle()).isEqualTo("첫 게시글");
-        assertThat(foundPost.get().getEmployee().getEmployeeId()).isEqualTo(creator.getEmployeeId());
+        assertThat(foundPost.get().getPostId()).isEqualTo(post1.getPostId());
+        assertThat(foundPost.get().getTitle()).isEqualTo(post1.getTitle());
     }
 
     @Test
-    @DisplayName("R: 전체 Post 조회(findAll) 테스트")
-    void findAllPostsTest() {
+    @DisplayName("R: 게시글 ID로 조회(findById) 테스트 - 실패 (존재하지 않는 ID)")
+    void findByIdFailureTest() {
         // given
-        postRepository.save(createValidPost(noticeCategoryId, "공지1", "내용1"));
-        postRepository.save(createValidPost(freeCategoryId, "자유2", "내용2"));
-        postRepository.save(createValidPost(noticeCategoryId, "공지3", "내용3"));
+        Long nonExistentId = 9999L;
 
         // when
-        List<Post> posts = postRepository.findAll();
+        Optional<Post> foundPost = postRepository.findById(nonExistentId);
 
         // then
-        assertThat(posts).hasSize(3);
-        assertThat(posts).extracting(Post::getTitle).containsExactlyInAnyOrder("공지1", "자유2", "공지3");
+        assertThat(foundPost).isNotPresent();
     }
 
-    // -------------------------------------------------------------------------------- //
-    // ------------------------------------ U. Update --------------------------------- //
-    // -------------------------------------------------------------------------------- //
-
     @Test
-    @DisplayName("U: Post 정보 수정(update) 테스트")
+    @DisplayName("U: 게시글 수정(update) 테스트")
     void updatePostTest() throws InterruptedException {
         // given
-        Post savedPost = postRepository.save(createValidPost(noticeCategoryId, "수정 전 제목", "수정 전 내용"));
-        LocalDateTime originalUpdateTime = savedPost.getUpdatedAt();
+        Post savedPost = postRepository.save(
+                createPersistablePost("수정 전 제목", "수정 전 내용", testUser1, categoryFree, false)
+        );
+        LocalDateTime createdAt = savedPost.getCreatedAt();
+
+        // @PreUpdate 시간을 명확히 구분하기 위해 잠시 대기
+        Thread.sleep(10);
 
         // when
-        // 시간을 약간 지연시켜 updated_at 값이 변경됨을 보장
-        TimeUnit.MILLISECONDS.sleep(100);
+        // 영속성 컨텍스트에서 엔티티를 가져옴
+        Post postToUpdate = postRepository.findById(savedPost.getPostId()).get();
+        String newTitle = "수정된 제목";
+        String newContent = "수정된 내용";
+        boolean newNotification = true;
 
-        // Post 엔티티의 update 메서드 사용
-        String newTitle = "수정 후 제목";
-        String newContent = "수정 후 내용";
-        savedPost.update(newTitle, newContent, false);
+        // 엔티티의 update 메서드 호출 (JPA 변경 감지)
+        postToUpdate.update(newTitle, newContent, newNotification);
 
-        Post updatedPost = postRepository.saveAndFlush(savedPost);
+        // flush로 DB에 즉시 반영
+        postRepository.flush();
+
+        // when
+        // 검증을 위해 DB에서 다시 조회
+        Post updatedPost = postRepository.findById(savedPost.getPostId()).get();
 
         // then
         assertThat(updatedPost.getTitle()).isEqualTo(newTitle);
         assertThat(updatedPost.getContent()).isEqualTo(newContent);
-        // UpdatedAt이 변경되었는지 확인
-        assertThat(updatedPost.getUpdatedAt()).isAfter(originalUpdateTime);
+        assertThat(updatedPost.getIsNotification()).isEqualTo(newNotification);
+        assertThat(updatedPost.getUpdatedAt()).isAfter(createdAt); // @PreUpdate 동작 확인
     }
 
-    // -------------------------------------------------------------------------------- //
-    // ------------------------------------ D. Delete --------------------------------- //
-    // -------------------------------------------------------------------------------- //
-
     @Test
-    @DisplayName("D: Post 논리적 삭제(delete) 테스트 - isDeleted 변경 확인")
+    @DisplayName("D: 게시글 논리적 삭제(soft delete) 테스트")
     void softDeletePostTest() {
-        // given
-        Post postToDelete = postRepository.save(createValidPost(freeCategoryId, "삭제 대상", "내용"));
-        Long postId = postToDelete.getPostId();
-        assertThat(postToDelete.getIsDeleted()).isFalse();
+        // given (setUp에서 post1이 저장됨)
+        assertThat(post1.getIsDeleted()).isFalse();
 
         // when
-        postToDelete.delete(); // Post 엔티티의 delete() 메서드 사용
-        postRepository.saveAndFlush(postToDelete); // DB에 변경 사항 반영
+        // 영속성 컨텍스트에서 가져와서 엔티티 메서드 호출
+        Post postToDelete = postRepository.findById(post1.getPostId()).get();
+        postToDelete.delete(); // isDeleted = true로 변경
+        postRepository.flush();
 
         // then
-        Optional<Post> deletedPost = postRepository.findById(postId);
-        assertThat(deletedPost).isPresent();
-        assertThat(deletedPost.get().getIsDeleted()).isTrue(); // 논리적 삭제 확인
+        Post deletedPost = postRepository.findById(post1.getPostId()).get();
+        assertThat(deletedPost.getIsDeleted()).isTrue();
     }
 
-
-    // -------------------------------------------------------------------------------- //
-    // --------------------------------- Custom Query: searchPost --------------------- //
-    // -------------------------------------------------------------------------------- //
-
     @Test
-    @DisplayName("Custom: searchPost - 제목으로 검색 테스트 (삭제된 글 제외)")
-    void searchPost_ByTitle_Test() {
+    @DisplayName("D: 게시글 물리적 삭제(deleteById) 테스트")
+    void hardDeletePostTest() {
         // given
-        postRepository.save(createValidPost(noticeCategoryId, "중요한 공지사항", "내용1"));
-        postRepository.save(createValidPost(freeCategoryId, "자유로운 의견", "내용2"));
-        Post deletedPost = createValidPost(noticeCategoryId, "삭제된 공지사항", "내용4");
-        postRepository.save(deletedPost);
-        deletedPost.delete(); // 삭제
-        postRepository.saveAndFlush(deletedPost); // DB에 삭제 상태 반영
-
-        Pageable pageable = PageRequest.of(0, 10, Sort.by("postId").ascending());
-
-        // when
-        Page<Post> result = postRepository.searchPost(
-                null, "공지사항", null, null, pageable // 제목 검색
+        Post savedPost = postRepository.save(
+                createPersistablePost("삭제될 글", "내용", testUser1, categoryFree, false)
         );
+        Long postId = savedPost.getPostId();
+        assertThat(postRepository.existsById(postId)).isTrue();
+
+        // when
+        postRepository.deleteById(postId);
+        postRepository.flush();
 
         // then
-        assertThat(result.getTotalElements()).isEqualTo(1); // '중요한 공지사항' 1건만 조회
-        assertThat(result.getContent()).extracting(Post::getTitle)
-                .containsExactly("중요한 공지사항");
+        assertThat(postRepository.existsById(postId)).isFalse();
     }
 
+    // --- Custom Repository Method (searchPost) Tests ---
 
     @Test
-    @DisplayName("Custom: searchPost - 검색 조건이 모두 null일 경우 전체 비삭제 게시글 조회 테스트")
-    void searchPost_NoCriteria_Test() {
+    @DisplayName("Custom: searchPost - 파라미터 없음 (삭제 제외 전체 조회)")
+    void searchPost_FindAllActive() {
         // given
-        postRepository.save(createValidPost(noticeCategoryId, "공지1", "내용1"));
-        postRepository.save(createValidPost(freeCategoryId, "자유2", "내용2"));
-
-        // 삭제된 게시글
-        Post deletedPost = createValidPost(noticeCategoryId, "삭제글", "내용3");
-        postRepository.save(deletedPost);
-        deletedPost.delete();
-        postRepository.saveAndFlush(deletedPost); // DB에 삭제 상태 반영
-
         Pageable pageable = PageRequest.of(0, 10);
 
         // when
-        // 모든 검색 조건(categoryId, title, content, employeeName)이 null인 경우
-        Page<Post> result = postRepository.searchPost(
-                null, null, null, null, pageable
-        );
+        // categoryId, title, content, employeeName 모두 null
+        Page<Post> result = postRepository.searchPost(null, null, null, null, pageable);
 
         // then
-        assertThat(result.getTotalElements()).isEqualTo(2); // 삭제되지 않은 2개만 조회되어야 함
-        assertThat(result.getContent()).extracting(Post::getTitle)
-                .containsExactlyInAnyOrder("공지1", "자유2");
+        // setUp에서 생성한 4개 중 삭제된(post4_deleted) 1개를 제외한 3개
+        assertThat(result.getTotalElements()).isEqualTo(3);
+        assertThat(result.getContent()).containsExactlyInAnyOrder(post1, post2, post3);
     }
 
     @Test
-    @DisplayName("Custom: searchPost - 카테고리 ID와 작성자 이름으로 검색 테스트")
-    void searchPost_ByCategoryAndEmployeeName_Test() {
+    @DisplayName("Custom: searchPost - CategoryId로 검색")
+    void searchPost_ByCategoryId() {
         // given
-        postRepository.save(createValidPost(noticeCategoryId, "공지1", "작성1"));
-        postRepository.save(createValidPost(freeCategoryId, "자유2", "작성2"));
-
         Pageable pageable = PageRequest.of(0, 10);
 
         // when
-        // 공지 카테고리(noticeCategoryId)와 작성자 이름("관리자")으로 검색
-        Page<Post> result = postRepository.searchPost(
-                noticeCategoryId, null, null, creator.getName(), pageable
-        );
+        // 공지사항(categoryNotice)으로 검색
+        Page<Post> result = postRepository.searchPost(categoryNotice.getCommonCodeId(), null, null, null, pageable);
+
+        // then
+        // post1(공지), post3(공지) 2개
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        assertThat(result.getContent()).containsExactlyInAnyOrder(post1, post3);
+    }
+
+    @Test
+    @DisplayName("Custom: searchPost - Title로 검색")
+    void searchPost_ByTitle() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+
+        // when
+        // "제목A" (post1)
+        Page<Post> result = postRepository.searchPost(null, "제목A", null, null, pageable);
 
         // then
         assertThat(result.getTotalElements()).isEqualTo(1);
-        assertThat(result.getContent().get(0).getTitle()).isEqualTo("공지1");
-        assertThat(result.getContent().get(0).getEmployeeName()).isEqualTo(creator.getName());
+        assertThat(result.getContent()).contains(post1);
+    }
+
+    @Test
+    @DisplayName("Custom: searchPost - Content로 검색")
+    void searchPost_ByContent() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+
+        // when
+        // "특별한" (post3)
+        Page<Post> result = postRepository.searchPost(null, null, "특별한", null, pageable);
+
+        // then
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent()).contains(post3);
+    }
+
+    @Test
+    @DisplayName("Custom: searchPost - EmployeeName으로 검색")
+    void searchPost_ByEmployeeName() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+        String user1Name = testUser1.getName(); // "테스트유저1"
+
+        // when
+        Page<Post> result = postRepository.searchPost(null, null, null, user1Name, pageable);
+
+        // then
+        // post1(유저1), post2(유저1) 2개
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        assertThat(result.getContent()).containsExactlyInAnyOrder(post1, post2);
+    }
+
+    @Test
+    @DisplayName("Custom: searchPost - 복합 조건 검색 (Category + Name)")
+    void searchPost_ByCombined() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+        String user2Name = testUser2.getName(); // "테스트유저2"
+
+        // when
+        // 공지사항(categoryNotice) + 작성자(user2Name)
+        Page<Post> result = postRepository.searchPost(categoryNotice.getCommonCodeId(), null, null, user2Name, pageable);
+
+        // then
+        // post3(공지, 유저2) 1개
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent()).contains(post3);
+    }
+
+    @Test
+    @DisplayName("Custom: searchPost - 검색 결과 없음")
+    void searchPost_NoResult() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+
+        // when
+        // 자유게시판(categoryFree) + 제목("제목A") -> 일치하는 항목 없음
+        Page<Post> result = postRepository.searchPost(categoryFree.getCommonCodeId(), "제목A", null, null, pageable);
+
+        // then
+        assertThat(result.getTotalElements()).isEqualTo(0);
+        assertThat(result.getContent()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Custom: searchPost - 삭제된 게시글(isDeleted=true)은 검색 제외")
+    void searchPost_IgnoresDeleted() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+
+        // when
+        // "삭제된글" (post4_deleted) 검색
+        Page<Post> result = postRepository.searchPost(null, "삭제된글", null, null, pageable);
+
+        // then
+        // @Query에서 p.isDeleted = false 조건으로 인해 검색되지 않아야 함
+        assertThat(result.getTotalElements()).isEqualTo(0);
     }
 
 
-    // -------------------------------------------------------------------------------- //
-    // --------------------------------- Exception Test ------------------------------- //
-    // -------------------------------------------------------------------------------- //
+    // --- Exception (Constraints) Tests ---
 
     @Test
-    @DisplayName("Exception: 필수 FK(Employee) null 저장 시 DataIntegrityViolationException 발생")
-    void saveNullEmployeeTest() {
+    @DisplayName("Exception: 필수 FK(commonCode) null 저장 시 예외 발생")
+    void saveNullCategoryTest() {
         // given
-        final CommonCode postCategoryNotice = commonCodeRepository.findById(noticeCategoryId)
-                .orElseThrow(() -> new RuntimeException("Test setup error"));
-
-        // Employee 필드를 null로 설정 (nullable = false 위반)
-        Post incompletePost = Post.builder()
-                .commonCode(postCategoryNotice)
-                .employee(null) // 필수 FK 누락
-                .employeeName(creator.getName())
+        // Post.create()는 NPE를 유발하므로, builder로 직접 생성하여 DB 제약조건 테스트
+        Post post = Post.builder()
+                .commonCode(null) // nullable=false 위반
+                .employee(testUser1)
+                .employeeName(testUser1.getName())
                 .title("제목")
                 .content("내용")
                 .isNotification(false)
-                .alert(false)
                 .isDeleted(false)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
+                .alert(false)
                 .build();
 
         // when & then
-        assertThatThrownBy(() -> postRepository.saveAndFlush(incompletePost))
+        // saveAndFlush()로 즉시 DB에 쿼리를 전송하여 제약조건 위반 확인
+        assertThatThrownBy(() -> postRepository.saveAndFlush(post))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test
-    @DisplayName("Exception: 필수 필드(title) null 저장 시 DataIntegrityViolationException 발생")
-    void saveNullTitleTest() {
+    @DisplayName("Exception: 필수 FK(employee) null 저장 시 예외 발생")
+    void saveNullEmployeeTest() {
         // given
-        final CommonCode postCategoryNotice = commonCodeRepository.findById(noticeCategoryId)
-                .orElseThrow(() -> new RuntimeException("Test setup error"));
-
-        // Title 필드를 null로 설정하여 @Column(nullable = false) 제약 조건 위반
-        Post incompletePost = Post.builder()
-                .commonCode(postCategoryNotice)
-                .employee(creator)
-                .employeeName(creator.getName())
-                .title(null) // 필수 필드 누락
+        // Post.create()가 employee.getName()에서 NPE를 유발하므로 builder 사용
+        Post post = Post.builder()
+                .commonCode(categoryNotice)
+                .employee(null) // nullable=false 위반
+                .employeeName("임시이름") // employeeName 자체는 nullable=false이므로 값 필요
+                .title("제목")
                 .content("내용")
                 .isNotification(false)
-                .alert(false)
                 .isDeleted(false)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
+                .alert(false)
                 .build();
 
         // when & then
-        assertThatThrownBy(() -> postRepository.saveAndFlush(incompletePost))
+        assertThatThrownBy(() -> postRepository.saveAndFlush(post))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
+
+    @Test
+    @DisplayName("Exception: 필수 필드(title) null 저장 시 예외 발생")
+    void saveNullTitleTest() {
+        // given
+        // Post.create()는 null을 허용
+        Post post = createPersistablePost(null, "내용", testUser1, categoryNotice, false);
+
+        // when & then
+        // title @Column(nullable=false) 위반
+        assertThatThrownBy(() -> postRepository.saveAndFlush(post))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("Exception: 필수 필드(content) null 저장 시 예외 발생")
+    void saveNullContentTest() {
+        // given
+        Post post = createPersistablePost("제목", null, testUser1, categoryNotice, false);
+
+        // when & then
+        // content @Column(nullable=false) 위반
+        assertThatThrownBy(() -> postRepository.saveAndFlush(post))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
 }

@@ -21,323 +21,332 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.anyBoolean; // updatePost를 위한 추가
-import static org.mockito.ArgumentMatchers.eq; // eq 추가
-import static org.mockito.ArgumentMatchers.isNull; // isNull 추가
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PostServiceImplTest {
 
-    @InjectMocks // 테스트 대상 클래스
-    private PostServiceImpl postService;
+    @InjectMocks
+    private PostServiceImpl postServiceImpl;
 
-    @Mock // 의존성 Mock 객체
+    @Mock
     private PostRepository postRepository;
 
-    @Mock // 의존성 Mock 객체
+    @Mock
     private CommonCodeRepository commonCodeRepository;
 
-    @Mock // 의존성 Mock 객체
+    @Mock
     private EmployeeRepository employeeRepository;
 
-    // 테스트에서 공통으로 사용할 Mock 객체 및 Fixture 선언
-    private Post mockPost;
-    private CommonCode mockCategory;
+    // 공통 Mock 객체
     private Employee mockEmployee;
-    private PostRequestDTO postRequest;
-    private Pageable pageable;
+    private CommonCode mockCommonCode;
+    private Post mockPost;
 
+    // 공통 데이터
     private final Long POST_ID = 1L;
-    private final Long CATEGORY_ID = 10L;
-    private final Long EMPLOYEE_ID = 100L;
+    private final Long EMPLOYEE_ID = 10L;
+    private final Long CATEGORY_ID = 100L;
     private final String EMPLOYEE_NAME = "테스트 작성자";
+    private final String POST_TITLE = "초기 테스트 제목";
+    private final String POST_CONTENT = "초기 테스트 내용";
 
     @BeforeEach
     void setUp() {
-        // Post Request DTO Fixture
-        postRequest = new PostRequestDTO();
-        postRequest.setPostId(POST_ID);
-        postRequest.setCommonCodeId(CATEGORY_ID);
-        postRequest.setEmployeeId(EMPLOYEE_ID);
-        postRequest.setEmployeeName(EMPLOYEE_NAME);
-        postRequest.setTitle("테스트 제목");
-        postRequest.setContent("테스트 내용");
-        postRequest.setIsNotification(false);
-        postRequest.setAlert(false);
-
-        // Pageable Fixture
-        pageable = PageRequest.of(0, 10);
-
-        // Mock 객체 초기화
-        mockPost = mock(Post.class);
-        mockCategory = mock(CommonCode.class);
+        // Mock 객체 초기화 (EmployeeServiceImplTest 참고)
         mockEmployee = mock(Employee.class);
+        mockCommonCode = mock(CommonCode.class);
+        mockPost = mock(Post.class);
 
         // PostResponseDTO.toDTO() 실행 시 NPE 방지를 위한 기본 Mocking
-        lenient().when(mockPost.getPostId()).thenReturn(POST_ID);
-        lenient().when(mockPost.getTitle()).thenReturn("테스트 제목");
-        lenient().when(mockPost.getContent()).thenReturn("테스트 내용");
-        lenient().when(mockPost.getEmployeeName()).thenReturn(EMPLOYEE_NAME);
-        lenient().when(mockPost.getIsDeleted()).thenReturn(false);
-        lenient().when(mockPost.getCommonCode()).thenReturn(mockCategory);
         lenient().when(mockPost.getEmployee()).thenReturn(mockEmployee);
-        lenient().when(mockCategory.getCommonCodeId()).thenReturn(CATEGORY_ID);
+
+        // 공통 반환 값 설정
         lenient().when(mockEmployee.getEmployeeId()).thenReturn(EMPLOYEE_ID);
+        lenient().when(mockPost.getPostId()).thenReturn(POST_ID);
+        lenient().when(mockPost.getEmployeeName()).thenReturn(EMPLOYEE_NAME);
+        lenient().when(mockPost.getTitle()).thenReturn(POST_TITLE);
+        lenient().when(mockPost.getContent()).thenReturn(POST_CONTENT);
+        lenient().when(mockPost.getCreatedAt()).thenReturn(LocalDateTime.now());
+        lenient().when(mockPost.getUpdatedAt()).thenReturn(LocalDateTime.now());
+        lenient().when(mockPost.getIsNotification()).thenReturn(false);
+        lenient().when(mockPost.getAlert()).thenReturn(false);
+        lenient().when(mockPost.getIsDeleted()).thenReturn(false); // 삭제되지 않은 상태 기본 설정
     }
 
-    // --- C (Create) : 게시글 생성 테스트 ---
+    // --- 게시글 생성 (createPost) 테스트 그룹 ---
     @Nested
     @DisplayName("게시글 생성 (createPost)")
     class CreatePost {
+        private PostRequestDTO requestDto;
+
+        @BeforeEach
+        void createSetup() {
+            requestDto = new PostRequestDTO(
+                    null, EMPLOYEE_ID, EMPLOYEE_NAME, POST_TITLE, POST_CONTENT,
+                    false, false, CATEGORY_ID, null
+            );
+        }
 
         @Test
         @DisplayName("성공")
         void createPost_Success() {
             // given
-            // CommonCode, Employee 존재 Mocking
-            given(commonCodeRepository.findById(CATEGORY_ID)).willReturn(Optional.of(mockCategory));
+            // CommonCodeRepository에서 CommonCode Mock 객체를 반환하도록 설정
+            given(commonCodeRepository.findById(CATEGORY_ID)).willReturn(Optional.of(mockCommonCode));
+            // EmployeeRepository에서 Employee Mock 객체를 반환하도록 설정
             given(employeeRepository.findById(EMPLOYEE_ID)).willReturn(Optional.of(mockEmployee));
 
-            // Repository.save() Mocking (저장 후 객체 반환)
-            given(postRepository.save(any(Post.class))).willReturn(mockPost);
+            // PostRepository.save(Post)가 실제 Post 객체를 저장하고 반환하는 상황을 Mocking
+            // Post.builder()... 에 대한 Mocking이 복잡하므로, save를 Mocking함
+            // 여기서는 toDTO를 위해 필요한 정보만 담은 Post 객체를 반환하도록 설정
+            Post savedPost = Post.builder()
+                    .postId(POST_ID)
+                    .employee(mockEmployee)
+                    .employeeName(EMPLOYEE_NAME)
+                    .title(POST_TITLE)
+                    .content(POST_CONTENT)
+                    .isNotification(false)
+                    .alert(false)
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .isDeleted(false)
+                    .build();
+
+            given(postRepository.save(any(Post.class))).willReturn(savedPost);
 
             // when
-            PostResponseDTO result = postService.createPost(postRequest);
+            PostResponseDTO result = postServiceImpl.createPost(requestDto);
 
             // then
-            // 1. save() 메서드가 호출되었는지 검증
-            verify(postRepository).save(any(Post.class));
-            // 2. 반환된 DTO의 ID가 예상과 일치하는지 검증
-            assertThat(result.getPostId()).isEqualTo(POST_ID);
-            // 3. 반환된 DTO의 제목이 요청 값과 일치하는지 검증 (PostResponseDTO.toDTO 내부 로직)
-            assertThat(result.getTitle()).isEqualTo("테스트 제목");
+            verify(postRepository, times(1)).save(any(Post.class));
+            assertThat(result).isNotNull();
+            assertThat(result.getTitle()).isEqualTo(POST_TITLE);
+            assertThat(result.getEmployeeId()).isEqualTo(EMPLOYEE_ID);
         }
 
         @Test
-        @DisplayName("실패 - CommonCode (게시판 ID) 없음")
+        @DisplayName("실패 - 존재하지 않는 게시판 ID")
         void createPost_Fail_CategoryNotFound() {
             // given
-            // CommonCode 조회 실패 Mocking
             given(commonCodeRepository.findById(CATEGORY_ID)).willReturn(Optional.empty());
-            // Employee 조회는 필요 없음 (예외가 먼저 발생)
 
             // when & then
-            assertThatThrownBy(() -> postService.createPost(postRequest))
+            assertThatThrownBy(() -> postServiceImpl.createPost(requestDto))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("존재하지 않는 게시판 ID입니다.");
+                    .hasMessageContaining("존재하지 않는 게시판 ID입니다.");
 
-            // postRepository.save()가 호출되지 않았는지 검증
+            verify(employeeRepository, never()).findById(anyLong()); // 다음 로직 호출 안됨 검증
             verify(postRepository, never()).save(any(Post.class));
         }
 
         @Test
-        @DisplayName("실패 - Employee (작성자) 없음")
+        @DisplayName("실패 - 존재하지 않는 작성자 ID")
         void createPost_Fail_EmployeeNotFound() {
             // given
-            // CommonCode 조회 성공 Mocking
-            given(commonCodeRepository.findById(CATEGORY_ID)).willReturn(Optional.of(mockCategory));
-            // Employee 조회 실패 Mocking
+            given(commonCodeRepository.findById(CATEGORY_ID)).willReturn(Optional.of(mockCommonCode));
             given(employeeRepository.findById(EMPLOYEE_ID)).willReturn(Optional.empty());
 
             // when & then
-            assertThatThrownBy(() -> postService.createPost(postRequest))
+            assertThatThrownBy(() -> postServiceImpl.createPost(requestDto))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("존재하지 않는 작성자입니다.");
+                    .hasMessageContaining("존재하지 않는 작성자입니다.");
 
-            // postRepository.save()가 호출되지 않았는지 검증
             verify(postRepository, never()).save(any(Post.class));
         }
     }
 
-    // --- R (Read) : 게시글 검색 테스트 ---
-    @Nested
-    @DisplayName("게시글 검색 (searchPost)")
-    class SearchPost {
-
-        @Test
-        @DisplayName("성공 - 검색 조건으로 리스트 반환")
-        void searchPost_Success_WithResults() {
-            // given
-            PostRequestDTO searchDto = new PostRequestDTO();
-            searchDto.setTitle("테스트");
-            searchDto.setCommonCodeId(CATEGORY_ID);
-
-            // Repository가 Post Mock 객체 1개를 포함하는 Page 반환하도록 Mocking
-            Page<Post> postPage = new PageImpl<>(List.of(mockPost), pageable, 1);
-
-            // ★ 수정: given()의 인자를 실제 서비스 호출 인자와 정확히 일치하도록 수정
-            given(postRepository.searchPost(
-                    eq(CATEGORY_ID), // 10L (DTO에서 설정됨)
-                    eq("테스트"),   // "테스트" (DTO에서 설정됨)
-                    isNull(),       // content (DTO에 설정 안 됨 -> null)
-                    isNull(),       // employeeName (DTO에 설정 안 됨 -> null)
-                    eq(pageable)    // Pageable 객체
-            )).willReturn(postPage);
-
-            // when
-            List<PostResponseDTO> resultList = postService.searchPost(searchDto, pageable);
-
-            // then
-            // 1. searchPost() 메서드가 호출되었는지 검증
-            verify(postRepository).searchPost(
-                    eq(CATEGORY_ID), eq("테스트"), isNull(), isNull(), eq(pageable));
-            // 2. 결과 리스트 크기 및 내용 검증
-            assertThat(resultList).hasSize(1);
-            assertThat(resultList.get(0).getPostId()).isEqualTo(POST_ID);
-        }
-
-        @Test
-        @DisplayName("성공 - 검색 결과 없음")
-        void searchPost_Success_NoResults() {
-            // given
-            PostRequestDTO searchDto = new PostRequestDTO(); // 빈 DTO
-            Page<Post> emptyPage = new PageImpl<>(List.of(), pageable, 0);
-
-            // ★ 수정: given()의 인자를 빈 DTO가 전달될 때의 호출 인자(모두 null)와 일치하도록 수정
-            given(postRepository.searchPost(
-                    isNull(), isNull(), isNull(), isNull(), any(Pageable.class)
-            )).willReturn(emptyPage);
-
-            // when
-            List<PostResponseDTO> resultList = postService.searchPost(searchDto, pageable);
-
-            // then
-            // searchPost() 메서드가 호출되었는지 검증
-            verify(postRepository).searchPost(
-                    isNull(), isNull(), isNull(), isNull(), eq(pageable));
-
-            assertThat(resultList).isNotNull();
-            assertThat(resultList).isEmpty();
-        }
-    }
-
-    // --- U (Update) : 게시글 수정 테스트 ---
+    // --- 게시글 수정 (updatePost) 테스트 그룹 ---
     @Nested
     @DisplayName("게시글 수정 (updatePost)")
     class UpdatePost {
-
-        private PostRequestDTO updateRequest;
-        private final String NEW_TITLE = "새 제목";
-        private final String NEW_CONTENT = "새 내용";
-        private final boolean NEW_NOTIFICATION = true;
+        private PostRequestDTO requestDto;
+        private final String UPDATED_TITLE = "수정된 제목";
+        private final String UPDATED_CONTENT = "수정된 내용";
 
         @BeforeEach
         void updateSetup() {
-            updateRequest = new PostRequestDTO();
-            updateRequest.setPostId(POST_ID);
-            updateRequest.setTitle(NEW_TITLE);
-            updateRequest.setContent(NEW_CONTENT);
-            updateRequest.setIsNotification(NEW_NOTIFICATION);
-
-            // 업데이트 후 Post 객체의 getter가 새 값을 반환하도록 설정
-            lenient().when(mockPost.getTitle()).thenReturn(NEW_TITLE);
-            lenient().when(mockPost.getContent()).thenReturn(NEW_CONTENT);
-            lenient().when(mockPost.getIsNotification()).thenReturn(NEW_NOTIFICATION);
+            requestDto = new PostRequestDTO(
+                    POST_ID, EMPLOYEE_ID, EMPLOYEE_NAME, UPDATED_TITLE, UPDATED_CONTENT,
+                    true, false, CATEGORY_ID, null
+            );
         }
 
         @Test
         @DisplayName("성공")
         void updatePost_Success() {
             // given
-            // 게시글 존재 Mocking
             given(postRepository.findById(POST_ID)).willReturn(Optional.of(mockPost));
-            // isDeleted가 false인 상태 Mocking (삭제되지 않음)
-            given(mockPost.getIsDeleted()).willReturn(false);
+            // update 메서드 호출 후 업데이트된 값을 반환하도록 Mocking
+            when(mockPost.getTitle()).thenReturn(UPDATED_TITLE);
+            when(mockPost.getContent()).thenReturn(UPDATED_CONTENT);
+            when(mockPost.getIsNotification()).thenReturn(true);
 
             // when
-            PostResponseDTO result = postService.updatePost(updateRequest);
+            PostResponseDTO result = postServiceImpl.updatePost(requestDto);
 
             // then
-            // 1. Post.update() 메서드가 올바른 인자로 호출되었는지 검증
-            verify(mockPost).update(NEW_TITLE, NEW_CONTENT, NEW_NOTIFICATION);
-            // 2. 반환된 DTO의 값이 업데이트 요청 값과 일치하는지 검증
-            assertThat(result.getTitle()).isEqualTo(NEW_TITLE);
-            assertThat(result.getContent()).isEqualTo(NEW_CONTENT);
-            assertThat(result.getIsNotification()).isEqualTo(NEW_NOTIFICATION);
+            // Post 엔티티의 update 메서드가 올바른 인자로 호출되었는지 검증
+            verify(mockPost, times(1)).update(UPDATED_TITLE, UPDATED_CONTENT, true);
+            // PostRepository.save는 @Transactional에 의해 flush/merge되므로, 명시적 save 호출은 검증할 필요 없음
+            assertThat(result).isNotNull();
+            assertThat(result.getTitle()).isEqualTo(UPDATED_TITLE);
+            assertThat(result.getIsNotification()).isTrue();
         }
 
         @Test
-        @DisplayName("실패 - 게시글 ID 없음")
+        @DisplayName("실패 - 존재하지 않는 게시글 ID")
         void updatePost_Fail_PostNotFound() {
             // given
-            // 게시글 조회 실패 Mocking
             given(postRepository.findById(POST_ID)).willReturn(Optional.empty());
 
             // when & then
-            assertThatThrownBy(() -> postService.updatePost(updateRequest))
+            assertThatThrownBy(() -> postServiceImpl.updatePost(requestDto))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("존재하지 않는 게시글입니다.");
+                    .hasMessageContaining("존재하지 않는 게시글입니다.");
 
-            // Post.update()가 호출되지 않았는지 검증
             verify(mockPost, never()).update(anyString(), anyString(), anyBoolean());
         }
 
         @Test
         @DisplayName("실패 - 이미 삭제된 게시글")
-        void updatePost_Fail_AlreadyDeleted() {
+        void updatePost_Fail_PostIsDeleted() {
             // given
-            // 게시글 존재 Mocking
             given(postRepository.findById(POST_ID)).willReturn(Optional.of(mockPost));
-            // isDeleted가 true인 상태 Mocking (삭제됨)
-            given(mockPost.getIsDeleted()).willReturn(true);
+            // 게시글이 삭제된 상태라고 Mocking
+            when(mockPost.getIsDeleted()).thenReturn(true);
 
             // when & then
-            assertThatThrownBy(() -> postService.updatePost(updateRequest))
+            assertThatThrownBy(() -> postServiceImpl.updatePost(requestDto))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessage("삭제된 게시글입니다.");
+                    .hasMessageContaining("삭제된 게시글입니다.");
 
-            // Post.update()가 호출되지 않았는지 검증
             verify(mockPost, never()).update(anyString(), anyString(), anyBoolean());
         }
     }
 
-    // --- D (Delete) : 게시글 삭제 테스트 ---
+    // --- 게시글 삭제 (deletePost) 테스트 그룹 ---
     @Nested
     @DisplayName("게시글 삭제 (deletePost)")
     class DeletePost {
 
         @Test
-        @DisplayName("성공")
-        void deletePost_Success() {
+        @DisplayName("성공 (Soft Delete)")
+        void deletePost_Success_SoftDelete() {
             // given
-            // 게시글 존재 Mocking
             given(postRepository.findById(POST_ID)).willReturn(Optional.of(mockPost));
 
             // when
-            postService.deletePost(POST_ID);
+            postServiceImpl.deletePost(POST_ID);
 
             // then
-            // 1. PostRepository.findById()가 호출되었는지 검증
-            verify(postRepository).findById(POST_ID);
-            // 2. Post.delete() 메서드가 호출되어 isDeleted 필드가 업데이트되었는지 검증
-            verify(mockPost).delete();
-            // 참고: delete()는 엔티티 내부 필드만 업데이트하고 save()를 명시적으로 호출하지 않으므로,
-            // 트랜잭션 종료 시 dirty checking에 의해 DB에 반영됨
+            // Post 엔티티의 delete 메서드가 1회 호출되었는지 검증 (Soft Delete)
+            verify(mockPost, times(1)).delete();
+            verify(postRepository, times(1)).findById(POST_ID);
         }
 
         @Test
-        @DisplayName("실패 - 게시글 ID 없음")
+        @DisplayName("실패 - 존재하지 않는 게시글 ID")
         void deletePost_Fail_PostNotFound() {
             // given
-            // 게시글 조회 실패 Mocking
             given(postRepository.findById(POST_ID)).willReturn(Optional.empty());
 
             // when & then
-            assertThatThrownBy(() -> postService.deletePost(POST_ID))
+            assertThatThrownBy(() -> postServiceImpl.deletePost(POST_ID))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("존재하지 않는 게시글입니다.");
+                    .hasMessageContaining("존재하지 않는 게시글입니다.");
 
-            // Post.delete()가 호출되지 않았는지 검증
             verify(mockPost, never()).delete();
+        }
+    }
+
+    // --- 게시글 검색 (searchPost) 테스트 그룹 ---
+    @Nested
+    @DisplayName("게시글 검색 (searchPost)")
+    class SearchPost {
+
+        private PostRequestDTO searchDto;
+        private Pageable pageable;
+
+        @BeforeEach
+        void searchSetup() {
+            searchDto = new PostRequestDTO(
+                    null, null, EMPLOYEE_NAME, POST_TITLE, POST_CONTENT,
+                    null, null, CATEGORY_ID, null
+            );
+            pageable = PageRequest.of(0, 10);
+        }
+
+        @Test
+        @DisplayName("성공 - 검색 결과 존재")
+        void searchPost_Success_ResultsFound() {
+            // given
+            // searchPost Repository 메서드가 Post Mock 객체 1개를 포함하는 Page를 반환하도록 Mocking
+            Page<Post> mockPage = new PageImpl<>(Arrays.asList(mockPost), pageable, 1);
+            given(postRepository.searchPost(
+                    searchDto.getCommonCodeId(),
+                    searchDto.getTitle(),
+                    searchDto.getContent(),
+                    searchDto.getEmployeeName(),
+                    pageable
+            )).willReturn(mockPage);
+
+            // when
+            List<PostResponseDTO> resultList = postServiceImpl.searchPost(searchDto, pageable);
+
+            // then
+            verify(postRepository, times(1)).searchPost(any(), any(), any(), any(), any());
+            assertThat(resultList).isNotNull();
+            assertThat(resultList).hasSize(1);
+            assertThat(resultList.get(0).getTitle()).isEqualTo(POST_TITLE);
+            assertThat(resultList.get(0).getEmployeeName()).isEqualTo(EMPLOYEE_NAME);
+        }
+
+        @Test
+        @DisplayName("성공 - 검색 결과 없음")
+        void searchPost_Success_NoResults() {
+            // given
+            // 빈 Page를 반환하도록 Mocking
+            Page<Post> emptyPage = new PageImpl<>(List.of(), pageable, 0);
+            given(postRepository.searchPost(any(), any(), any(), any(), any())).willReturn(emptyPage);
+
+            // when
+            List<PostResponseDTO> resultList = postServiceImpl.searchPost(searchDto, pageable);
+
+            // then
+            verify(postRepository, times(1)).searchPost(any(), any(), any(), any(), any());
+            assertThat(resultList).isNotNull();
+            assertThat(resultList).isEmpty();
+        }
+
+        @Test
+        @DisplayName("성공 - 검색 조건 없음 (전체 조회와 동일)")
+        void searchPost_Success_NoSearchCriteria() {
+            // given
+            PostRequestDTO emptySearchDto = new PostRequestDTO(
+                    null, null, null, null, null,
+                    null, null, null, null
+            );
+            // Post Mock 객체 1개를 포함하는 Page 반환 Mocking
+            Page<Post> mockPage = new PageImpl<>(Arrays.asList(mockPost), pageable, 1);
+            given(postRepository.searchPost(
+                    null, null, null, null, pageable
+            )).willReturn(mockPage);
+
+            // when
+            List<PostResponseDTO> resultList = postServiceImpl.searchPost(emptySearchDto, pageable);
+
+            // then
+            verify(postRepository, times(1)).searchPost(null, null, null, null, pageable);
+            assertThat(resultList).hasSize(1);
         }
     }
 }
