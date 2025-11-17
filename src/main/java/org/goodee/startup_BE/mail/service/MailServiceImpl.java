@@ -29,6 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -88,69 +89,82 @@ public class MailServiceImpl implements MailService{
 		return list.get(0);
 	}
 	
-	// 수신자 변경 적용: null=변경없음, []=전부 제거, 값 있으면 교체 - 메일 수정
-	private void receiverChange(Mail mail, CommonCode typeCode, List<MailReceiver> currentList, List<String> newList) {
-		// 현재 집합(소문자)
-		Set<String> curr = new LinkedHashSet<>();
-		for (MailReceiver r : currentList) {
-			if (r == null || r.getEmail() == null) continue;
-			String s = r.getEmail().trim().toLowerCase();
-			if (!s.isEmpty()) curr.add(s);
+	// 수신자 이메일 -> 수신자 이름으로 가져오기 - 메일 리스트 조회
+	private List<String> resolveReceiverNames(Mail mail, CommonCode toCode) {
+		// 1) 이 메일의 TO 수신자 이메일들
+		List<String> receiverEmails = mailReceiverRepository
+			                              .findAllByMailAndType(mail, toCode)
+			                              .stream()
+			                              .map(MailReceiver::getEmail)
+			                              .filter(Objects::nonNull)
+			                              .map(String::trim)
+			                              .filter(s -> !s.isEmpty())
+			                              .toList();
+		
+		if (receiverEmails.isEmpty()) {
+			return Collections.emptyList();
 		}
 		
-		// 변경 없음
-		if (newList == null) return;
+		// 2) 이메일로 직원 목록 조회
+		List<Employee> receiverEmployees = employeeRepository.findAllByEmailIn(receiverEmails);
 		
-		// 목표 집합: key(lower) -> original(trim) (첫 등장 원본 유지)
-		Map<String, String> desired = new LinkedHashMap<>();
-		for (String raw : newList) {
-			if (raw == null) continue;
-			String trimmed = raw.trim();
-			if (trimmed.isEmpty()) continue;
-			String key = trimmed.toLowerCase();
-			desired.putIfAbsent(key, trimmed);
-		}
+		// 3) email(lowercase) -> 이름 매핑
+		Map<String, String> nameByEmail = receiverEmployees.stream()
+			                                  .filter(e -> e.getEmail() != null)
+			                                  .collect(Collectors.toMap(
+				                                  e -> e.getEmail().trim().toLowerCase(),
+				                                  Employee::getName,
+				                                  (a, b) -> a
+			                                  ));
 		
-		Set<String> next = desired.keySet();
-		
-		// 제거 대상 = curr - next
-		Set<String> toRemove = new LinkedHashSet<>(curr);
-		toRemove.removeAll(next);
-		
-		// 추가 대상 = next - curr
-		Set<String> toAdd = new LinkedHashSet<>(next);
-		toAdd.removeAll(curr);
-		
-		// 제거
-		if (!toRemove.isEmpty()) {
-			List<MailReceiver> del = new ArrayList<>();
-			for (MailReceiver r : currentList) {
-				String key = r.getEmail() == null ? "" : r.getEmail().trim().toLowerCase();
-				if (toRemove.contains(key)) del.add(r);
-			}
-			if (!del.isEmpty()) mailReceiverRepository.deleteAll(del);
-		}
-		
-		// 추가 (키 기준으로 1회만)
-		if (!toAdd.isEmpty()) {
-			List<MailReceiver> ins = new ArrayList<>();
-			for (String key : toAdd) {
-				String original = desired.get(key); // 첫 등장 원본 보존
-				ins.add(MailReceiver.createMailReceiver(mail, original, typeCode));
-			}
-			mailReceiverRepository.saveAll(ins);
-		}
+		// 4) 이메일 순서 유지하면서 이름 리스트 생성
+		return receiverEmails.stream()
+			       .map(email -> {
+				       String key = email.trim().toLowerCase();
+				       return nameByEmail.getOrDefault(key, email); // 이름 없으면 이메일 그대로
+			       })
+			       .toList();
 	}
 	
-	// MailReceiver → email 리스트 - 메일 수정
-	private List<String> mapEmails(List<MailReceiver> list) {
-		List<String> out = new ArrayList<>();
-		for (MailReceiver r : list) {
-			if (r == null || r.getEmail() == null) continue;
-			String s = r.getEmail().trim();
-			if (!s.isEmpty()) out.add(s);
+	// MailReceiver → "email (이름)" 리스트 - 메일 상세
+	private List<String> mapEmailWithName(Mail mail, CommonCode typeCode) {
+		// 1) 해당 타입(TO/CC/BCC) 수신자 이메일 목록
+		List<String> receiverEmails = mailReceiverRepository
+			                              .findAllByMailAndType(mail, typeCode)
+			                              .stream()
+			                              .map(MailReceiver::getEmail)
+			                              .filter(Objects::nonNull)
+			                              .map(String::trim)
+			                              .filter(s -> !s.isEmpty())
+			                              .toList();
+		
+		if (receiverEmails.isEmpty()) {
+			return Collections.emptyList();
 		}
-		return out;
+		
+		// 2) 이메일로 직원 목록 조회
+		List<Employee> receiverEmployees = employeeRepository.findAllByEmailIn(receiverEmails);
+		
+		// 3) email(lowercase) -> name 매핑
+		Map<String, String> nameByEmail = receiverEmployees.stream()
+			                                  .filter(e -> e.getEmail() != null)
+			                                  .collect(Collectors.toMap(
+				                                  e -> e.getEmail().trim().toLowerCase(),
+				                                  Employee::getName,
+				                                  (a, b) -> a
+			                                  ));
+		
+		// 4) "email (이름)" 형식으로 변환 (이름 없으면 email만)
+		return receiverEmails.stream()
+			       .map(email -> {
+				       String key = email.trim().toLowerCase();
+				       String name = nameByEmail.get(key);
+				       if (name == null || name.isBlank()) {
+					       return email;          // 매칭되는 직원 없으면 이메일만
+				       }
+				       return email + " (" + name + ")";
+			       })
+			       .toList();
 	}
 	
 	
@@ -268,14 +282,14 @@ public class MailServiceImpl implements MailService{
 			commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(ReceiverType.PREFIX, ReceiverType.BCC.name()), "BCC 코드가 존재하지 않습니다."
 		);
 		
-		List<String> toList = mapEmails(mailReceiverRepository.findAllByMailAndType(mail, toCode));
-		List<String> ccList = mapEmails(mailReceiverRepository.findAllByMailAndType(mail, ccCode));
+		List<String> toList = mapEmailWithName(mail, toCode);
+		List<String> ccList = mapEmailWithName(mail, ccCode);
 		List<String> bccList = null;
 		
 		boolean ISender = mail.getEmployee() != null && mail.getEmployee().getEmployeeId().equals(employee.getEmployeeId());
-		if(ISender) {
-			// 숨은참조는 작성자만 볼수있음
-			bccList = mapEmails(mailReceiverRepository.findAllByMailAndType(mail, bccCode));
+		if (ISender) {
+			// 숨은참조는 작성자만 볼 수 있음
+			bccList = mapEmailWithName(mail, bccCode);
 		}
 		
 		// 첨부파일 조회
@@ -352,18 +366,7 @@ public class MailServiceImpl implements MailService{
 		return mailboxList.map(mb -> {
 			Mail mail = mb.getMail();
 			
-			CommonCode code = commonCodeRepository
-				                    .findByCodeStartsWithAndKeywordExactMatchInValues(
-					                    ReceiverType.PREFIX,
-					                    ReceiverType.TO.name()
-				                    )
-				                    .get(0);
-			
-			List<String> receivers = mailReceiverRepository
-				                         .findAllByMailAndType(mail, code)
-				                         .stream()
-				                         .map(r -> r.getEmail())
-				                         .toList();
+			List<String> receiverNames = resolveReceiverNames(mail, toCode);
 			
 			return MailboxListDTO.builder()
 				       .boxId(mb.getBoxId())
@@ -372,7 +375,7 @@ public class MailServiceImpl implements MailService{
 				       .title(mail.getTitle())
 				       .receivedAt(mail.getSendAt())
 				       .isRead(Boolean.TRUE.equals(mb.getIsRead()))
-				       .receivers(receivers)
+				       .receivers(receiverNames)   // 🔹 이제 이름 리스트
 				       .build();
 		});
 	}
