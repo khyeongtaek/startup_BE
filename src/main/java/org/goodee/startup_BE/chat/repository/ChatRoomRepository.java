@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Optional;
+import java.util.List;
 
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
 
@@ -17,7 +17,8 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
             "JOIN ChatEmployee ce2 ON ce1.chatRoom = ce2.chatRoom " +
             "WHERE ce1.employee.employeeId = :userId1 " +
             "AND ce2.employee.employeeId = :userId2 " +
-            "AND ce1.chatRoom.isTeam = false")
-    Optional<ChatRoom> findExistingOneOnOneRoom(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
+            "AND ce1.chatRoom.isTeam = false " +
+            "ORDER BY ce1.chatRoom.createdAt DESC")
+    List<ChatRoom> findExistingOneOnOneRooms(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
 
 }
