@@ -1,6 +1,8 @@
 package org.goodee.startup_BE.chat.repository;
 
 import jakarta.persistence.EntityManager;
+import org.goodee.startup_BE.chat.entity.ChatEmployee;
+import org.goodee.startup_BE.chat.entity.ChatMessage;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.employee.entity.Employee;
@@ -41,6 +43,13 @@ class ChatRoomRepositoryTest {
     @Autowired
     private CommonCodeRepository commonCodeRepository;
 
+    // --- [신규] 쿼리 테스트를 위해 리포지토리 주입 ---
+    @Autowired
+    private ChatEmployeeRepository chatEmployeeRepository;
+    @Autowired
+    private ChatMessageRepository chatMessageRepository;
+    // --- [신규] ---
+
     @Autowired
     private EntityManager entityManager;
 
@@ -49,7 +58,9 @@ class ChatRoomRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        // H2 DB 초기화
+        // H2 DB 초기화 (자식 테이블부터)
+        chatEmployeeRepository.deleteAll(); // [신규]
+        chatMessageRepository.deleteAll(); // [신규]
         chatRoomRepository.deleteAll();
         employeeRepository.deleteAll();
         commonCodeRepository.deleteAll();
@@ -76,6 +87,8 @@ class ChatRoomRepositoryTest {
         employee.updateInitPassword("testPassword123!", creator);
         return employee;
     }
+
+    // --- (기존 CRUD 및 Exception 테스트는 동일) ---
 
     @Test
     @DisplayName("C: 채팅방 생성(save) 테스트")
@@ -149,5 +162,76 @@ class ChatRoomRepositoryTest {
         // creator가 null (nullable=false 위반) 상태로 save 시도
         assertThatThrownBy(() -> chatRoomRepository.saveAndFlush(incompleteRoom))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    // --- [신규] 커스텀 쿼리 테스트 ---
+
+    @Test
+    @DisplayName("Custom: [신규] findExistingOneOnOneRooms 테스트 (1:1방, 팀방, 순서)")
+    void findExistingOneOnOneRoomsTest() throws InterruptedException {
+        // === given ===
+        // 1. 추가 사용자 생성 (user1, user2, user3)
+        Employee user1 = employeeRepository.save(createPersistableEmployee("user1", "user1@test.com", roleUser, deptDev, posJunior, creator));
+        Employee user2 = employeeRepository.save(createPersistableEmployee("user2", "user2@test.com", roleUser, deptDev, posJunior, creator));
+        Employee user3 = employeeRepository.save(createPersistableEmployee("user3", "user3@test.com", roleUser, deptDev, posJunior, creator));
+
+        // 2. 테스트용 채팅방 4개 생성 (시간차를 두어 createdAt 순서 보장)
+        // (1) user1-user2 1:1 방 (가장 오래됨)
+        ChatRoom room1_1on1_older = chatRoomRepository.save(ChatRoom.createChatRoom(user1, "user1-user2 (Old)", false));
+        Thread.sleep(10);
+
+        // (2) user1-user2 팀 방 (테스트에서 제외되어야 함)
+        ChatRoom room2_team = chatRoomRepository.save(ChatRoom.createChatRoom(user1, "user1-user2 (Team)", true));
+        Thread.sleep(10);
+
+        // (3) user1-user3 1:1 방 (테스트에서 제외되어야 함)
+        ChatRoom room3_1on1_other = chatRoomRepository.save(ChatRoom.createChatRoom(user1, "user1-user3 (1:1)", false));
+        Thread.sleep(10);
+
+        // (4) user1-user2 1:1 방 (가장 최신)
+        ChatRoom room4_1on1_newest = chatRoomRepository.save(ChatRoom.createChatRoom(user1, "user1-user2 (New)", false));
+
+        // 3. 각 방의 '최초' 메시지 생성 (lastReadMessage FK용)
+        ChatMessage msg1 = chatMessageRepository.save(ChatMessage.createChatMessage(room1_1on1_older, null, "..."));
+        ChatMessage msg2 = chatMessageRepository.save(ChatMessage.createChatMessage(room2_team, null, "..."));
+        ChatMessage msg3 = chatMessageRepository.save(ChatMessage.createChatMessage(room3_1on1_other, null, "..."));
+        ChatMessage msg4 = chatMessageRepository.save(ChatMessage.createChatMessage(room4_1on1_newest, null, "..."));
+
+        // 4. ChatEmployee로 사용자들을 방에 연결
+        // (1) room1_1on1_older (user1, user2)
+        chatEmployeeRepository.save(ChatEmployee.createChatEmployee(user1, room1_1on1_older, "user2", msg1));
+        chatEmployeeRepository.save(ChatEmployee.createChatEmployee(user2, room1_1on1_older, "user1", msg1));
+        // (2) room2_team (user1, user2)
+        chatEmployeeRepository.save(ChatEmployee.createChatEmployee(user1, room2_team, "Team", msg2));
+        chatEmployeeRepository.save(ChatEmployee.createChatEmployee(user2, room2_team, "Team", msg2));
+        // (3) room3_1on1_other (user1, user3)
+        chatEmployeeRepository.save(ChatEmployee.createChatEmployee(user1, room3_1on1_other, "user3", msg3));
+        chatEmployeeRepository.save(ChatEmployee.createChatEmployee(user3, room3_1on1_other, "user1", msg3));
+        // (4) room4_1on1_newest (user1, user2)
+        chatEmployeeRepository.save(ChatEmployee.createChatEmployee(user1, room4_1on1_newest, "user2", msg4));
+        chatEmployeeRepository.save(ChatEmployee.createChatEmployee(user2, room4_1on1_newest, "user1", msg4));
+
+        // === when ===
+        // 1. user1과 user2 간의 1:1 방 조회
+        List<ChatRoom> foundRooms = chatRoomRepository.findExistingOneOnOneRooms(user1.getEmployeeId(), user2.getEmployeeId());
+
+        // 2. user1과 user3 간의 1:1 방 조회
+        List<ChatRoom> foundRooms_other = chatRoomRepository.findExistingOneOnOneRooms(user1.getEmployeeId(), user3.getEmployeeId());
+
+        // 3. 관계없는 사용자(creator)와의 1:1 방 조회
+        List<ChatRoom> emptyRooms = chatRoomRepository.findExistingOneOnOneRooms(creator.getEmployeeId(), user1.getEmployeeId());
+
+        // === then ===
+        // 1. room1(오래된 1:1), room4(최신 1:1)만 조회되어야 함. room2(팀방), room3(다른사용자)는 제외
+        assertThat(foundRooms).hasSize(2);
+        // 2. 쿼리의 "ORDER BY createdAt DESC"가 정확히 동작하는지 확인
+        assertThat(foundRooms).containsExactly(room4_1on1_newest, room1_1on1_older);
+
+        // 3. user1, user3 간에는 room3(1:1) 하나만 조회되어야 함
+        assertThat(foundRooms_other).hasSize(1);
+        assertThat(foundRooms_other).contains(room3_1on1_other);
+
+        // 4. creator와 user1 간에는 1:1 방이 없으므로 비어있어야 함
+        assertThat(emptyRooms).isEmpty();
     }
 }
