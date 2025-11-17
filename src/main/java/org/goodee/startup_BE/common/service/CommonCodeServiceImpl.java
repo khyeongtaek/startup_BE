@@ -1,6 +1,7 @@
 package org.goodee.startup_BE.common.service;
 
 import lombok.RequiredArgsConstructor;
+import org.goodee.startup_BE.approval.enums.ApprovalTemplate;
 import org.goodee.startup_BE.common.dto.CommonCodeRequestDTO;
 import org.goodee.startup_BE.approval.enums.VacationType;
 import org.goodee.startup_BE.common.dto.CommonCodeResponseDTO;
@@ -115,14 +116,9 @@ public class CommonCodeServiceImpl implements CommonCodeService {
                 .toList();
     }
 
-
     @Override
     public List<CommonCodeResponseDTO> getVacationTypes() {
-        return commonCodeRepository
-                .findByCodeStartsWithAndIsDisabledFalse(VacationType.PREFIX)
-                .stream()
-                .map(CommonCodeResponseDTO::toDTO)
-                .toList();
+        return getFilteredCommonCodes(VacationType.PREFIX);
     }
 
 

@@ -10,6 +10,7 @@ import org.goodee.startup_BE.common.dto.CommonCodeRequestDTO;
 import org.goodee.startup_BE.common.dto.CommonCodeResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.service.CommonCodeService;
+import org.goodee.startup_BE.common.service.CommonCodeServiceImpl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +24,7 @@ import java.util.List;
 public class CommonCodeController {
 
   private final CommonCodeService commonCodeService;
+  private final CommonCodeServiceImpl commonCodeServiceImpl;
 
   @Operation(summary = "전체 부서 목록 조회", description = "시스템에 등록된 모든 부서 목록을 조회합니다.")
   @ApiResponses(value = {

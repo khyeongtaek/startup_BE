@@ -77,13 +77,17 @@ public class ApprovalServiceImpl implements ApprovalService {
      */
     @Override
     public List<CommonCodeResponseDTO> getAllApprovalTemplates() {
+
+        String excludedCode = TEMPLATE_PREFIX + "0";
         List<CommonCode> templateList = commonCodeRepository
                 .findByCodeStartsWithAndIsDisabledFalse(TEMPLATE_PREFIX);
 
         return templateList.stream()
                 .map(CommonCodeResponseDTO::toDTO)
+                .filter(code -> !code.getCode().equals(excludedCode))   // AT0
                 .collect(Collectors.toList());
     }
+
 
     /**
      * 상신 (결재 문서 생성)
