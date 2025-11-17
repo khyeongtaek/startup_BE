@@ -20,13 +20,12 @@ import org.springframework.data.domain.Pageable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-
+// EmployeeRepositoryTest와 동일한 H2 DB 설정 강제
 @DataJpaTest(properties = {
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.datasource.driver-class-name=org.h2.Driver",
@@ -35,335 +34,319 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         "spring.datasource.password=",
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect"
 })
+// @DataJpaTest가 Post, Employee, CommonCode 등 모든 엔티티를 찾도록 스캔 경로 지정
 @EntityScan(basePackages = "org.goodee.startup_BE")
 class PostCommentRepositoryTest {
 
-    // final 필드와 생성자 주입 유지 (Field injection 경고 제거)
-    private final PostCommentRepository postCommentRepository;
-    private final EmployeeRepository employeeRepository;
-    private final CommonCodeRepository commonCodeRepository;
-    private final PostRepository postRepository;
-
-    // 테스트 전체에서 공유되어야 했던 필드들을 ID로 대체하거나 제거
-    private Long testEmployeeId;
-    private Long testPost1Id;
-    private Long testPost2Id;
-
-    private final String TEST_PASSWORD = "testPassword123!";
-
-    // 생성자 주입
     @Autowired
-    public PostCommentRepositoryTest(
-            PostCommentRepository postCommentRepository,
-            EmployeeRepository employeeRepository,
-            CommonCodeRepository commonCodeRepository,
-            PostRepository postRepository) {
-        this.postCommentRepository = postCommentRepository;
-        this.employeeRepository = employeeRepository;
-        this.commonCodeRepository = commonCodeRepository;
-        this.postRepository = postRepository;
-    }
+    private PostCommentRepository postCommentRepository;
 
-    // ID를 통해 Employee 객체를 조회하는 헬퍼 메서드
-    private Employee getTestEmployee() {
-        return employeeRepository.findById(testEmployeeId)
-                .orElseThrow(() -> new NoSuchElementException("테스트 Employee 조회 실패"));
-    }
+    @Autowired
+    private PostRepository postRepository;
 
-    // ID를 통해 Post 객체를 조회하는 헬퍼 메서드
-    private Post getTestPost1() {
-        return postRepository.findById(testPost1Id)
-                .orElseThrow(() -> new NoSuchElementException("테스트 Post1 조회 실패"));
-    }
+    @Autowired
+    private EmployeeRepository employeeRepository;
 
-    private Post getTestPost2() {
-        return postRepository.findById(testPost2Id)
-                .orElseThrow(() -> new NoSuchElementException("테스트 Post2 조회 실패"));
-    }
+    @Autowired
+    private CommonCodeRepository commonCodeRepository;
 
+    // 테스트용 공통 데이터
+    private Employee testUser;
+    private Post testPost;
+    private CommonCode postCategoryFree;
+    private final String TEST_PASSWORD = "testPassword123!";
 
     @BeforeEach
     void setUp() {
-        // DB 초기화
+        // FK 제약조건을 위해 자식 테이블부터 삭제
         postCommentRepository.deleteAll();
         postRepository.deleteAll();
         employeeRepository.deleteAll();
         commonCodeRepository.deleteAll();
 
-        // CommonCode 필드를 지역 변수로 선언
-        final CommonCode statusActive = CommonCode.createCommonCode("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null,false);
-        final CommonCode roleUser = CommonCode.createCommonCode("ROLE_USER", "사용자", "USER", null, null, 2L, null, false);
-        final CommonCode deptDev = CommonCode.createCommonCode("DEPT_DEV", "개발팀", "DEV", null, null, 1L, null,false);
-        final CommonCode posJunior = CommonCode.createCommonCode("POS_JUNIOR", "사원", "JUNIOR", null, null, 1L, null,false);
-        commonCodeRepository.saveAll(List.of(statusActive, roleUser, deptDev, posJunior));
+        // --- given: 1. 공통 코드 데이터 생성 ---
+        CommonCode statusActive = CommonCode.createCommonCode("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null, false);
+        CommonCode roleUser = CommonCode.createCommonCode("ROLE_USER", "사용자", "USER", null, null, 1L, null, false);
+        CommonCode deptDev = CommonCode.createCommonCode("DEPT_DEV", "개발팀", "DEV", null, null, 1L, null, false);
+        CommonCode posJunior = CommonCode.createCommonCode("POS_JUNIOR", "사원", "JUNIOR", null, null, 1L, null, false);
+        postCategoryFree = CommonCode.createCommonCode("POST_FREE", "자유게시판", "FREE", null, null, 1L, null, false);
 
-        // --- given: 테스트용 Employee 생성 ---
-        Employee testEmployee = Employee.createEmployee(
-                "commenter", "테스트", "commenter@test.com", "010-0000-0000",
+        commonCodeRepository.saveAll(List.of(statusActive, roleUser, deptDev, posJunior, postCategoryFree));
+
+        // --- given: 2. 직원(댓글 작성자) 데이터 생성 ---
+        testUser = Employee.createEmployee(
+                "testuser", "테스트유저", "testuser@test.com", "010-1234-5678",
                 LocalDate.now(), statusActive, roleUser, deptDev, posJunior,
                 null
         );
-        testEmployee.updateInitPassword(TEST_PASSWORD, null);
-        testEmployee = employeeRepository.save(testEmployee);
+        testUser.updateInitPassword(TEST_PASSWORD, null);
+        employeeRepository.save(testUser);
 
-        // 필드 대신 ID를 저장하여 경고 제거
-        this.testEmployeeId = testEmployee.getEmployeeId();
-
-        // --- given: 테스트용 Post 생성 ---
-        Post testPost1 = Post.builder()
-                .postId(null)
-                .title("Test Post 1")
-                .content("Content 1")
-                .isDeleted(false)
-                .employee(testEmployee)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
-        Post testPost2 = Post.builder()
-                .postId(null)
-                .title("Test Post 2")
-                .content("Content 2")
-                .isDeleted(false)
-                .employee(testEmployee)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
-        testPost1 = postRepository.save(testPost1);
-        testPost2 = postRepository.save(testPost2);
-
-        // 필드 대신 ID를 저장하여 경고 제거
-        this.testPost1Id = testPost1.getPostId();
-        this.testPost2Id = testPost2.getPostId();
+        // --- given: 3. 게시글 데이터 생성 ---
+        testPost = Post.create(postCategoryFree, testUser, "테스트 게시글", "내용입니다.", false, false);
+        postRepository.save(testPost);
     }
 
     /**
-     * PostComment.java의 createPostComment 팩토리 메서드를 사용하여 엔티티를 생성하고 저장
+     * 테스트용 댓글 엔티티를 생성하는 헬퍼 메서드
+     * (PostComment.java의 팩토리 메서드 사용)
      */
-    private PostComment createAndSaveComment(final Post post, final String content) {
-        final PostComment comment = PostComment.createPostComment(
-                post,
-                getTestEmployee(), // 헬퍼 메서드 사용
-                content
-        );
-        return postCommentRepository.save(comment);
+    private PostComment createPersistableComment(Post post, Employee author, String content) {
+        return PostComment.createPostComment(post, author, content);
     }
 
-    // --------------------------------------------------------------------------------
-    // 1. CRUD 테스트 (JpaRepository 기본 메서드)
-    // --------------------------------------------------------------------------------
-
     @Test
-    @DisplayName("C: 댓글 저장(save) 테스트")
-    void savePostCommentTest() {
+    @DisplayName("C: 댓글 생성(save) 테스트")
+    void saveCommentTest() {
         // given
-        final Post testPost1 = getTestPost1(); // 헬퍼 메서드 사용
-        final String content = "새로운 댓글입니다.";
-        final PostComment newComment = PostComment.createPostComment(testPost1, getTestEmployee(), content);
+        PostComment newComment = createPersistableComment(testPost, testUser, "새로운 댓글입니다.");
 
         // when
-        final PostComment savedComment = postCommentRepository.save(newComment);
+        PostComment savedComment = postCommentRepository.save(newComment);
 
         // then
         assertThat(savedComment).isNotNull();
         assertThat(savedComment.getCommentId()).isNotNull();
-        assertThat(savedComment.getContent()).isEqualTo(content);
+        assertThat(savedComment.getContent()).isEqualTo("새로운 댓글입니다.");
+        assertThat(savedComment.getPost()).isEqualTo(testPost);
+        assertThat(savedComment.getEmployee()).isEqualTo(testUser);
         assertThat(savedComment.getIsDeleted()).isFalse();
+        assertThat(savedComment.getCreatedAt()).isNotNull();
+        assertThat(savedComment.getUpdatedAt()).isNotNull();
     }
 
     @Test
     @DisplayName("R: 댓글 ID로 조회(findById) 테스트 - 성공")
     void findByIdSuccessTest() {
         // given
-        final PostComment savedComment = createAndSaveComment(getTestPost1(), "조회할 댓글");
+        PostComment savedComment = postCommentRepository.save(
+                createPersistableComment(testPost, testUser, "찾아주세요.")
+        );
 
         // when
-        final Optional<PostComment> foundComment = postCommentRepository.findById(savedComment.getCommentId());
+        Optional<PostComment> foundComment = postCommentRepository.findById(savedComment.getCommentId());
 
         // then
         assertThat(foundComment).isPresent();
-        assertThat(foundComment.get().getContent()).isEqualTo("조회할 댓글");
+        assertThat(foundComment.get().getCommentId()).isEqualTo(savedComment.getCommentId());
+        assertThat(foundComment.get().getContent()).isEqualTo("찾아주세요.");
     }
 
     @Test
     @DisplayName("R: 댓글 ID로 조회(findById) 테스트 - 실패 (존재하지 않는 ID)")
     void findByIdFailureTest() {
         // given
-        final Long nonExistentId = 9999L;
+        Long nonExistentId = 9999L;
 
         // when
-        final Optional<PostComment> foundComment = postCommentRepository.findById(nonExistentId);
+        Optional<PostComment> foundComment = postCommentRepository.findById(nonExistentId);
 
         // then
         assertThat(foundComment).isNotPresent();
     }
 
     @Test
-    @DisplayName("U: 댓글 수정(update) 테스트")
-    void updatePostCommentTest() {
+    @DisplayName("U: 댓글 수정(update) 테스트 (엔티티 메서드 + 변경 감지)")
+    void updateCommentTest() throws InterruptedException {
         // given
-        final PostComment savedComment = createAndSaveComment(getTestPost1(), "수정 전 내용");
-        final LocalDateTime originalUpdatedAt = savedComment.getUpdatedAt();
-        final String updatedContent = "수정된 내용입니다.";
+        PostComment savedComment = postCommentRepository.save(
+                createPersistableComment(testPost, testUser, "수정 전 내용")
+        );
+        LocalDateTime createdAt = savedComment.getCreatedAt();
+
+        // @PreUpdate 시간을 명확히 구분하기 위해 잠시 대기
+        Thread.sleep(10);
 
         // when
-        final PostComment commentToUpdate = postCommentRepository.findById(savedComment.getCommentId())
-                .orElseThrow(() -> new NoSuchElementException("테스트 데이터 조회 실패"));
+        // 1. 영속성 컨텍스트에서 엔티티 조회
+        PostComment commentToUpdate = postCommentRepository.findById(savedComment.getCommentId()).get();
 
-        commentToUpdate.update(updatedContent);
+        // 2. 엔티티의 update 메서드 호출 (Dirty Checking 대상)
+        commentToUpdate.update("수정된 내용입니다.");
+
+        // 3. 변경 감지(Dirty Checking)를 테스트하기 위해 flush() 호출
         postCommentRepository.flush();
 
-        // 검증을 위해 다시 조회
-        final PostComment updatedComment = postCommentRepository.findById(savedComment.getCommentId())
-                .orElseThrow(() -> new NoSuchElementException("수정 후 데이터 조회 실패"));
+        // 4. 검증을 위해 다시 조회 (혹은 1번 엔티티 재사용)
+        PostComment updatedComment = postCommentRepository.findById(savedComment.getCommentId()).get();
 
         // then
-        assertThat(updatedComment.getContent()).isEqualTo(updatedContent);
-        assertThat(updatedComment.getUpdatedAt()).isAfter(originalUpdatedAt);
+        assertThat(updatedComment.getContent()).isEqualTo("수정된 내용입니다.");
+        assertThat(updatedComment.getUpdatedAt()).isAfter(createdAt); // @PreUpdate 동작 확인
     }
 
     @Test
-    @DisplayName("D: 댓글 삭제(delete) 테스트 - isDeleted = true 로 변경 (Soft Delete)")
-    void softDeletePostCommentTest() {
+    @DisplayName("D: 댓글 삭제(delete) 테스트 (엔티티 Soft Delete)")
+    void softDeleteCommentTest() throws InterruptedException {
         // given
-        final PostComment savedComment = createAndSaveComment(getTestPost1(), "삭제할 댓글");
-        final Long commentId = savedComment.getCommentId();
+        PostComment savedComment = postCommentRepository.save(
+                createPersistableComment(testPost, testUser, "삭제될 댓글")
+        );
+        LocalDateTime createdAt = savedComment.getCreatedAt();
+        Thread.sleep(10);
 
         // when
-        final PostComment commentToDelete = postCommentRepository.findById(commentId)
-                .orElseThrow(() -> new NoSuchElementException("삭제할 데이터 조회 실패"));
-
-        commentToDelete.delete();
+        PostComment commentToDelete = postCommentRepository.findById(savedComment.getCommentId()).get();
+        commentToDelete.delete(); // isDeleted = true, updatedAt 갱신
         postCommentRepository.flush();
 
         // then
-        final PostComment deletedComment = postCommentRepository.findById(commentId)
-                .orElseThrow(() -> new NoSuchElementException("삭제된 데이터 조회 실패"));
+        PostComment deletedComment = postCommentRepository.findById(savedComment.getCommentId()).get();
         assertThat(deletedComment.getIsDeleted()).isTrue();
+        assertThat(deletedComment.getUpdatedAt()).isAfter(createdAt);
     }
 
-    // --------------------------------------------------------------------------------
-    // 2. Custom Repository Method 테스트 (PostCommentRepository.java)
-    // --------------------------------------------------------------------------------
+    @Test
+    @DisplayName("D: 댓글 삭제(deleteById) 테스트 (Hard Delete)")
+    void hardDeleteCommentTest() {
+        // given
+        PostComment savedComment = postCommentRepository.save(
+                createPersistableComment(testPost, testUser, "완전히 삭제될 댓글")
+        );
+        Long commentId = savedComment.getCommentId();
+        assertThat(postCommentRepository.existsById(commentId)).isTrue();
+
+        // when
+        postCommentRepository.deleteById(commentId);
+        postCommentRepository.flush(); // 삭제 쿼리 즉시 실행
+
+        // then
+        assertThat(postCommentRepository.existsById(commentId)).isFalse();
+    }
+
+    // --- Custom Repository Method Tests ---
 
     @Test
     @DisplayName("Custom: findByPost_PostIdAndIsDeletedFalseOrderByCreatedAtAsc (List) 테스트")
-    void findActiveCommentsByPostIdListTest() throws InterruptedException {
+    void findByPostIdAndNotDeletedTest() throws InterruptedException {
         // given
-        createAndSaveComment(getTestPost1(), "첫 번째 댓글");
-        Thread.sleep(10);
-        final PostComment deletedComment = createAndSaveComment(getTestPost1(), "삭제된 댓글");
-        deletedComment.delete();
-        postCommentRepository.save(deletedComment);
-        Thread.sleep(10);
-        createAndSaveComment(getTestPost1(), "세 번째 댓글");
-        createAndSaveComment(getTestPost2(), "다른 게시글 댓글");
+        // 다른 게시글 생성
+        Post otherPost = Post.create(postCategoryFree, testUser, "다른 게시글", "내용", false, false);
+        postRepository.save(otherPost);
+
+        // 테스트 게시글(testPost)의 댓글
+        PostComment c1 = createPersistableComment(testPost, testUser, "댓글 1");
+        postCommentRepository.save(c1);
+        Thread.sleep(5); // 순서 보장
+
+        PostComment c2_deleted = createPersistableComment(testPost, testUser, "댓글 2 (삭제됨)");
+        postCommentRepository.save(c2_deleted);
+        c2_deleted.delete(); // soft delete
+        postCommentRepository.flush();
+        Thread.sleep(5);
+
+        PostComment c3 = createPersistableComment(testPost, testUser, "댓글 3");
+        postCommentRepository.save(c3);
+
+        // 다른 게시글(otherPost)의 댓글
+        PostComment c4_other = createPersistableComment(otherPost, testUser, "다른 게시글의 댓글");
+        postCommentRepository.save(c4_other);
 
         // when
-        final List<PostComment> activeComments = postCommentRepository.findByPost_PostIdAndIsDeletedFalseOrderByCreatedAtAsc(testPost1Id);
+        List<PostComment> comments = postCommentRepository.findByPost_PostIdAndIsDeletedFalseOrderByCreatedAtAsc(testPost.getPostId());
 
         // then
-        assertThat(activeComments).hasSize(2);
-        assertThat(activeComments)
-                .extracting(PostComment::getContent)
-                .containsExactly("첫 번째 댓글", "세 번째 댓글");
+        assertThat(comments).hasSize(2); // 삭제된 댓글(c2)과 다른 게시글 댓글(c4)은 제외
+        assertThat(comments).containsExactly(c1, c3); // createdAt 오름차순 정렬 확인
+        assertThat(comments).doesNotContain(c2_deleted, c4_other);
     }
 
     @Test
     @DisplayName("Custom: findByPost_PostIdAndIsDeletedFalseOrderByCreatedAtAsc (Page) 테스트")
-    void findActiveCommentsByPostIdPageTest() throws InterruptedException {
+    void findByPostIdAndNotDeletedPageableTest() throws InterruptedException {
         // given
-        createAndSaveComment(getTestPost1(), "1번 댓글");
-        Thread.sleep(10);
-        createAndSaveComment(getTestPost1(), "2번 댓글");
-        Thread.sleep(10);
-        createAndSaveComment(getTestPost1(), "3번 댓글");
+        PostComment c1 = postCommentRepository.save(createPersistableComment(testPost, testUser, "댓글 1"));
+        Thread.sleep(5);
+        PostComment c2 = postCommentRepository.save(createPersistableComment(testPost, testUser, "댓글 2"));
+        Thread.sleep(5);
+        PostComment c3 = postCommentRepository.save(createPersistableComment(testPost, testUser, "댓글 3"));
 
-        final Pageable pageable = PageRequest.of(0, 2);
+        // Pageable: 0페이지, 사이즈 2
+        Pageable pageable = PageRequest.of(0, 2);
 
         // when
-        final Page<PostComment> commentPage = postCommentRepository.findByPost_PostIdAndIsDeletedFalseOrderByCreatedAtAsc(testPost1Id, pageable);
+        Page<PostComment> commentPage = postCommentRepository.findByPost_PostIdAndIsDeletedFalseOrderByCreatedAtAsc(testPost.getPostId(), pageable);
 
         // then
-        assertThat(commentPage.getTotalElements()).isEqualTo(3);
-        assertThat(commentPage.getContent())
-                .extracting(PostComment::getContent)
-                .containsExactly("1번 댓글", "2번 댓글");
+        assertThat(commentPage.getTotalElements()).isEqualTo(3); // 총 댓글 수
+        assertThat(commentPage.getTotalPages()).isEqualTo(2); // 총 페이지 (3개 / 2 = 1.5 -> 2)
+        assertThat(commentPage.getContent()).hasSize(2); // 현재 페이지의 아이템 수
+        assertThat(commentPage.getContent()).containsExactly(c1, c2); // 0페이지의 아이템 (c1, c2)
+    }
 
-        // 다음 페이지 검증
-        final Pageable secondPageable = PageRequest.of(1, 2);
-        final Page<PostComment> secondPage = postCommentRepository.findByPost_PostIdAndIsDeletedFalseOrderByCreatedAtAsc(testPost1Id, secondPageable);
-        assertThat(secondPage.getContent())
-                .extracting(PostComment::getContent)
-                .containsExactly("3번 댓글");
+    // --- Exception (Constraints) Tests ---
+
+    @Test
+    @DisplayName("Exception: 필수 FK(Post) null 저장 시 예외 발생")
+    void saveNullPostTest() {
+        // given
+        // PostComment.java의 @Builder를 사용하여 의도적으로 Post를 null로 설정
+        PostComment incompleteComment = PostComment.builder()
+                .employee(testUser) // Employee는 설정
+                .content("Post가 없는 댓글")
+                .isDeleted(false)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        // when & then
+        // @JoinColumn(name = "post_id", nullable = false) 위반
+        assertThatThrownBy(() -> postCommentRepository.saveAndFlush(incompleteComment))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test
-    @DisplayName("Custom: findByPost_PostIdAndIsDeletedFalseOrderByCreatedAtAsc - 댓글 없는 경우")
-    void findActiveCommentsEmptyTest() {
-        // given (Post 1에 댓글 없음)
+    @DisplayName("Exception: 필수 FK(Employee) null 저장 시 예외 발생")
+    void saveNullEmployeeTest() {
+        // given
+        PostComment incompleteComment = PostComment.builder()
+                .post(testPost) // Post는 설정
+                .content("Employee가 없는 댓글")
+                .isDeleted(false)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
 
-        // when
-        final List<PostComment> activeComments = postCommentRepository.findByPost_PostIdAndIsDeletedFalseOrderByCreatedAtAsc(testPost1Id);
-
-        // then
-        assertThat(activeComments).isEmpty();
+        // when & then
+        // @JoinColumn(name = "employee_id", nullable = false) 위반
+        assertThatThrownBy(() -> postCommentRepository.saveAndFlush(incompleteComment))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
-
-    // --------------------------------------------------------------------------------
-    // 3. Exception (Constraints) 테스트
-    // --------------------------------------------------------------------------------
-
     @Test
-    @DisplayName("Exception: 필수 필드(content) null 저장 시 DataIntegrityViolationException 발생")
+    @DisplayName("Exception: 필수 필드(content) null 저장 시 예외 발생")
     void saveNullContentTest() {
         // given
-        final PostComment incompleteComment = PostComment.builder()
-                .post(getTestPost1())
-                .employee(getTestEmployee())
-                .content(null)
+        PostComment incompleteComment = PostComment.builder()
+                .post(testPost)
+                .employee(testUser)
+                // content (nullable = false) 누락
                 .isDeleted(false)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
 
         // when & then
+        // @Column(name = "content", nullable = false) 위반
         assertThatThrownBy(() -> postCommentRepository.saveAndFlush(incompleteComment))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test
-    @DisplayName("Exception: 필수 FK(post) null 저장 시 DataIntegrityViolationException 발생")
-    void saveNullPostFKTest() {
+    @DisplayName("Exception: 필수 필드(isDeleted) null 저장 시 예외 발생")
+    void saveNullIsDeletedTest() {
         // given
-        final PostComment incompleteComment = PostComment.builder()
-                .post(null)
-                .employee(getTestEmployee())
-                .content("Valid content")
-                .isDeleted(false)
+        PostComment incompleteComment = PostComment.builder()
+                .post(testPost)
+                .employee(testUser)
+                .content("isDeleted가 null")
+                // isDeleted (nullable = false) 누락
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
 
         // when & then
-        assertThatThrownBy(() -> postCommentRepository.saveAndFlush(incompleteComment))
-                .isInstanceOf(DataIntegrityViolationException.class);
-    }
-
-    @Test
-    @DisplayName("Exception: 필수 FK(employee) null 저장 시 DataIntegrityViolationException 발생")
-    void saveNullEmployeeFKTest() {
-        // given
-        final PostComment incompleteComment = PostComment.builder()
-                .post(getTestPost1())
-                .employee(null)
-                .content("Valid content")
-                .isDeleted(false)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
-
-        // when & then
+        // @Column(name = "is_deleted", nullable = false) 위반
         assertThatThrownBy(() -> postCommentRepository.saveAndFlush(incompleteComment))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
