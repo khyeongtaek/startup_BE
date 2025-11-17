@@ -8,23 +8,14 @@ import java.util.List;
 
 public interface CommonCodeService {
 
-    // 전체 부서 조회
-    List<CommonCodeResponseDTO> getAllDepartments();
-
-    // 전체 재직상태 조회
-    List<CommonCodeResponseDTO> getAllEmployeeStatus();
-
-    // 전체 직급 조회
-    List<CommonCodeResponseDTO> getAllPositions();
-
-    // 전체 권한 조회
-    List<CommonCodeResponseDTO> getAllRole();
-
     // 전체 Prefix 조회
     List<CommonCodeResponseDTO> getAllCodePrefixes();
 
     // Prefix를 바탕으로 대분류 설명인 0번째 값까지 포함한 조회
     List<CommonCodeResponseDTO> getCommonCodeByPrefix(String codePrefix);
+
+    // Prefix를 바탕으로 대분류 설명인 0번째 값을 제외한 조회
+    List<CommonCodeResponseDTO> getCommonCodeByPrefixWithoutRoot(String codePrefix);
 
     // 코드 생성
    CommonCodeResponseDTO createCode(String username, CommonCodeRequestDTO commonCodeRequestDTO);

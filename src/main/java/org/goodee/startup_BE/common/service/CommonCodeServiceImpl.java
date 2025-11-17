@@ -26,27 +26,6 @@ public class CommonCodeServiceImpl implements CommonCodeService {
     private final CommonCodeRepository commonCodeRepository;
     private final EmployeeRepository employeeRepository;
 
-
-    @Override
-    public List<CommonCodeResponseDTO> getAllDepartments() {
-        return getFilteredCommonCodes("DP");
-    }
-
-    @Override
-    public List<CommonCodeResponseDTO> getAllEmployeeStatus() {
-        return getFilteredCommonCodes(EmployeeStatus.PREFIX);
-    }
-
-    @Override
-    public List<CommonCodeResponseDTO> getAllPositions() {
-        return getFilteredCommonCodes(Position.PREFIX);
-    }
-
-    @Override
-    public List<CommonCodeResponseDTO> getAllRole() {
-        return getFilteredCommonCodes(Role.PREFIX);
-    }
-
     @Override
     public List<CommonCodeResponseDTO> getAllCodePrefixes() {
         return commonCodeRepository.findDistinctCodePrefixes();
@@ -61,6 +40,12 @@ public class CommonCodeServiceImpl implements CommonCodeService {
                 .toList();
 
     }
+
+    @Override
+    public List<CommonCodeResponseDTO> getCommonCodeByPrefixWithoutRoot(String codePrefix){
+        return getFilteredCommonCodes(codePrefix);
+    }
+
 
     @Override
     public CommonCodeResponseDTO createCode(String username, CommonCodeRequestDTO commonCodeRequestDTO) {

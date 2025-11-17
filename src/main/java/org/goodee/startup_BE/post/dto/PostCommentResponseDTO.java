@@ -18,26 +18,29 @@ public class PostCommentResponseDTO {
     private Long commentId;
     private Long postId;
     private Long employeeId;
+    private String employeename;
     private String content;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
   // Entity -> DTO 변환
   public static PostCommentResponseDTO toDTO(PostComment postComment) {
-    if (postComment == null) {
+    if (postComment == null || postComment.getIsDeleted()) {
       return null;
     }
+
+      Long postId = postComment.getPost() != null ? postComment.getPost().getPostId() : null;
+      Long employeeId = postComment.getEmployee() != null ? postComment.getEmployee().getEmployeeId() : null;
+      String employeeName = postComment.getEmployee() != null ? postComment.getEmployee().getName() : null;
+
     return new PostCommentResponseDTO(
             postComment.getCommentId(),
-            // postComment가 어떤 게시글(Post)에 달린 댓글이라면 그 게시글의 ID(postId)를 가져오고,
-            // 만약 postComment.getPost()가 null이면 그냥 null을 반환.
-            postComment.getPost() != null ? postComment.getPost().getPostId() : null,
-            // postComment의 작성자(employee)가 있다면, 그 사람의 ID를 가져오고, 없으면 null을 반환
-            postComment.getEmployee() != null ? postComment.getEmployee().getEmployeeId() : null,
+            postId,
+            employeeId,
+            employeeName,
             postComment.getContent(),
             postComment.getCreatedAt(),
             postComment.getUpdatedAt()
-
 
     );
   }

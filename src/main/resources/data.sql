@@ -677,5 +677,272 @@ VALUES
     ('VT3', '오후반차', 'AFTERNOON_HALF', '오후 반차', NULL, 3, NULL, NOW(), NOW(), false);
 
 
+/*
+* =============================================
+* Menu & Routes (메뉴 및 라우트)
+* code: MN + 번호 (Menu) / RO + 번호 (Route)
+* code_description: 메뉴/라우트 설명
+* value1: JSON. (id, title, type, icon, url, componentPath, admin, target 등)
+* value2: 상위 메뉴 Code (부모-자식 관계)
+* =============================================
+*/
+
+INSERT INTO tbl_common_code
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
+VALUES
+    /* -------------------------------------------
+     * 메뉴 (새 루트)
+     * ------------------------------------------- */
+    ('MN0', '메뉴', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+
+    /* -------------------------------------------
+     * 메뉴 루트 (pages.js의 root)
+     * ------------------------------------------- */
+    ('MN1', '메뉴 루트', '{
+      "id": "pages",
+      "title": "메뉴",
+      "type": "group"
+    }', null, NULL, 1, 1, 1, NOW(), NOW(), false),
+
+    /* -------------------------------------------
+     * 1. 코드관리 (Item)
+     * ------------------------------------------- */
+    ('MN2', '코드관리', '{
+      "id": "code",
+      "title": "코드관리",
+      "type": "item",
+      "icon": "IconCode",
+      "url": "/code",
+      "admin": true,
+      "componentPath": "features/code/pages/CodePage"
+    }', 'MN1', NULL, 1, 1, 1, NOW(), NOW(), false),
+
+    /* -------------------------------------------
+     * 2. 인사관리 (Item)
+     * ------------------------------------------- */
+    ('MN3', '인사관리', '{
+      "id": "organization",
+      "title": "인사관리",
+      "type": "item",
+      "icon": "IconBadge",
+      "url": "/organization",
+      "admin": true,
+      "componentPath": "features/organization/pages/OrganizationPage"
+    }', 'MN1', NULL, 2, 1, 1, NOW(), NOW(), false),
+
+    /* -------------------------------------------
+     * 3. 근태관리 (Item)
+     * ------------------------------------------- */
+    ('MN4', '근태관리', '{
+      "id": "attendance",
+      "title": "근태관리",
+      "type": "item",
+      "icon": "CoPresentIcon",
+      "url": "/attendance",
+      "componentPath": "features/attendance/pages/AttendancePage"
+    }', 'MN1', NULL, 3, 1, 1, NOW(), NOW(), false),
+
+    /* -------------------------------------------
+     * 4. 전자결재 (Collapse)
+     * ------------------------------------------- */
+    ('MN5', '전자결재', '{
+      "id": "approval",
+      "title": "전자결재",
+      "type": "collapse",
+      "icon": "IconClipboardCheck"
+    }', 'MN1', NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('MN6', '결재 작성', '{
+      "id": "insert",
+      "title": "결재 작성",
+      "type": "item",
+      "url": "/approval/form",
+      "target": false,
+      "componentPath": "features/approval/pages/AddApprovalPage"
+    }', 'MN5', NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('MN7', '결재 대기 목록', '{
+      "id": "approval-list-pending",
+      "title": "결재 대기 목록",
+      "type": "item",
+      "url": "/approval/list/pending",
+      "target": false
+    }', 'MN5', NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('MN8', '결재 기안 목록', '{
+      "id": "approval-list-draft",
+      "title": "결재 기안 목록",
+      "type": "item",
+      "url": "/approval/list/draft",
+      "target": false
+    }', 'MN5', NULL, 3, 1, 1, NOW(), NOW(), false),
+    ('MN9', '결재 완료 목록', '{
+      "id": "approval-list-completed",
+      "title": "결재 완료 목록",
+      "type": "item",
+      "url": "/approval/list/completed",
+      "target": false
+    }', 'MN5', NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('MN10', '결재 참조 목록', '{
+      "id": "approval-list-reference",
+      "title": "결재 참조 목록",
+      "type": "item",
+      "url": "/approval/list/reference",
+      "target": false
+    }', 'MN5', NULL, 5, 1, 1, NOW(), NOW(), false),
+
+    /* -------------------------------------------
+     * 5. 캘린더 (Item)
+     * ------------------------------------------- */
+    ('MN11', '캘린더', '{
+      "id": "calendar",
+      "title": "캘린더",
+      "type": "item",
+      "icon": "IconCalendar",
+      "url": "/schedule",
+      "componentPath": "features/schedule/pages/SchedulePage"
+    }', 'MN1', NULL, 5, 1, 1, NOW(), NOW(), false),
+
+    /* -------------------------------------------
+     * 6. 메일함 (Collapse)
+     * ------------------------------------------- */
+    ('MN12', '메일함', '{
+      "id": "mail",
+      "title": "메일함",
+      "type": "collapse",
+      "icon": "IconMail"
+    }', 'MN1', NULL, 6, 1, 1, NOW(), NOW(), false),
+    ('MN13', '받은메일함', '{
+      "id": "mail-inbox",
+      "title": "받은메일함",
+      "type": "item",
+      "url": "/mail/list/INBOX",
+      "target": false
+    }', 'MN12', NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('MN14', '보낸메일함', '{
+      "id": "mail-sent",
+      "title": "보낸메일함",
+      "type": "item",
+      "url": "/mail/list/SENT",
+      "target": false
+    }', 'MN12', NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('MN15', '개인보관함', '{
+      "id": "mail-my",
+      "title": "개인보관함",
+      "type": "item",
+      "url": "/mail/list/MYBOX",
+      "target": false
+    }', 'MN12', NULL, 3, 1, 1, NOW(), NOW(), false),
+    ('MN16', '휴지통', '{
+      "id": "mail-trash",
+      "title": "휴지통",
+      "type": "item",
+      "url": "/mail/list/TRASH",
+      "target": false
+    }', 'MN12', NULL, 4, 1, 1, NOW(), NOW(), false),
+
+    /* -------------------------------------------
+     * 7. 업무일지 (Collapse)
+     * (MainRoutes.jsx에 정보가 없어 componentPath는 제외)
+     * ------------------------------------------- */
+    ('MN19', '업무일지', '{
+      "id": "worklog",
+      "title": "업무일지",
+      "type": "collapse",
+      "icon": "IconClipboardList"
+    }', 'MN1', NULL, 7, 1, 1, NOW(), NOW(), false),
+    ('MN20', '전체업무일지', '{
+      "id": "worklog-all",
+      "title": "전체업무일지",
+      "type": "item",
+      "url": "/worklog/list",
+      "target": false
+    }', 'MN19', NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('MN21', '부서업무일지', '{
+      "id": "worklog-department",
+      "title": "부서업무일지",
+      "type": "item",
+      "url": "/worklog/list?type=department",
+      "target": false
+    }', 'MN19', NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('MN22', '나의업무일지', '{
+      "id": "worklog-personal",
+      "title": "나의업무일지",
+      "type": "item",
+      "url": "/worklog/list?type=personal",
+      "target": false
+    }', 'MN19', NULL, 3, 1, 1, NOW(), NOW(), false),
+
+    /* -------------------------------------------
+     * 8. 게시판 (Collapse)
+     * (MainRoutes.jsx에 정보가 없어 componentPath는 제외)
+     * ------------------------------------------- */
+    ('MN23', '게시판', '{
+      "id": "gaesipan",
+      "title": "게시판",
+      "type": "collapse",
+      "icon": "IconBug"
+    }', 'MN1', NULL, 8, 1, 1, NOW(), NOW(), false),
+    ('MN24', '공지사항', '{
+      "id": "isNotification",
+      "title": "공지사항",
+      "type": "item",
+      "url": "/pages/error",
+      "target": true
+    }', 'MN23', NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('MN25', '자유게시판', '{
+      "id": "freeBoard",
+      "title": "자유게시판",
+      "type": "item",
+      "url": "/pages/500",
+      "target": true
+    }', 'MN23', NULL, 2, 1, 1, NOW(), NOW(), false),
+
+    /* -------------------------------------------
+     * 메뉴에 없는 라우트 (RO - Route)
+     * ------------------------------------------- */
+    ('RO0', '라우트', null, NULL, NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('RO1', '마이페이지', '{
+      "id": "mypage",
+      "title": "마이페이지",
+      "type": "route",
+      "url": "/mypage",
+      "componentPath": "features/mypage/pages/MyInfoPage"
+    }', NULL, NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('RO2', '결재 상세', '{
+      "id": "approval-detail",
+      "title": "결재 상세",
+      "type": "route",
+      "url": "/approval/detail",
+      "componentPath": null
+    }', NULL, NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('RO3', '결재 목록', '{
+      "id": "approval-list",
+      "title": "결재 목록",
+      "type": "route",
+      "url": "/approval/list/:status",
+      "componentPath": "features/approval/pages/ApprovalListPage"
+    }', NULL, NULL, 3, 1, 1, NOW(), NOW(), false),
+    ('RO4', '메일 목록', '{
+      "id": "mail-list",
+      "title": "메일 목록",
+      "type": "route",
+      "url": "/mail/list/:type",
+      "componentPath": "features/mail/pages/MailListPage"
+    }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('RO6', '메일 재작성', '{
+      "id": "mail-rewrite",
+      "title": "메일 작성",
+      "type": "route",
+      "url": "/mail/write/:mailId?",
+      "componentPath": "features/mail/pages/MailWritePage"
+    }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('RO7', '메일 상세', '{
+      "id": "mail-detail",
+      "title": "메일 상세",
+      "type": "route",
+      "url": "/mail/detail/:mailId",
+      "componentPath": "features/mail/pages/MailDetailPage"
+    }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false);
+
+
+
 # 이구문이 반드시 최하단에 있어야함
 SET FOREIGN_KEY_CHECKS = 1;
