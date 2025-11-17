@@ -108,8 +108,8 @@ public interface ChatEmployeeRepository extends JpaRepository<ChatEmployee, Long
                                @Param("messageCreatedAt") LocalDateTime messageCreatedAt);
 
     /**
-     * 특정 사용자의 모든 채팅방에서 안 읽은 메시지의 총 개수를 합산합니다.
-     * ChatEmployee의 lastReadMessage ID와 ChatMessage의 ID를 비교하여 계산합니다.
+     * 특정 사용자의 모든 채팅방에서 안 읽은 메시지의 총 개수를 합산
+     * ChatEmployee의 lastReadMessage ID와 ChatMessage의 ID를 비교하여 계산
      *
      * @param employeeId 안 읽은 개수를 계산할 직원의 ID
      * @return 총 안 읽은 메시지 개수
@@ -128,4 +128,27 @@ public interface ChatEmployeeRepository extends JpaRepository<ChatEmployee, Long
     """)
     long sumTotalUnreadMessagesByEmployeeId(@Param("employeeId") Long employeeId);
 
+    /**
+     * 1:1 채팅방에서 메시지를 보낸 사람 외에 나가지 않은 참여자 수 Count (무조건 0 또는 1)
+     * sendMessage에서 1:1 방의 unreadCount를 1로 설정할 때 사용
+     */
+    long countByChatRoomChatRoomIdAndEmployeeEmployeeIdNotAndIsLeftFalse(Long rommId, Long employeeId);
+
+    /**
+     * 특정 메시지보다 이전에 마지막으로 읽은, 나가지 않은 참여자 수 Count
+     * updateLastReadMessageId에서 '새로운 안 읽음 카운트'를 계산할 때 사용
+     * (기존 countUnreadForMessage와 달리 employeeId를 제외하지 않습니다)
+     */
+    @Query("""
+           SELECT COUNT(ce) FROM ChatEmployee ce
+           LEFT JOIN ce.lastReadMessage lrm
+           WHERE ce.chatRoom.chatRoomId = :roomId
+             AND ce.isLeft = false
+             AND ce.joinedAt <= :messageCreatedAt
+             AND (lrm IS NULL OR lrm.createdAt < :messageCreatedAt)
+        """)
+    long countUnreadByAllParticipants(
+            @Param("roomId") Long roomId,
+            @Param("messageCreatedAt") LocalDateTime messageCreatedAt
+    );
 }
