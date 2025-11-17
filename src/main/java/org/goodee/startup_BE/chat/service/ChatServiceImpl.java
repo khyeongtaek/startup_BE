@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -84,10 +85,10 @@ public class ChatServiceImpl implements ChatService {
         if (!isTeamChat && invitees.size() == 1) {
             Employee invitee = invitees.get(0); // 1:1 채팅의 상대방
 
-            Optional<ChatRoom> existingRoomOpt = chatRoomRepository.findExistingOneOnOneRoom(creator.getEmployeeId(), invitee.getEmployeeId());
+            List<ChatRoom> existingRoomOpt = chatRoomRepository.findExistingOneOnOneRooms(creator.getEmployeeId(), invitee.getEmployeeId());
 
-            if (existingRoomOpt.isPresent()) {
-                ChatRoom existingRoom = existingRoomOpt.get();
+            if (!existingRoomOpt.isEmpty()) {
+                ChatRoom existingRoom = existingRoomOpt.get(0);
                 Long existingRoomId = existingRoom.getChatRoomId();
 
                 // 두 참가자의 ChatEmployee 정보를 모두 가져와서 재활성화
@@ -388,6 +389,11 @@ public class ChatServiceImpl implements ChatService {
                     sender.getEmployeeId(),
                     message.getCreatedAt()
             );
+        } else {
+            unread = chatEmployeeRepository.countByChatRoomChatRoomIdAndEmployeeEmployeeIdNotAndIsLeftFalse(
+                    room.getChatRoomId(),
+                    sender.getEmployeeId()
+            );
         }
 
         Long finalRoomId = room.getChatRoomId();
@@ -419,7 +425,18 @@ public class ChatServiceImpl implements ChatService {
                         pageable
                 );
 
-        return page.map(ChatMessageResponseDTO::toDTO);
+        return page.map(message -> {
+            ChatMessageResponseDTO dto = ChatMessageResponseDTO.toDTO(message);
+
+            if(message.getEmployee() != null) {
+                long currentUnreadCount = chatEmployeeRepository.countUnreadByAllParticipants(
+                        roomId,
+                        message.getCreatedAt()
+                );
+                dto.setUnreadCount(currentUnreadCount);
+            }
+            return dto;
+        });
     }
 
     @Override
@@ -450,6 +467,12 @@ public class ChatServiceImpl implements ChatService {
         }
         if (finalMessageToRead == null) return;
 
+        // 사용자의 이전 마지막 읽은 메시지 정보를 가져옴
+        ChatMessage oldLastReadMessage = membership.getLastReadMessage();
+        LocalDateTime readAfterTime = (oldLastReadMessage != null && oldLastReadMessage.getCreatedAt().isAfter(membership.getJoinedAt()))
+                ? oldLastReadMessage.getCreatedAt()
+                : membership.getJoinedAt();
+
         if (membership.getLastReadMessage() != null &&
                 membership.getLastReadMessage().getCreatedAt().isAfter(finalMessageToRead.getCreatedAt())) {
             return; // 이미 더 최신 메시지를 읽었으므로 갱신 안 함
@@ -458,13 +481,39 @@ public class ChatServiceImpl implements ChatService {
         membership.updateLastReadMessage(finalMessageToRead);
         chatEmployeeRepository.save(membership);
 
+        // 방금 읽은 메시지 목록 조회
+        List<ChatMessage> messagesJustRead = chatMessageRepository
+                .findAllByChatRoomChatRoomIdAndCreatedAtAfterAndCreatedAtLessThanEqualOrderByCreatedAtAsc(
+                        roomId,
+                        readAfterTime,
+                        finalMessageToRead.getCreatedAt()
+                );
+
+        // 각 메시지의 새로운 안 읽음 카운트를 계산
+        List<Map<String, Object>> unreadUpdates = new ArrayList<>();
+        for (ChatMessage message : messagesJustRead) {
+            // 시스템 메시지(employee=null)는 카운트 계산에서 제외
+            if (message.getEmployee() != null) {
+                // ChatEmployeeRepository에 추가한 새 메소드 사용
+                long newUnreadCount = chatEmployeeRepository.countUnreadByAllParticipants(
+                        roomId,
+                        message.getCreatedAt()
+                );
+                unreadUpdates.add(Map.of(
+                        "chatMessageId", message.getChatMessageId(),
+                        "newUnreadCount", newUnreadCount
+                ));
+            }
+        }
+
         // 읽음 브로드캐스트: 프론트는 해당 방의 메시지들 중 msg.id 이하의 미읽음 카운트만 감소
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + roomId + "/reads",
-                        Map.of("lastMessageId", membership.getEmployee().getEmployeeId(),
-                                "readUpToMessageId", finalMessageToRead.getChatMessageId()));
+                if(!unreadUpdates.isEmpty()) {
+                    simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + roomId + "/unread-updates",
+                            Map.of("unreadUpdates", unreadUpdates));
+                }
 
                 calculateAndSendTotalUnreadCount(reader.getEmployeeId(), reader.getUsername());
             }
