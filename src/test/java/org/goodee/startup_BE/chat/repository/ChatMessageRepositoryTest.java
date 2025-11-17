@@ -358,7 +358,7 @@ class ChatMessageRepositoryTest {
 
         // when
         // msg1_room1 이후의 메시지 개수 카운트
-        long count = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(
+        long count = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThanAndEmployeeIsNotNull(
                 room1, lastReadId
         );
 
@@ -376,7 +376,7 @@ class ChatMessageRepositoryTest {
         Long lastReadId = msg4_room1.getChatMessageId();
 
         // when
-        long count = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(
+        long count = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThanAndEmployeeIsNotNull(
                 room1, lastReadId
         );
 
@@ -392,7 +392,7 @@ class ChatMessageRepositoryTest {
         // userJoinedAt 이후: msg1, msg2, msg3_del, msg4 (총 4개)
 
         // when
-        long count = chatMessageRepository.countByChatRoomAndCreatedAtAfter(
+        long count = chatMessageRepository.countByChatRoomAndCreatedAtAfterAndEmployeeIsNotNull(
                 room1, userJoinedAt
         );
 
@@ -408,7 +408,7 @@ class ChatMessageRepositoryTest {
         LocalDateTime futureTime = LocalDateTime.now().plusDays(1);
 
         // when
-        long count = chatMessageRepository.countByChatRoomAndCreatedAtAfter(
+        long count = chatMessageRepository.countByChatRoomAndCreatedAtAfterAndEmployeeIsNotNull(
                 room1, futureTime
         );
 
