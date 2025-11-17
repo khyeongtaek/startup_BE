@@ -2,161 +2,361 @@
 
 package org.goodee.startup_BE.common.service;
 
-import org.goodee.startup_BE.common.dto.CommonCodeResponseDTO; // DTO 임포트 추가
+import org.goodee.startup_BE.common.dto.CommonCodeRequestDTO;
+import org.goodee.startup_BE.common.dto.CommonCodeResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
-import org.goodee.startup_BE.employee.enums.EmployeeStatus; // Enum 임포트 추가
-import org.goodee.startup_BE.employee.enums.Position; // Enum 임포트 추가
-import org.goodee.startup_BE.employee.enums.Role; // Enum 임포트 추가
+import org.goodee.startup_BE.employee.entity.Employee;
+import org.goodee.startup_BE.employee.exception.ResourceNotFoundException;
+import org.goodee.startup_BE.employee.repository.EmployeeRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.BDDMockito.*;
+// AssertJ static import
+import static org.assertj.core.api.Assertions.*;
 
-@ExtendWith(MockitoExtension.class)
+// ArgumentMatchers static import
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+
+// BDDMockito static import
+import static org.mockito.BDDMockito.given;
+
+// Mockito static import
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class) // JUnit5에서 Mockito 확장 사용
 class CommonCodeServiceImplTest {
 
-  @Mock
-  private CommonCodeRepository commonCodeRepository;
-
-  @InjectMocks
+  @InjectMocks // 테스트 대상 클래스, Mock 객체들이 주입됨
   private CommonCodeServiceImpl commonCodeService;
 
-  @Test
-  @DisplayName("부서 목록 조회 성공")
-  void getAllDepartments_Success() {
-    // given
-    // 테스트용 데이터 생성
-    CommonCode dept1 = CommonCode.createCommonCode(
-            "DP1", "개발부", "DEV", null, null, 1L, null, false
-    );
-    CommonCode dept2 = CommonCode.createCommonCode(
-            "DP2", "인사부", "HR", null, null, 2L, null, false
-    );
+  @Mock // Mock 객체로 생성
+  private CommonCodeRepository commonCodeRepository;
 
-    // 레포지토리 메서드 호출 시 반환될 값 설정
-    given(commonCodeRepository.findByCodeStartsWithAndIsDisabledFalse("DP")).willReturn(List.of(dept1, dept2));
+  @Mock // Mock 객체로 생성
+  private EmployeeRepository employeeRepository;
 
-    // when
-    // 테스트할 서비스 메서드 호출
-    List<CommonCodeResponseDTO> result = commonCodeService.getAllDepartments();
+  // 테스트에서 공통으로 사용할 Mock 객체 선언
+  private Employee mockAdmin;
+  private CommonCode mockCode;
 
-    // then
-    // 결과 검증
-    assertThat(result).hasSize(2);
-    assertThat(result.get(0).getCodeDescription()).isEqualTo("개발부");
-    assertThat(result.get(1).getCodeDescription()).isEqualTo("인사부");
+  @BeforeEach // 각 테스트 실행 전 공통 설정
+  void setUp() {
+    // Mock 객체 초기화
+    mockAdmin = mock(Employee.class);
+    mockCode = mock(CommonCode.class);
 
-    // 메서드가 1번 호출되었는지 검증
-    verify(commonCodeRepository, times(1)).findByCodeStartsWithAndIsDisabledFalse("DP");
+    // CommonCodeResponseDTO.toDTO() 메서드 실행 시 NPE 방지를 위한 기본 Mocking
+    // lenient() : 해당 Mocking이 모든 테스트에서 사용되지 않더라도 경고/오류를 발생시키지 않음
+    lenient().when(mockAdmin.getUsername()).thenReturn("admin");
+
+    lenient().when(mockCode.getCommonCodeId()).thenReturn(1L);
+    lenient().when(mockCode.getCode()).thenReturn("DP1");
+    lenient().when(mockCode.getCodeDescription()).thenReturn("Test Department");
+    lenient().when(mockCode.getCreator()).thenReturn(mockAdmin);
+    lenient().when(mockCode.getUpdater()).thenReturn(mockAdmin);
+    lenient().when(mockCode.getCreatedAt()).thenReturn(LocalDateTime.now());
+    lenient().when(mockCode.getUpdatedAt()).thenReturn(LocalDateTime.now());
+    lenient().when(mockCode.getIsDisabled()).thenReturn(false);
   }
 
-  @Test
-  @DisplayName("재직 상태 목록 조회 성공")
-  void getAllEmployeeStatus_Success() {
-    // given
-    // 테스트용 데이터 생성 (ES: EmployeeStatus)
-    CommonCode status1 = CommonCode.createCommonCode(
-            "ES1", "재직", "ACTIVE", null, null, 1L, null, false
-    );
-    CommonCode status2 = CommonCode.createCommonCode(
-            "ES2", "휴직", "ON_LEAVE", null, null, 2L, null, false
-    );
-    List<CommonCode> mockList = List.of(status1, status2);
+  @Nested
+  @DisplayName("getAllCodePrefixes (코드 Prefix 전체 조회)")
+  class GetAllCodePrefixes {
 
-    // 레포지토리 메서드 호출 시 반환될 값 설정 (PREFIX 사용)
-    given(commonCodeRepository.findByCodeStartsWithAndIsDisabledFalse(EmployeeStatus.PREFIX))
-            .willReturn(mockList);
+    @Test
+    @DisplayName("성공")
+    void getAllCodePrefixes_Success() {
+      // given
+      CommonCodeResponseDTO dto = CommonCodeResponseDTO.builder().code("DP").build();
+      List<CommonCodeResponseDTO> mockDtoList = List.of(dto);
 
-    // when
-    // 테스트할 서비스 메서드 호출
-    List<CommonCodeResponseDTO> result = commonCodeService.getAllEmployeeStatus();
+      // Repository가 DTO 리스트를 반환하도록 Mocking
+      given(commonCodeRepository.findDistinctCodePrefixes()).willReturn(mockDtoList);
 
-    // then
-    // 결과 검증 (DTO로 변환되었는지 확인)
-    assertThat(result).hasSize(2);
-    assertThat(result.get(0).getCodeDescription()).isEqualTo("재직");
-    assertThat(result.get(0).getCode()).isEqualTo("ES1");
-    assertThat(result.get(1).getCodeDescription()).isEqualTo("휴직");
-    assertThat(result.get(1).getCode()).isEqualTo("ES2");
+      // when
+      List<CommonCodeResponseDTO> result = commonCodeService.getAllCodePrefixes();
 
-    // 메서드가 올바른 PREFIX로 1번 호출되었는지 검증
-    verify(commonCodeRepository, times(1))
-            .findByCodeStartsWithAndIsDisabledFalse(EmployeeStatus.PREFIX);
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result).hasSize(1);
+      assertThat(result.get(0).getCode()).isEqualTo("DP");
+      verify(commonCodeRepository).findDistinctCodePrefixes();
+    }
+
+    @Test
+    @DisplayName("성공 - 결과 없음")
+    void getAllCodePrefixes_Success_Empty() {
+      // given
+      given(commonCodeRepository.findDistinctCodePrefixes()).willReturn(List.of());
+
+      // when
+      List<CommonCodeResponseDTO> result = commonCodeService.getAllCodePrefixes();
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result).isEmpty();
+    }
   }
 
-  @Test
-  @DisplayName("직급 목록 조회 성공")
-  void getAllPositions_Success() {
-    // given
-    // 테스트용 데이터 생성 (PS: Position)
-    CommonCode pos1 = CommonCode.createCommonCode(
-            "PS1", "사원", "STAFF", null, null, 1L, null, false
-    );
-    CommonCode pos2 = CommonCode.createCommonCode(
-            "PS2", "주임", "SENIOR_STAFF", null, null, 2L, null, false
-    );
-    List<CommonCode> mockList = List.of(pos1, pos2);
+  @Nested
+  @DisplayName("getCommonCodeByPrefix (Prefix로 코드 조회)")
+  class GetCommonCodeByPrefix {
 
-    // 레포지토리 메서드 호출 시 반환될 값 설정
-    given(commonCodeRepository.findByCodeStartsWithAndIsDisabledFalse(Position.PREFIX))
-            .willReturn(mockList);
+    @Test
+    @DisplayName("성공")
+    void getCommonCodeByPrefix_Success() {
+      // given
+      String prefix = "DP";
+      given(commonCodeRepository.findByCodeStartsWith(prefix)).willReturn(List.of(mockCode));
 
-    // when
-    // 테스트할 서비스 메서드 호출
-    List<CommonCodeResponseDTO> result = commonCodeService.getAllPositions();
+      // when
+      List<CommonCodeResponseDTO> result = commonCodeService.getCommonCodeByPrefix(prefix);
 
-    // then
-    // 결과 검증
-    assertThat(result).hasSize(2);
-    assertThat(result.get(0).getCodeDescription()).isEqualTo("사원");
-    assertThat(result.get(0).getCode()).isEqualTo("PS1");
-    assertThat(result.get(1).getCodeDescription()).isEqualTo("주임");
-    assertThat(result.get(1).getCode()).isEqualTo("PS2");
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result).hasSize(1);
+      assertThat(result.get(0).getCode()).isEqualTo("DP1");
+      assertThat(result.get(0).getCreator()).isEqualTo("admin");
+      verify(commonCodeRepository).findByCodeStartsWith(prefix);
+    }
 
-    // 메서드가 올바른 PREFIX로 1번 호출되었는지 검증
-    verify(commonCodeRepository, times(1))
-            .findByCodeStartsWithAndIsDisabledFalse(Position.PREFIX);
+    @Test
+    @DisplayName("성공 - 결과 없음")
+    void getCommonCodeByPrefix_Success_Empty() {
+      // given
+      String prefix = "DP";
+      given(commonCodeRepository.findByCodeStartsWith(prefix)).willReturn(List.of());
+
+      // when
+      List<CommonCodeResponseDTO> result = commonCodeService.getCommonCodeByPrefix(prefix);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result).isEmpty();
+    }
   }
 
-  @Test
-  @DisplayName("권한 목록 조회 성공")
-  void getAllRole_Success() {
-    // given
-    // 테스트용 데이터 생성 (AU: Role - 아마도 Authority에서 따온 듯)
-    CommonCode role1 = CommonCode.createCommonCode(
-            "AU1", "일반사용자", "ROLE_USER", null, null, 1L, null, false
-    );
-    CommonCode role2 = CommonCode.createCommonCode(
-            "AU2", "관리자", "ROLE_ADMIN", null, null, 2L, null, false
-    );
-    List<CommonCode> mockList = List.of(role1, role2);
+  @Nested
+  @DisplayName("getCommonCodeByPrefixWithoutRoot (Root 제외 Prefix로 코드 조회)")
+  class GetCommonCodeByPrefixWithoutRoot {
 
-    // 레포지토리 메서드 호출 시 반환될 값 설정
-    given(commonCodeRepository.findByCodeStartsWithAndIsDisabledFalse(Role.PREFIX))
-            .willReturn(mockList);
+    @Test
+    @DisplayName("성공 - Root('DP0') 코드가 필터링되어야 함")
+    void getCommonCodeByPrefixWithoutRoot_Success_Filtered() {
+      // given
+      String prefix = "DP";
+      String excludedCode = "DP0";
 
-    // when
-    // 테스트할 서비스 메서드 호출
-    List<CommonCodeResponseDTO> result = commonCodeService.getAllRole();
+      CommonCode rootCode = mock(CommonCode.class);
+      when(rootCode.getCode()).thenReturn(excludedCode); // "DP0"
 
-    // then
-    // 결과 검증
-    assertThat(result).hasSize(2);
-    assertThat(result.get(0).getCodeDescription()).isEqualTo("일반사용자");
-    assertThat(result.get(0).getCode()).isEqualTo("AU1");
-    assertThat(result.get(1).getCodeDescription()).isEqualTo("관리자");
-    assertThat(result.get(1).getCode()).isEqualTo("AU2");
+      // mockCode는 "DP1" (setUp에서 설정됨)
 
-    // 메서드가 올바른 PREFIX로 1번 호출되었는지 검증
-    verify(commonCodeRepository, times(1))
-            .findByCodeStartsWithAndIsDisabledFalse(Role.PREFIX);
+      // Repository는 "DP0"과 "DP1"을 모두 반환
+      given(commonCodeRepository.findByCodeStartsWithAndIsDisabledFalse(prefix))
+              .willReturn(List.of(rootCode, mockCode));
+
+      // when
+      List<CommonCodeResponseDTO> result = commonCodeService.getCommonCodeByPrefixWithoutRoot(prefix);
+
+      // then
+      // "DP0"이 필터링되고 "DP1"만 남아야 함
+      assertThat(result).isNotNull();
+      assertThat(result).hasSize(1);
+      assertThat(result.get(0).getCode()).isEqualTo("DP1");
+      verify(commonCodeRepository).findByCodeStartsWithAndIsDisabledFalse(prefix);
+    }
+
+    @Test
+    @DisplayName("성공 - 결과 없음")
+    void getCommonCodeByPrefixWithoutRoot_Success_Empty() {
+      // given
+      String prefix = "DP";
+      given(commonCodeRepository.findByCodeStartsWithAndIsDisabledFalse(prefix))
+              .willReturn(List.of());
+
+      // when
+      List<CommonCodeResponseDTO> result = commonCodeService.getCommonCodeByPrefixWithoutRoot(prefix);
+
+      // then
+      assertThat(result).isNotNull();
+      assertThat(result).isEmpty();
+    }
+  }
+
+  @Nested
+  @DisplayName("createCode (코드 생성)")
+  class CreateCode {
+
+    private CommonCodeRequestDTO request;
+    private String adminUsername = "admin";
+
+    @BeforeEach
+    void createSetup() {
+      request = new CommonCodeRequestDTO();
+      request.setCode("DP2");
+      request.setCodeDescription("New Department");
+      request.setValue1("Value1");
+      request.setSortOrder(2L);
+      request.setIsDisabled(false);
+    }
+
+    @Test
+    @DisplayName("성공")
+    void createCode_Success() {
+      // given
+      // 1. 관리자 조회
+      given(employeeRepository.findByUsername(adminUsername)).willReturn(Optional.of(mockAdmin));
+
+      // 2. commonCodeRepository.save()가 호출될 때
+      //    - 어떤 CommonCode 객체가 전달되는지 캡처 (ArgumentCaptor)
+      //    - 저장된 결과로 mockCode를 반환 (DTO 변환을 위해)
+      ArgumentCaptor<CommonCode> codeCaptor = ArgumentCaptor.forClass(CommonCode.class);
+      given(commonCodeRepository.save(codeCaptor.capture())).willReturn(mockCode);
+
+      // when
+      CommonCodeResponseDTO result = commonCodeService.createCode(adminUsername, request);
+
+      // then
+      // 1. DTO 반환 값 검증 (mockCode 기반)
+      assertThat(result).isNotNull();
+      assertThat(result.getCode()).isEqualTo("DP1"); // mockCode의 코드
+      assertThat(result.getCreator()).isEqualTo("admin");
+
+      // 2. Repository 호출 검증
+      verify(employeeRepository).findByUsername(adminUsername);
+      verify(commonCodeRepository).save(any(CommonCode.class));
+
+      // 3. save()에 전달된 엔티티(캡처된 객체)의 값 검증
+      //    (DTO -> Entity 변환이 올바르게 일어났는지 검증)
+      CommonCode capturedCode = codeCaptor.getValue();
+      assertThat(capturedCode.getCode()).isEqualTo(request.getCode());
+      assertThat(capturedCode.getCodeDescription()).isEqualTo(request.getCodeDescription());
+      assertThat(capturedCode.getCreator()).isEqualTo(mockAdmin); // 생성자가 올바르게 설정되었는지
+      assertThat(capturedCode.getUpdater()).isEqualTo(mockAdmin); // 수정자가 올바르게 설정되었는지
+      assertThat(capturedCode.getIsDisabled()).isFalse();
+    }
+
+    @Test
+    @DisplayName("실패 - 생성자(관리자) 없음")
+    void createCode_Fail_AdminNotFound() {
+      // given
+      given(employeeRepository.findByUsername(adminUsername)).willReturn(Optional.empty());
+
+      // when & then
+      assertThatThrownBy(() -> commonCodeService.createCode(adminUsername, request))
+              .isInstanceOf(ResourceNotFoundException.class)
+              .hasMessage("생성자 정보를 찾을 수 없습니다.");
+
+      // save는 절대 호출되면 안 됨
+      verify(commonCodeRepository, never()).save(any());
+    }
+  }
+
+  @Nested
+  @DisplayName("updateCode (코드 수정)")
+  class UpdateCode {
+
+    private CommonCodeRequestDTO request;
+    private String adminUsername = "admin";
+    private Long targetCodeId = 1L;
+
+    @BeforeEach
+    void updateSetup() {
+      request = new CommonCodeRequestDTO();
+      request.setCommonCodeId(targetCodeId);
+      request.setCode("DP1-Updated");
+      request.setCodeDescription("Updated Description");
+      request.setValue1("Updated Value1");
+      request.setValue2("Updated Value2");
+      request.setValue3("Updated Value3");
+      request.setSortOrder(10L);
+      request.setIsDisabled(true);
+    }
+
+    @Test
+    @DisplayName("성공")
+    void updateCode_Success() {
+      // given
+      // 1. 관리자 조회
+      given(employeeRepository.findByUsername(adminUsername)).willReturn(Optional.of(mockAdmin));
+      // 2. 수정할 코드 조회
+      given(commonCodeRepository.findById(targetCodeId)).willReturn(Optional.of(mockCode));
+
+      // when
+      CommonCodeResponseDTO result = commonCodeService.updateCode(adminUsername, request);
+
+      // then
+      // 1. DTO 반환 값 검증 (mockCode 기반)
+      assertThat(result).isNotNull();
+      assertThat(result.getCommonCodeId()).isEqualTo(targetCodeId);
+      assertThat(result.getCreator()).isEqualTo("admin"); // toDTO가 호출되었는지 확인
+
+      // 2. Repository 호출 검증
+      verify(employeeRepository).findByUsername(adminUsername);
+      verify(commonCodeRepository).findById(targetCodeId);
+
+      // 3. mockCode의 update() 메서드가 정확한 인자들로 호출되었는지 검증
+      // CommonCode.java의 update() 시그니처:
+      // update(String code, String codeDescription, String value1, String value2,
+      //        String value3, Long sortOrder, Employee updater, Boolean isDisabled)
+      verify(mockCode).update(
+              request.getCode(),
+              request.getCodeDescription(),
+              request.getValue1(),
+              request.getValue2(),
+              request.getValue3(),
+              request.getSortOrder(),
+              mockAdmin, // Employee updater
+              request.getIsDisabled()
+      );
+    }
+
+    @Test
+    @DisplayName("실패 - 수정자(관리자) 없음")
+    void updateCode_Fail_AdminNotFound() {
+      // given
+      given(employeeRepository.findByUsername(adminUsername)).willReturn(Optional.empty());
+
+      // when & then
+      assertThatThrownBy(() -> commonCodeService.updateCode(adminUsername, request))
+              .isInstanceOf(ResourceNotFoundException.class)
+              .hasMessage("생성자 정보를 찾을 수 없습니다.");
+
+      // 관리자 조회 실패 시, 코드 조회나 update는 절대 호출되면 안 됨
+      verify(commonCodeRepository, never()).findById(any());
+      verify(mockCode, never()).update(any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("실패 - 수정할 코드 없음")
+    void updateCode_Fail_CodeNotFound() {
+      // given
+      // 1. 관리자 조회 성공
+      given(employeeRepository.findByUsername(adminUsername)).willReturn(Optional.of(mockAdmin));
+      // 2. 수정할 코드 조회 실패
+      given(commonCodeRepository.findById(targetCodeId)).willReturn(Optional.empty());
+
+      // when & then
+      assertThatThrownBy(() -> commonCodeService.updateCode(adminUsername, request))
+              .isInstanceOf(ResourceNotFoundException.class)
+              .hasMessage("코드 정보를 찾을 수 없습니다.");
+
+      // update는 절대 호출되면 안 됨
+      verify(mockCode, never()).update(any(), any(), any(), any(), any(), any(), any(), any());
+    }
   }
 }
