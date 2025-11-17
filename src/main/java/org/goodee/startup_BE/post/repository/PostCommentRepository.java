@@ -1,10 +1,20 @@
 package org.goodee.startup_BE.post.repository;
 
+import org.goodee.startup_BE.post.entity.PostComment;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-@Repository
-public interface PostCommentRepository {
+import java.util.List;
 
+@Repository
+public interface PostCommentRepository extends JpaRepository<PostComment, Long> {
+
+    // 게시글의 댓글 목록
+    List<PostComment> findByPost_PostIdAndIsDeletedFalseOrderByCreatedAtAsc(Long postId);
+
+    Page<PostComment> findByPost_PostIdAndIsDeletedFalseOrderByCreatedAtAsc(Long postId, Pageable pageable);
 
 
 }
