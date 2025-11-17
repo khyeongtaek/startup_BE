@@ -1,42 +1,34 @@
 package org.goodee.startup_BE.post.repository;
 
 import org.goodee.startup_BE.post.entity.Post;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 
 @Repository
 public interface PostRepository extends JpaRepository<Post, Long> {
 
-  // <#entity>
-
-  // 카테고리 별 기준으로 조회
-  List<Post> findByCommonCode_CommonCodeId(Long commonCodeId);
-
-  // 작성자
-  List<Post> findByEmployee_EmployeeId(Long employeeId);
-
-  // 제목
-  // findByTitleContaining - 제목(title)에 특정 단어가 포함된 게시글을 찾는다.
-  List<Post> findByTitleContaining(String title);
-
-  // 공지글만 조회
-  List<Post> findByIsNotificationTrue();
-
-  // 일반글(공지x)만 조회
-  List<Post> findByIsNotificationFalse();
-
-  // 삭제되지 않은 게시글만 조회
-  List<Post> findByIsDeletedFalse();
-
-  // 삭제되지 않은 게시글 최신순 정령
-  List<Post> findByIsDeletedFalseOrderByCreatedAtDesc();
-
-  // 공지글 - 최신순 정렬
-  List<Post> findByIsNotificationTrueOrderByCreatedAtDesc();
-
-  // 제목 검색 - 삭제되지 않은 게시글만
-  List<Post> findByTitleContainingAndIsDeletedFalse(String title);
+    // 검색
+    @Query("""
+    SELECT p FROM Post p
+    JOIN p.employee e
+    WHERE p.isDeleted = false
+    AND (:categoryId IS NULL OR p.commonCode.commonCodeId = :categoryId)
+    AND (
+        (:title IS NULL AND :content IS NULL AND :employeeName IS NULL)
+        OR (:title IS NOT NULL AND p.title LIKE CONCAT('%', :title, '%'))
+        OR (:content IS NOT NULL AND p.content LIKE CONCAT('%', :content, '%'))
+        OR (:employeeName IS NOT NULL AND e.name LIKE CONCAT('%', :employeeName, '%'))
+    )
+    """)
+    Page<Post> searchPost(@Param("categoryId") Long categoryId,
+                          @Param("title") String title,
+                          @Param("content") String content,
+                          @Param("employeeName") String employeeName,
+                          Pageable pageable);
 
 }

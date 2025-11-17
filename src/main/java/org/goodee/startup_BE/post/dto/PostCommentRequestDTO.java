@@ -23,7 +23,6 @@ public class PostCommentRequestDTO {
   // DTO -> Entity 변환
   public PostComment toEntity(Post post, Employee employee) {
     return PostComment.builder()
-            .commentId(commentId)
             .post(post)         // 어떤 게시글에 속한 댓글인지.
             .employee(employee) // 누가 작성했는지.
             .content(content)   // 댓글 내용.

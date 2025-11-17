@@ -31,6 +31,9 @@ public class Post {
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
+    @Column(name = "employee_name", nullable = false, columnDefinition = "LONGTEXT")
+    private String employeeName;
+
     @Column(name = "title", nullable = false, columnDefinition = "LONGTEXT")
     private String title;
 
@@ -41,7 +44,7 @@ public class Post {
     private Boolean isNotification;
 
     @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted = false;
+    private Boolean isDeleted;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -49,19 +52,24 @@ public class Post {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public static Post createPost (
-            CommonCode commonCode,
-            Employee employee,
-            String title,
-            String content,
-            boolean isNotification
-    ) {
+    @Column(name = "alert", nullable = false)
+    @Builder.Default
+    private Boolean alert = false;
+
+
+
+    public static Post create(CommonCode commonCode, Employee employee, String title, String content, Boolean isNotification, Boolean alert) {
         return Post.builder()
                 .commonCode(commonCode)
                 .employee(employee)
+                .employeeName(employee.getName())
                 .title(title)
                 .content(content)
-                .isNotification(isNotification)
+                .isNotification(isNotification != null ? isNotification : false)
+                .alert(alert != null ? alert : false)
+                .isDeleted(false)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
                 .build();
     }
 
@@ -70,6 +78,7 @@ public class Post {
         this.title = title;
         this.content = content;
         this.isNotification = isNotification;
+        this.updatedAt = LocalDateTime.now();
     }
 
     // 게시글 삭제
