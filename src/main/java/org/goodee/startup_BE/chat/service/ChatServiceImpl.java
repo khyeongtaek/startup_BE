@@ -265,38 +265,32 @@ public class ChatServiceImpl implements ChatService {
 
 
         // 6) 커밋 후 알림
-        List<Employee> notificationTargets = allAffectedInvitees;
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + finalRoomId,
-                        ChatMessageResponseDTO.toDTO(systemMsg));
+        simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + finalRoomId,
+                ChatMessageResponseDTO.toDTO(systemMsg));
 
-                notifyParticipantsOfNewMessage(room, systemMsg, null);
+        notifyParticipantsOfNewMessage(room, systemMsg, null);
 
-                try {
-                    Long codeId = commonCodeRepository
-                            .findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.TEAMCHATNOTI.name())
-                            .stream().findFirst()
-                            .orElseThrow(() -> new EntityNotFoundException("채팅 초대 CommonCode 없음"))
-                            .getCommonCodeId();
+        try {
+            Long codeId = commonCodeRepository
+                    .findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.TEAMCHATNOTI.name())
+                    .stream().findFirst()
+                    .orElseThrow(() -> new EntityNotFoundException("채팅 초대 CommonCode 없음"))
+                    .getCommonCodeId();
 
-                    for (Employee target : notificationTargets) {
-                        notificationService.create(
-                                NotificationRequestDTO.builder()
-                                        .employeeId(target.getEmployeeId())
-                                        .ownerTypeCommonCodeId(codeId)
-                                        .url("/chat/rooms/" + finalRoomId)
-                                        .title(room.getName() + "팀 채팅방에 초대되었습니다.")
-                                        .content(inviter.getName() + "님이 채팅방에 초대했습니다.")
-                                        .build()
-                        );
-                    }
-                } catch (Exception e) {
-                    log.warn("Invite notification failed. roomId={}, error={}", finalRoomId, e.getMessage());
-                }
+            for (Employee target : allAffectedInvitees) {
+                notificationService.create(
+                        NotificationRequestDTO.builder()
+                                .employeeId(target.getEmployeeId())
+                                .ownerTypeCommonCodeId(codeId)
+                                .url("/chat/rooms/" + finalRoomId)
+                                .title(room.getName() + "팀 채팅방에 초대되었습니다.")
+                                .content(inviter.getName() + "님이 채팅방에 초대했습니다.")
+                                .build()
+                );
             }
-        });
+        } catch (Exception e) {
+            log.warn("Invite notification failed. roomId={}, error={}", finalRoomId, e.getMessage());
+        }
     }
 
     // 채팅방 나가기
