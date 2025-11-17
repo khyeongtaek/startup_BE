@@ -89,11 +89,11 @@ class PostViewLogRepositoryTest {
      */
     private TestEntities createAndSaveTestEntities() {
         // 1. CommonCode 생성
-        CommonCode statusActive = commonCodeRepository.save(CommonCode.createCommonCode("ES1", "상태 - 활성", "ACTIVE", null, null, 1L, null));
-        CommonCode roleUser = commonCodeRepository.save(CommonCode.createCommonCode("AU2", "권한 - 사용자", "USER", null, null, 2L, null));
-        CommonCode deptDev = commonCodeRepository.save(CommonCode.createCommonCode("DP1", "부서 - 개발", "DEV", null, null, 1L, null));
-        CommonCode posJunior = commonCodeRepository.save(CommonCode.createCommonCode("PS1", "직급 - 주니어", "JUNIOR", null, null, 1L, null));
-        CommonCode postCategory = commonCodeRepository.save(CommonCode.createCommonCode("PC1", "게시글 카테고리", "GENERAL", null, null, 1L, null));
+        CommonCode statusActive = commonCodeRepository.save(CommonCode.createCommonCode("ES1", "상태 - 활성", "ACTIVE", null, null, 1L, null, false));
+        CommonCode roleUser = commonCodeRepository.save(CommonCode.createCommonCode("AU2", "권한 - 사용자", "USER", null, null, 2L, null, false));
+        CommonCode deptDev = commonCodeRepository.save(CommonCode.createCommonCode("DP1", "부서 - 개발", "DEV", null, null, 1L, null, false));
+        CommonCode posJunior = commonCodeRepository.save(CommonCode.createCommonCode("PS1", "직급 - 주니어", "JUNIOR", null, null, 1L, null,false));
+        CommonCode postCategory = commonCodeRepository.save(CommonCode.createCommonCode("PC1", "게시글 카테고리", "GENERAL", null, null, 1L, null, false));
 
         // 2. Creator Employee 생성 (10개 인자 시그니처 추정 및 순서 조정)
         Employee creator = Employee.createEmployee(

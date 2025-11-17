@@ -47,11 +47,11 @@ class PostViewLogServiceTest {
                                 CommonCode pos, CommonCode postCat, Employee emp, Post post) { }
 
     private TestEntities createEntities() {
-        CommonCode status = CommonCode.createCommonCode("S1", "ACTIVE", "Y", null, null, 1L, null);
-        CommonCode role = CommonCode.createCommonCode("R1", "USER", "USER", null, null, 1L, null);
-        CommonCode dept = CommonCode.createCommonCode("D1", "DEV", "DEV", null, null, 1L, null);
-        CommonCode pos = CommonCode.createCommonCode("P1", "JUNIOR", "JR", null, null, 1L, null);
-        CommonCode postCat = CommonCode.createCommonCode("PC1", "GENERAL", "GEN", null, null, 1L, null);
+        CommonCode status = CommonCode.createCommonCode("S1", "ACTIVE", "Y", null, null, 1L, null, false);
+        CommonCode role = CommonCode.createCommonCode("R1", "USER", "USER", null, null, 1L, null, false);
+        CommonCode dept = CommonCode.createCommonCode("D1", "DEV", "DEV", null, null, 1L, null,false);
+        CommonCode pos = CommonCode.createCommonCode("P1", "JUNIOR", "JR", null, null, 1L, null,false);
+        CommonCode postCat = CommonCode.createCommonCode("PC1", "GENERAL", "GEN", null, null, 1L, null,false);
 
         Employee emp = Employee.createEmployee("test", "테스터", "test@test.com", "010-1111-2222",
                 LocalDate.now(), status, role, dept, pos, null);

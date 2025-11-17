@@ -69,13 +69,13 @@ class PostRepositoryTest {
         commonCodeRepository.deleteAll();
 
         // 1. Employee 및 Post 생성에 필요한 공통 코드 객체 (지역 변수로 선언)
-        final CommonCode statusActive = CommonCode.createCommonCode("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null);
-        final CommonCode roleAdmin = CommonCode.createCommonCode("ROLE_ADMIN", "관리자", "ADMIN", null, null, 1L, null);
-        final CommonCode deptDev = CommonCode.createCommonCode("DEPT_DEV", "개발팀", "DEV", null, null, 1L, null);
-        final CommonCode posSenior = CommonCode.createCommonCode("POS_SENIOR", "대리", "SENIOR", null, null, 2L, null);
+        final CommonCode statusActive = CommonCode.createCommonCode("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null,false);
+        final CommonCode roleAdmin = CommonCode.createCommonCode("ROLE_ADMIN", "관리자", "ADMIN", null, null, 1L, null,false);
+        final CommonCode deptDev = CommonCode.createCommonCode("DEPT_DEV", "개발팀", "DEV", null, null, 1L, null,false);
+        final CommonCode posSenior = CommonCode.createCommonCode("POS_SENIOR", "대리", "SENIOR", null, null, 2L, null,false);
 
-        final CommonCode postCategoryNotice = CommonCode.createCommonCode("PC1", "게시판 카테고리", "NOTICE", "공지사항", null, 1L, null);
-        final CommonCode postCategoryFree = CommonCode.createCommonCode("PC2", "게시판 카테고리", "FREE", "자유게시판", null, 2L, null);
+        final CommonCode postCategoryNotice = CommonCode.createCommonCode("PC1", "게시판 카테고리", "NOTICE", "공지사항", null, 1L, null,false);
+        final CommonCode postCategoryFree = CommonCode.createCommonCode("PC2", "게시판 카테고리", "FREE", "자유게시판", null, 2L, null,false);
 
         // CommonCode 저장 및 ID 저장 (ID는 @Test 메서드에서 필요하므로 필드로 저장)
         commonCodeRepository.saveAll(List.of(
