@@ -665,16 +665,18 @@ INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
     ('AT0', '결재 양식', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
-    ('AT1', '휴가 신청서', '휴가 신청서', 'VACATION', '/forms/vacation', 1, 1, 1, NOW(), NOW(), false),
-    ('AT2', '출장 계획서', '출장 계획서', 'BUSINESS_TRIP', '/forms/biztrip', 2, 1, 1, NOW(), NOW(), false);
+    ('AT1', '휴가 신청서', '휴가 신청서', 'VACATION', 'LeaveTemplate', 1, 1, 1, NOW(), NOW(), false),
+    ('AT2', '출장 계획서', '출장 계획서', 'BUSINESS_TRIP', 'BusinessTripTemplate', 2, 1, 1, NOW(), NOW(), false);
 
 INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
-VALUES
-    ('VT0', '휴가 종류', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
-    ('VT1', '연차', 'ANNUAL', '연차', NULL, 1, NULL, NOW(), NOW(), false),
-    ('VT2', '오전반차', 'MORNING_HALF', '오전 반차', NULL, 2, NULL, NOW(), NOW(), false),
-    ('VT3', '오후반차', 'AFTERNOON_HALF', '오후 반차', NULL, 3, NULL, NOW(), NOW(), false);
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at,
+ is_disabled)
+VALUES ('VT0', '휴가 종류', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+       ('VT1', '연차', 'ANNUAL', '연차', NULL, 1, 1, 1, NOW(), NOW(), false),
+       ('VT2', '오전반차', 'MORNING_HALF', '오전 반차', NULL, 2, 1, 1, NOW(), NOW(), false),
+       ('VT3', '오후반차', 'AFTERNOON_HALF', '오후 반차', NULL, 3, 1, 1, NOW(), NOW(), false);
+
+
 
 
 /*
