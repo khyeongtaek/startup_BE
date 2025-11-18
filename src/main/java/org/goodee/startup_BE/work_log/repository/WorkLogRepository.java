@@ -20,6 +20,8 @@ public interface WorkLogRepository extends JpaRepository<WorkLog, Long> {
         w.workDate,
         w.title,
         w.content,
+        w.workType.commonCodeId,
+        w.workOption.commonCodeId,
         CASE WHEN r.readId IS NOT NULL THEN true ELSE false END
     )
     FROM WorkLog w
@@ -28,6 +30,7 @@ public interface WorkLogRepository extends JpaRepository<WorkLog, Long> {
      AND r.employee.employeeId = :empId
     WHERE (:deptId IS NULL OR w.employee.department.commonCodeId = :deptId)
       AND (:onlyMine = false OR w.employee.employeeId = :empId)
+    ORDER BY w.workDate DESC, w.workLogId DESC
     """,
 		countQuery = """
       SELECT COUNT(w)

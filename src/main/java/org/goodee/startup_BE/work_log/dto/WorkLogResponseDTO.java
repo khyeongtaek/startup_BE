@@ -34,6 +34,9 @@ public class WorkLogResponseDTO {
 	@Schema(description = "내용", example = "미팅 결과 요약 및 액션 아이템 정리")
 	private String content;         // 내용
 	
+	private Long workTypeId;
+	private Long workOptionId;
+	
 	@Builder.Default
 	@Schema(description = "읽음 여부 (리스트에서 true면 이미 열람함)", example = "false")
 	private Boolean isRead = false; // 읽음 여부
@@ -46,6 +49,8 @@ public class WorkLogResponseDTO {
 			       .employeeName(workLog.getEmployee().getName())
 			       .workTypeName(workLog.getWorkType().getValue2())
 			       .workOptionName(workLog.getWorkOption().getValue2())
+			       .workTypeId(workLog.getWorkType().getCommonCodeId())
+			       .workOptionId(workLog.getWorkOption().getCommonCodeId())
 			       .workDate(workLog.getWorkDate())
 			       .title(workLog.getTitle())
 			       .content(workLog.getContent())

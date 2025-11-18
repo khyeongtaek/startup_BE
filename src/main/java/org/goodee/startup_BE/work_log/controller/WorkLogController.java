@@ -3,11 +3,14 @@ package org.goodee.startup_BE.work_log.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.common.dto.APIResponseDTO;
+import org.goodee.startup_BE.common.entity.CommonCode;
+import org.goodee.startup_BE.work_log.dto.WorkLogCodeListDTO;
 import org.goodee.startup_BE.work_log.dto.WorkLogRequestDTO;
 import org.goodee.startup_BE.work_log.dto.WorkLogResponseDTO;
 
 import org.goodee.startup_BE.work_log.service.WorkLogService;
 import org.springframework.data.domain.Page;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +21,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
+import java.util.List;
 
 
 @RestController
@@ -37,9 +42,9 @@ public class WorkLogController {
 		description = "등록 성공",
 		content = @Content(schema = @Schema(implementation = WorkLogResponseDTO.class))
 	)
-	@PostMapping
+	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<APIResponseDTO<WorkLogResponseDTO>> createWorkLog(
-					@Valid @RequestBody WorkLogRequestDTO workLogDTO,
+					@Valid @ModelAttribute WorkLogRequestDTO workLogDTO,
 					@Parameter(hidden = true) Authentication auth
 	) {
 		WorkLogResponseDTO createWorkLog = workLogService.saveWorkLog(workLogDTO, auth.getName());
@@ -85,11 +90,11 @@ public class WorkLogController {
 		description = "해당 ID의 업무일지를 소프트 삭제합니다. 작성자만 삭제 가능."
 	)
 	@ApiResponse(responseCode = "200", description = "삭제 성공")
-	@DeleteMapping("/{id}")
+	@DeleteMapping
 	public ResponseEntity<APIResponseDTO<Void>> deleteWorkLog(
-		@Parameter(description = "업무일지 ID", example = "1") @PathVariable Long id,
+		@Parameter(description = "업무일지 ID", example = "1") @RequestBody List<Long> ids,
 		@Parameter(hidden = true) Authentication auth) {
-		workLogService.deleteWorkLog(id, auth.getName());  // common.exception 패키지에 exceptionHandler 추가
+		workLogService.deleteWorkLog(ids, auth.getName());  // common.exception 패키지에 exceptionHandler 추가
 		APIResponseDTO<Void> response = APIResponseDTO.<Void>builder()
 			                                .message("업무일지 삭제 성공")
 			                                .build();
@@ -144,5 +149,18 @@ public class WorkLogController {
 			           .data(data)
 			           .build();
 		return ResponseEntity.ok(body);
+	}
+	
+	@GetMapping("/codes")
+	public ResponseEntity<APIResponseDTO<WorkLogCodeListDTO>> getWorkLogCodes() {
+		WorkLogCodeListDTO dto = workLogService.getWorkLogCodes();
+		
+		APIResponseDTO<WorkLogCodeListDTO> response =
+			APIResponseDTO.<WorkLogCodeListDTO>builder()
+				.message("업무일지 코드 목록 조회 성공")
+				.data(dto)
+				.build();
+		
+		return ResponseEntity.ok(response);
 	}
 }

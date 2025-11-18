@@ -936,9 +936,9 @@ VALUES
       "url": "/mail/list/:type",
       "componentPath": "features/mail/pages/MailListPage"
     }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
-    ('RO6', '메일 재작성', '{
+    ('RO6', '메일 신규작성/재작성', '{
       "id": "mail-rewrite",
-      "title": "메일 작성",
+      "title": "메일 신규작성/재작성",
       "type": "route",
       "url": "/mail/write/:mailId?",
       "componentPath": "features/mail/pages/MailWritePage"
@@ -949,7 +949,29 @@ VALUES
       "type": "route",
       "url": "/mail/detail/:mailId",
       "componentPath": "features/mail/pages/MailDetailPage"
+    }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('RO8', '업무일지 목록', '{
+      "id": "worklog-list",
+      "title": "업무일지 목록",
+      "type": "route",
+      "url": "/worklog/list/:type",
+      "componentPath": "features/worklog/pages/WorkLogListPage"
+    }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('RO9', '업무일지 작성/수정', '{
+      "id": "worklog-write",
+      "title": "업무일지 작성,",
+      "type": "route",
+      "url": "/worklog/write/:worklogId?",
+      "componentPath": "features/worklog/pages/WorkLogWritePage"
+    }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false)
+    ('RO10', '업무일지 상세', '{
+      "id": "worklog-detail",
+      "title": "업무일지 상세,",
+      "type": "route",
+      "url": "/worklog/detail/:worklogId",
+      "componentPath": "features/worklog/pages/WorkLogDetailPage"
     }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false);
+
 
 
 

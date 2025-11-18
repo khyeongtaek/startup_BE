@@ -1,13 +1,17 @@
 package org.goodee.startup_BE.work_log.service;
 
 import lombok.RequiredArgsConstructor;
+import org.goodee.startup_BE.common.dto.APIResponseDTO;
+import org.goodee.startup_BE.common.dto.CommonCodeResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.common.service.AttachmentFileServiceImpl;
+import org.goodee.startup_BE.common.service.CommonCodeService;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.exception.ResourceNotFoundException;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
+import org.goodee.startup_BE.work_log.dto.WorkLogCodeListDTO;
 import org.goodee.startup_BE.work_log.dto.WorkLogRequestDTO;
 import org.goodee.startup_BE.work_log.dto.WorkLogResponseDTO;
 import org.goodee.startup_BE.work_log.entity.WorkLog;
@@ -34,7 +38,7 @@ public class WorkLogServiceImpl implements WorkLogService {
     private final WorkLogReadRepository workLogReadRepository;
     private final EmployeeRepository employeeRepository;
     private final CommonCodeRepository commonCodeRepository;
-    private final AttachmentFileServiceImpl attachmentFileService;
+    private final CommonCodeService commonCodeService;
 
     // 업무일지 등록
     @Override
@@ -49,17 +53,6 @@ public class WorkLogServiceImpl implements WorkLogService {
                                   .orElseThrow(() -> new ResourceNotFoundException("업무옵션 코드가 존재하지 않습니다."));
         
         WorkLog workLog = workLogRepository.save(workLogDTO.toEntity(employee, workType, workOption));
-        
-//        if(req != null && req.getFiles() != null && !req.getFiles().isEmpty()){
-//            List<CommonCode> ownerTypeList = commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.WORKLOG.name());
-//            if(ownerTypeList.isEmpty()) {
-//                throw new ResourceNotFoundException("모듈 타입이 존재 하지 않습니다.");
-//            }
-//            CommonCode ownerType = ownerTypeList.get(0);
-//
-//            attachmentFileService.uploadFiles(req, ownerType.getCommonCodeId(), workLog.getWorkLogId());
-//        }
-        
         
         return WorkLogResponseDTO.toDTO(workLog);
     }
@@ -86,13 +79,18 @@ public class WorkLogServiceImpl implements WorkLogService {
 
     // 업무일지 삭제 (소프트 삭제)
     @Override
-    public void deleteWorkLog(Long workLogId, String username) throws AccessDeniedException{
-        WorkLog workLog = workLogRepository.findById(workLogId)
-                .orElseThrow(() -> new ResourceNotFoundException("업무일지가 존재하지 않습니다."));
-        if(!workLog.getEmployee().getUsername().equals(username)) {
-            throw new AccessDeniedException("삭제 권한이 없습니다.");
+    public void deleteWorkLog(List<Long> workLogIds, String username) throws AccessDeniedException{
+        List<WorkLog> workLogs = workLogRepository.findAllById(workLogIds);
+        
+        if (workLogs.size() != workLogIds.size()) {
+            throw new ResourceNotFoundException("존재하지 않는 업무일지가 있습니다.");
         }
-        workLog.deleteWorkLog();    // 엔티티에서 isDeleted를 true 처리 (소프트 삭제)
+        for (WorkLog wl : workLogs) {
+            if (!wl.getEmployee().getUsername().equals(username)) {
+                throw new AccessDeniedException("삭제 권한이 없는 업무일지가 포함되어 있습니다.");
+            }
+        }
+        workLogs.forEach(WorkLog::deleteWorkLog);    // 엔티티에서 isDeleted를 true 처리 (소프트 삭제)
     }
 
     // 업무일지 조회 (상세보기)
@@ -144,5 +142,15 @@ public class WorkLogServiceImpl implements WorkLogService {
             default:
                 return workLogRepository.findWithRead(employee.getEmployeeId(), null, true, pageable);
         }
+    }
+    
+    // 업무일지 코드 조회
+    @Override
+    public WorkLogCodeListDTO getWorkLogCodes() {
+        List<CommonCodeResponseDTO> workTypes = commonCodeService.getCommonCodeByPrefixWithoutRoot("WT");
+        
+        List<CommonCodeResponseDTO> workOptions = commonCodeService.getCommonCodeByPrefixWithoutRoot("WO");
+	    
+	    return new WorkLogCodeListDTO(workTypes, workOptions);
     }
 }

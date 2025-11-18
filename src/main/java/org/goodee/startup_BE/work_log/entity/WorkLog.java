@@ -64,13 +64,13 @@ public class WorkLog {
     @PrePersist
     protected void onPrePersist() {
         if(isDeleted == null) isDeleted = false;
-//        if(createdAt == null) createdAt = LocalDateTime.now();
-//        updatedAt = LocalDateTime.now();
+        if(createdAt == null) createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
     protected void onPreUpdate() {
-//        updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
     protected WorkLog() {}
