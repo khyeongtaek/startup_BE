@@ -1,0 +1,26 @@
+services:
+  # 1. backend 서비스 생성
+  backend:
+    # 1) 도커 컨테이너 이름
+    container_name: boot-container
+    # 2) 같은 경로에 있는 Dockerfile로 도커 이미지를 빌드할 것
+    build:
+      context: ./
+    # 3) 이미 존재하는 외부 네트워크를 사용
+    networks:
+      - my-network
+    # 4) 컨테이너 간의 통신만 허용 (외부에서 8080으로 직접 접속할 수 없어 보안 향상)
+    expose:
+      - "8080"
+    # 5) docker-compose를 사용하면 Dockerfile를 통하지 않아도 환경 변수를 직접 컨테이너(boot-container)로 전달 가능
+    environment:
+      SPRING_DATASOURCE_URL: ${MYSQL_DATABASE}
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN}
+
+# 외부 네트워크 사용 (도커 네트워크 my-network는 도커 컴포즈 실행 전에 미리 만들어 두어야 함)
+networks:
+  my-network:
+    external: true
