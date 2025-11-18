@@ -33,7 +33,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "./*"
-          target: "/home/ubuntu/website"
+          target: "/home/ubuntu/website/backend"
           rm: false
 
       # 4. EC2에서 Docker Compose 실행 (플러그인-https://github.com/appleboy/ssh-action)
@@ -45,7 +45,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             # website 디렉터리로 이동
-            cd /home/ubuntu/website
+            cd /home/ubuntu/website/backend
             # 기존 컨테이너 중지 및 삭제
             docker compose down || true
             # 사용하지 않는 이미지 삭제
