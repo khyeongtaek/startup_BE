@@ -66,6 +66,8 @@ class ApprovalServiceImplTest {
     private CommonCodeRepository commonCodeRepository;
     @Mock
     private NotificationService notificationService;
+    @Mock
+    private VacationApprovalService vacationApprovalService;
 
     // AttachmentFileService Mock 객체 추가
     @Mock
@@ -465,6 +467,9 @@ class ApprovalServiceImplTest {
             given(employeeRepository.findByUsername(approverUsername)).willReturn(Optional.of(mockApprover1));
             given(commonCodeRepository.findById(approvedCodeId)).willReturn(Optional.of(mockLineStatusApproved));
             given(approvalLineRepository.findById(lineId)).willReturn(Optional.of(mockLine1));
+            given(mockDoc.getApprovalTemplate()).willReturn(mockTemplateCode);
+            given(mockTemplateCode.getValue2()).willReturn("VACATION");
+            doNothing().when(vacationApprovalService).handleApprovedVacation(anyLong());
 
             // 검증 통과
             given(mockLine1.getEmployee()).willReturn(mockApprover1);
