@@ -2,9 +2,9 @@ name: CI/CD Pipeline with Docker Compose
 
 on:
   push:
-    branches: [ "cicdtest" ]
+    branches: [ "develop" ]
   pull_request:
-    branches: [ "cicdtest" ]
+    branches: [ "develop" ]
 
 jobs:
   deploy:
