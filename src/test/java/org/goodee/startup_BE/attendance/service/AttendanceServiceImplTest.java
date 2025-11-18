@@ -176,9 +176,6 @@ class AttendanceServiceImplTest {
             given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "CLOCK_OUT"))
                     .willReturn(List.of(mockWorkStatusOut));
 
-            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "EARLY_LEAVE"))
-                    .willReturn(List.of(mockWorkStatusEarlyLeave));
-
 
             given(attendanceRepository.save(any(Attendance.class)))
                     .willAnswer(invocation -> invocation.getArgument(0));

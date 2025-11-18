@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.goodee.startup_BE.approval.enums.ApprovalLineStatus;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee; // Employee 임포트
 import org.hibernate.annotations.Comment;
@@ -65,16 +66,16 @@ public class ApprovalLine {
 
     public void updateApprovalStatus(CommonCode approvalStatus) {
         this.approvalStatus = approvalStatus;
+
+        if(ApprovalLineStatus.APPROVED.name().equals(approvalStatus.getValue1())  ||
+                ApprovalLineStatus.REJECTED.name().equals(approvalStatus.getValue1())){
+            this.approvalDate = LocalDateTime.now();
+        }
     }
 
     public void updateComment(String comment) {
         this.comment = comment;
     }
 
-
-    @PreUpdate
-    protected void onPreUpdate() {
-        approvalDate = LocalDateTime.now();
-    }
 
 }

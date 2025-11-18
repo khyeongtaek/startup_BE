@@ -426,4 +426,27 @@ public class AttendanceServiceImpl implements AttendanceService {
         return result;
     }
 
+    @Transactional
+    public void markVacation(Long employeeId, LocalDate date) {
+
+        // 1) 해당 날짜 Attendance 조회 or 새로 생성
+        Attendance attendance = attendanceRepository
+                .findByEmployeeEmployeeIdAndAttendanceDate(employeeId, date)
+                .orElseGet(() -> {
+                    Employee employee = employeeRepository.findById(employeeId)
+                            .orElseThrow(() -> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
+                    CommonCode defaultStatus = getCommonCode(WorkStatus.PREFIX, WorkStatus.VACATION.name());
+                    Attendance newA = Attendance.createAttendance(employee, date, defaultStatus);
+                    return attendanceRepository.save(newA);
+                });
+
+        // 2) 근태 상태 VACATION 으로 업데이트
+        CommonCode vacationStatus = getCommonCode(WorkStatus.PREFIX, WorkStatus.VACATION.name());
+        attendance.changeWorkStatus(vacationStatus);
+
+        attendanceRepository.save(attendance);
+
+        // 3) 이력 기록
+        attendanceWorkHistoryService.recordHistory(attendance, attendance.getEmployee(), WorkStatus.VACATION.name());
+    }
 }

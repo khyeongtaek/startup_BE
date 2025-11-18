@@ -36,4 +36,6 @@ public interface AttendanceService {
 
     @Transactional(readOnly = true)
     Map<String, Object> getAttendanceSummary(Long employeeId);
+
+    public void markVacation(Long employeeId, LocalDate date);
 }

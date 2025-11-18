@@ -49,6 +49,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     private final CommonCodeRepository commonCodeRepository;
     private final NotificationService notificationService;
     private final AttachmentFileService attachmentFileService;
+    private final VacationApprovalService vacationApprovalService;
 
 
     // --- 공통 코드 Prefix 정의 ---
@@ -232,7 +233,16 @@ public class ApprovalServiceImpl implements ApprovalService {
                 // 4-2-2. 다음 결재자가 없으면 (최종 승인): 문서 상태를 '최종 승인'으로 변경
                 finalDocStatus = getCommonCode(DOC_STATUS_PREFIX, DOC_STATUS_APPROVED);
                 doc.updateDocStatus(finalDocStatus);
+
+                String templateValue2 = doc.getApprovalTemplate().getValue2();
+                ApprovalTemplate templateEnum = ApprovalTemplate.valueOf(templateValue2);
+
+                if (templateEnum == ApprovalTemplate.VACATION) {
+                    vacationApprovalService.handleApprovedVacation(doc.getDocId());
+                }
             }
+
+
         }
 
         // 5. 알림 발송
