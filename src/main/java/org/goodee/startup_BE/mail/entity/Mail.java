@@ -20,7 +20,7 @@ public class Mail {
 	private Long mailId;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "employee_id", nullable = false)
+	@JoinColumn(name = "employee_id")
 	@Comment("발신자")
 	private Employee employee;
 	

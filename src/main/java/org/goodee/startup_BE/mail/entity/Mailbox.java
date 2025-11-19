@@ -17,7 +17,7 @@ public class Mailbox {
 	private Long boxId;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "employee_id", nullable = false)
+	@JoinColumn(name = "employee_id")
 	@Comment("사용자 ID")
 	private Employee employee;
 

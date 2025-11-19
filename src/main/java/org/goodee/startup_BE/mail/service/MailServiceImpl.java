@@ -1,5 +1,6 @@
 package org.goodee.startup_BE.mail.service;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.common.dto.AttachmentFileResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
@@ -163,12 +164,25 @@ public class MailServiceImpl implements MailService{
 			       .map(email -> {
 				       String key = email.trim().toLowerCase();
 				       String name = nameByEmail.get(key);
+				       
+				       // 이메일은 항상 남아있기 때문에 email은 무조건 표시
 				       if (name == null || name.isBlank()) {
-					       return email;          // 매칭되는 직원 없으면 이메일만
+					       return email + " (삭제된 사용자)";
 				       }
 				       return email + " (" + name + ")";
 			       })
 			       .toList();
+	}
+	
+	// 삭제된 사용자 조회시 "삭제된 사용자" 반환
+	private String resolveSenderName(Employee employee) {
+		if(employee == null) return "삭제된 사용자";
+		
+		try {
+			return employee.getName();
+		} catch (EntityNotFoundException e) {
+			return "삭제된 사용자";
+		}
 	}
 	
 	
@@ -296,6 +310,7 @@ public class MailServiceImpl implements MailService{
 		return MailSendResponseDTO.toDTO(mail, toCount, ccCount, bccCount, uploadFiles == null ? 0 : uploadFiles.size());
 	}
 	
+	
 	// 메일 상세 조회 및 읽음 처리
 	@Override
 	public MailDetailResponseDTO getMailDetail(Long mailId, String username, boolean isRead) {
@@ -412,15 +427,16 @@ public class MailServiceImpl implements MailService{
 			Mail mail = mb.getMail();
 			
 			List<String> receiverNames = resolveReceiverNames(mail, toCode);
+			Employee sender = mail.getEmployee();
 			
 			return MailboxListDTO.builder()
 				       .boxId(mb.getBoxId())
 				       .mailId(mail.getMailId())
-				       .senderName(mail.getEmployee().getName())
+				       .senderName(resolveSenderName(sender))
 				       .title(mail.getTitle())
 				       .receivedAt(mail.getSendAt())
 				       .isRead(Boolean.TRUE.equals(mb.getIsRead()))
-				       .receivers(receiverNames)   // 🔹 이제 이름 리스트
+				       .receivers(receiverNames)
 				       .build();
 		});
 	}
