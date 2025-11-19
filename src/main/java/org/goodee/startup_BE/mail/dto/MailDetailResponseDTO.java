@@ -86,7 +86,7 @@ public class MailDetailResponseDTO {
 		
 		Employee sender = mail.getEmployee();
 		Long senderId = (sender == null) ? null : sender.getEmployeeId();
-		String senderName = (sender == null) ? "삭제된 사용자" : sender.getName();
+		String senderName = (sender == null) ? "정보 없음" : sender.getName();
 		String senderEmail = (sender == null) ? null : sender.getEmail();
 		
 		return MailDetailResponseDTO.builder()

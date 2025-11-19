@@ -167,21 +167,21 @@ public class MailServiceImpl implements MailService{
 				       
 				       // 이메일은 항상 남아있기 때문에 email은 무조건 표시
 				       if (name == null || name.isBlank()) {
-					       return email + " (삭제된 사용자)";
+					       return email + " (정보 없음)";
 				       }
 				       return email + " (" + name + ")";
 			       })
 			       .toList();
 	}
 	
-	// 삭제된 사용자 조회시 "삭제된 사용자" 반환
+	// 삭제된 사용자 조회시 "정보 없음" 반환
 	private String resolveSenderName(Employee employee) {
-		if(employee == null) return "삭제된 사용자";
+		if(employee == null) return "정보 없음";
 		
 		try {
 			return employee.getName();
 		} catch (EntityNotFoundException e) {
-			return "삭제된 사용자";
+			return "정보 없음";
 		}
 	}
 	
