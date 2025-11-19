@@ -253,7 +253,8 @@ VALUES
     ('OT3', '사원', 'EMPLOYEE', '', '', 0, 1, 1, NOW(), NOW(), false),
     ('OT4', '전자결재', 'APPROVAL', '', '', 0, 1, 1, NOW(), NOW(), false),
     ('OT5', '채팅 초대', 'TEAMCHATNOTI', '', '', 0, 1, 1, NOW(), NOW(), false),
-    ('OT6', '일정 초대', 'SCHEDULEINVITE', '', '', 0, 1, 1, NOW(), NOW(), false);
+    ('OT6', '일정 초대', 'SCHEDULEINVITE', '', '', 0, 1, 1, NOW(), NOW(), false),
+    ('OT7', '채팅 메시지', 'CHAT', '', '', 0, 1, 1, NOW(), NOW(), false);
 /*
 * =============================================
 * Schedule Color (일정 색상)
