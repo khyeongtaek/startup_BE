@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -30,6 +32,7 @@ public class ChatMessage {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = true)
     @Comment("직원 ID")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee employee;
 
     @Comment("채팅 내용")

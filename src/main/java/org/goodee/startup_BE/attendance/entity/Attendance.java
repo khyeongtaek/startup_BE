@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 
 import java.time.LocalDate;
@@ -28,6 +30,7 @@ public class Attendance {
     // Employee Table  M : 1
     @ManyToOne(fetch=FetchType.LAZY)
     @JoinColumn(name="create_employee", referencedColumnName = "employee_id", nullable= false)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee employee;
 
 
