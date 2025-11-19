@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -26,7 +28,8 @@ public class Schedule {
     private String title;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_id", referencedColumnName = "employee_id", nullable = false)
+    @JoinColumn(name = "created_id", referencedColumnName = "employee_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee employee;
 
     @Lob

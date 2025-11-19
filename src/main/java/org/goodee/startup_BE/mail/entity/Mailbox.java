@@ -5,6 +5,8 @@ import lombok.Getter;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Entity
 @Table(name = "tbl_mailbox", uniqueConstraints = {@UniqueConstraint(columnNames = {"employee_id", "mail_id", "type_id"})})
@@ -17,8 +19,9 @@ public class Mailbox {
 	private Long boxId;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "employee_id", nullable = false)
+	@JoinColumn(name = "employee_id")
 	@Comment("사용자 ID")
+	@OnDelete(action = OnDeleteAction.SET_NULL)
 	private Employee employee;
 
 	@ManyToOne(fetch = FetchType.LAZY)
