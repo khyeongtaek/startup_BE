@@ -48,9 +48,9 @@ jobs:
             # website 디렉터리로 이동
             cd /home/ubuntu/website/backend
             # 파일저장소 폴더 생성
-            mkdir -p /home/ubuntu/website/uploads
+            mkdir -p /home/ubuntu/uploads
             # 권한 설정 (필요시, 도커가 쓸 수 있도록)
-            chmod 777 /home/ubuntu/website/uploads
+            chmod 777 /home/ubuntu/uploads
             # 기존 컨테이너 중지 및 삭제
             docker compose down || true
             # 사용하지 않는 이미지 삭제
