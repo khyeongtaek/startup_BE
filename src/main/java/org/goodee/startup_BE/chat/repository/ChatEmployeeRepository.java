@@ -88,7 +88,7 @@ public interface ChatEmployeeRepository extends JpaRepository<ChatEmployee, Long
     /**
      * 특정 채팅방(chatRoomId)의 활성(isLeft=false) 멤버 수를 조회합니다.
      * 잔여 인원 0명 시 방 삭제 등 판단에 사용됩니다.
-     *
+     * 팀 채팅방 헤더에 인원 수를 표시할 때 사용됩니다.
      * @param chatRoomId 채팅방 ID
      * @return 활성 멤버 수
      */
@@ -110,6 +110,7 @@ public interface ChatEmployeeRepository extends JpaRepository<ChatEmployee, Long
     /**
      * 특정 사용자의 모든 채팅방에서 안 읽은 메시지의 총 개수를 합산
      * ChatEmployee의 lastReadMessage ID와 ChatMessage의 ID를 비교하여 계산
+     * 메시지 발신자가 삭제되지 않은 경우만 카운트
      *
      * @param employeeId 안 읽은 개수를 계산할 직원의 ID
      * @return 총 안 읽은 메시지 개수
@@ -120,7 +121,8 @@ public interface ChatEmployeeRepository extends JpaRepository<ChatEmployee, Long
              FROM ChatMessage m
              WHERE m.chatRoom = ce.chatRoom
              AND m.chatMessageId > ce.lastReadMessage.chatMessageId
-             AND m.employee IS NOT NULL AND m.employee.employeeId <> :employeeId)
+             AND m.employee IS NOT NULL AND m.employee.employeeId <> :employeeId
+             AND m.employee IS NOT NULL)
         ), 0)
         FROM ChatEmployee ce
         WHERE ce.employee.employeeId = :employeeId
