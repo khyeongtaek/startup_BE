@@ -8,6 +8,8 @@ import org.goodee.startup_BE.approval.enums.ApprovalLineStatus;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee; // Employee 임포트
 import org.hibernate.annotations.Comment;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -47,6 +49,7 @@ public class ApprovalLine {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     @Comment("결재자 ID")
     private Employee employee;
 

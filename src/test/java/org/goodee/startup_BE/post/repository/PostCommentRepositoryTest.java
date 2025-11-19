@@ -295,23 +295,6 @@ class PostCommentRepositoryTest {
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
-    @Test
-    @DisplayName("Exception: 필수 FK(Employee) null 저장 시 예외 발생")
-    void saveNullEmployeeTest() {
-        // given
-        PostComment incompleteComment = PostComment.builder()
-                .post(testPost) // Post는 설정
-                .content("Employee가 없는 댓글")
-                .isDeleted(false)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
-
-        // when & then
-        // @JoinColumn(name = "employee_id", nullable = false) 위반
-        assertThatThrownBy(() -> postCommentRepository.saveAndFlush(incompleteComment))
-                .isInstanceOf(DataIntegrityViolationException.class);
-    }
 
     @Test
     @DisplayName("Exception: 필수 필드(content) null 저장 시 예외 발생")

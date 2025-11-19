@@ -20,5 +20,7 @@ public interface EmployeeService {
     // 특정 부서의 소속원들 조회
     List<EmployeeResponseDTO> getDepartmentMembers(Long departmentId);
 
+    void deleteEmployee(Long employeeId);
+
 
 }

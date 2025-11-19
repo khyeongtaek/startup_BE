@@ -73,6 +73,7 @@ public class EmployeeResponseDTO {
     }
 
     public static EmployeeResponseDTO toDTO(Employee employee) {
+        if( employee == null ) return null;
         return EmployeeResponseDTO.builder()
                 .employeeId(employee.getEmployeeId())
                 .username(employee.getUsername())
