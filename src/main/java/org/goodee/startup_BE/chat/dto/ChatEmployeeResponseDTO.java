@@ -21,11 +21,13 @@ public class ChatEmployeeResponseDTO {
     private Boolean isNotification;
 
     public ChatEmployeeResponseDTO toDTO(ChatEmployee chatEmployee) {
+        Employee employee = chatEmployee.getEmployee();
+
         return ChatEmployeeResponseDTO.builder()
                 .chatEmployeeId(chatEmployee.getChatEmployeeId())
-                .employeeId(chatEmployee.getEmployee().getEmployeeId())
+                .employeeId(employee != null ? employee.getEmployeeId() : null)
                 .chatRoomId(chatEmployee.getChatRoom().getChatRoomId())
-                .displayName(chatEmployee.getDisplayName())
+                .displayName(employee != null ? chatEmployee.getDisplayName() : "정보 없음")
                 .lastMessageId(chatEmployee.getLastReadMessage() != null ? chatEmployee.getLastReadMessage().getChatMessageId() : null)
                 .isNotification(chatEmployee.getIsNotify())
                 .build();
