@@ -22,7 +22,7 @@ public class WorkLog {
     private Long workLogId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
+    @JoinColumn(name = "employee_id")
     @Comment("작성자(직원) ID")
     private Employee employee;
 

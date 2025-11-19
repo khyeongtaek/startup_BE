@@ -2,6 +2,7 @@ package org.goodee.startup_BE.work_log.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
+import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.work_log.entity.WorkLog;
 
 import java.time.LocalDateTime;
@@ -44,9 +45,12 @@ public class WorkLogResponseDTO {
 	public static WorkLogResponseDTO toDTO(WorkLog workLog) {
 		if(workLog == null) return null;
 		
+		Employee writer = workLog.getEmployee();
+		String writerName = (writer == null) ? "삭제된 사용자" : writer.getName();;
+		
 		return WorkLogResponseDTO.builder()
 			       .workLogId(workLog.getWorkLogId())
-			       .employeeName(workLog.getEmployee().getName())
+			       .employeeName(writerName)
 			       .workTypeName(workLog.getWorkType().getValue2())
 			       .workOptionName(workLog.getWorkOption().getValue2())
 			       .workTypeId(workLog.getWorkType().getCommonCodeId())
