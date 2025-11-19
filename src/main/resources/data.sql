@@ -913,8 +913,8 @@ VALUES
       "id": "approval-detail",
       "title": "결재 상세",
       "type": "route",
-      "url": "/approval/detail",
-      "componentPath": null
+      "url": "/approval/detail/:docId"
+      "componentPath": "features/approval/pages/ApprovalDetailPage"
     }', NULL, NULL, 2, 1, 1, NOW(), NOW(), false),
     ('RO3', '결재 목록', '{
       "id": "approval-list",
