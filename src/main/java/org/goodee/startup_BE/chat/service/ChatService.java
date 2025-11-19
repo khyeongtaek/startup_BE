@@ -3,8 +3,10 @@ package org.goodee.startup_BE.chat.service;
 import org.goodee.startup_BE.chat.dto.ChatMessageResponseDTO;
 import org.goodee.startup_BE.chat.dto.ChatRoomListResponseDTO;
 import org.goodee.startup_BE.chat.dto.ChatRoomResponseDTO;
+import org.goodee.startup_BE.chat.dto.MessageSendPayloadDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -38,10 +40,10 @@ public interface ChatService {
      * 메시지 전송
      * @param senderUsername 메시지 발신자 username
      * @param roomId 대상 채팅방 ID
-     * @param content 메시지 내용
+     * @param payload 메시지 DTO (텍스트 전용)
      * @return 전송된 메시지 정보 DTO
      */
-    ChatMessageResponseDTO sendMessage(String senderUsername, Long roomId, String content);
+    ChatMessageResponseDTO sendMessage(String senderUsername, Long roomId, MessageSendPayloadDTO payload);
 
     /**
      * 특정 채팅방의 메시지 목록 조회 (페이지네이션)
@@ -75,4 +77,13 @@ public interface ChatService {
      * @return 채팅방 상세 정보 DTO
      */
     ChatRoomListResponseDTO getRoomById(String username, Long roomId);
+
+    /**
+     * HTTP를 통한 파일 첨부 메시지 전송
+     * @param senderUsername 메시지 발신자 username
+     * @param roomId 대상 채팅방 ID
+     * @param content 텍스트 내용 (파일만 보낼 시 "" or null)
+     * @param files 업로드할 파일 목록
+     */
+    void sendMessageWithFiles(String senderUsername, Long roomId, String content, List<MultipartFile> files);
 }

@@ -3,19 +3,20 @@ package org.goodee.startup_BE.chat.service;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.goodee.startup_BE.chat.dto.ChatMessageResponseDTO;
-import org.goodee.startup_BE.chat.dto.ChatRoomListResponseDTO;
-import org.goodee.startup_BE.chat.dto.ChatRoomResponseDTO;
-import org.goodee.startup_BE.chat.dto.TotalUnreadCountResponseDTO;
+import org.goodee.startup_BE.chat.dto.*;
 import org.goodee.startup_BE.chat.entity.ChatEmployee;
 import org.goodee.startup_BE.chat.entity.ChatMessage;
 import org.goodee.startup_BE.chat.entity.ChatRoom;
 import org.goodee.startup_BE.chat.repository.ChatEmployeeRepository;
 import org.goodee.startup_BE.chat.repository.ChatMessageRepository;
 import org.goodee.startup_BE.chat.repository.ChatRoomRepository;
+import org.goodee.startup_BE.common.dto.AttachmentFileResponseDTO;
+import org.goodee.startup_BE.common.entity.AttachmentFile;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.enums.OwnerType;
+import org.goodee.startup_BE.common.repository.AttachmentFileRepository;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
+import org.goodee.startup_BE.common.service.AttachmentFileService;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
 import org.goodee.startup_BE.notification.dto.NotificationRequestDTO;
@@ -29,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -46,10 +48,14 @@ public class ChatServiceImpl implements ChatService {
     private final ChatEmployeeRepository chatEmployeeRepository;
     private final EmployeeRepository employeeRepository;
     private final CommonCodeRepository commonCodeRepository;
+    private final AttachmentFileRepository attachmentFileRepository;
 
     // Service 및 Util
     private final NotificationService notificationService;
     private final SimpMessagingTemplate simpMessagingTemplate;
+    private final AttachmentFileService attachmentFileService;
+
+
 
 
     // 채팅방 생성
@@ -340,7 +346,9 @@ public class ChatServiceImpl implements ChatService {
 
     // 채팅방에 메시지 전송
     @Override
-    public ChatMessageResponseDTO sendMessage(String senderUsername, Long roomId, String content) {
+    public ChatMessageResponseDTO sendMessage(String senderUsername, Long roomId, MessageSendPayloadDTO payload) {
+
+        String content = payload.getContent();
         if (content == null || content.trim().isEmpty()) {
             throw new IllegalArgumentException("메시지 내용이 비어 있습니다.");
         }
@@ -353,6 +361,7 @@ public class ChatServiceImpl implements ChatService {
         ChatEmployee membership = chatEmployeeRepository
                 .findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(roomId, senderUsername)
                 .orElseThrow(() -> new AccessDeniedException("채팅방 멤버가 아니거나 이미 나간 사용자입니다."));
+
 
         if (Boolean.FALSE.equals(room.getIsTeam())) {
             // 나간 사용자를 포함하여 모든 멤버를 조회합니다.
@@ -419,6 +428,29 @@ public class ChatServiceImpl implements ChatService {
                         pageable
                 );
 
+        // 메시지 ID 목록 추출
+        List<Long> messageIds = page.getContent().stream()
+                .map(ChatMessage::getChatMessageId)
+                .toList();
+
+        if(messageIds.isEmpty()) {
+            return page.map(message -> ChatMessageResponseDTO.toDTO(message));
+        }
+
+        // CHAT 공통 코드 조회
+        CommonCode chatOwnerType = commonCodeRepository
+                .findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.CHAT.name())
+                .stream().findFirst()
+                .orElseThrow(() -> new EntityNotFoundException("CHAT 공통 코드를 찾을 수 없습니다"));
+
+        List<AttachmentFile> allAttachments =
+        attachmentFileRepository.findAllByOwnerTypeAndOwnerIdInAndIsDeletedFalse(chatOwnerType, messageIds);
+
+        Map<Long, List<AttachmentFileResponseDTO>> attachmentsMap = allAttachments.stream()
+                .collect(Collectors.groupingBy(
+                        AttachmentFile::getOwnerId,
+                        Collectors.mapping(AttachmentFileResponseDTO::toDTO, Collectors.toList())));
+
         return page.map(message -> {
             ChatMessageResponseDTO dto = ChatMessageResponseDTO.toDTO(message);
 
@@ -429,6 +461,8 @@ public class ChatServiceImpl implements ChatService {
                 );
                 dto.setUnreadCount(currentUnreadCount);
             }
+            dto.setAttachments(attachmentsMap.get(message.getChatMessageId()));
+
             return dto;
         });
     }
@@ -732,5 +766,87 @@ public class ChatServiceImpl implements ChatService {
                     room, unreadCount, optLastMessage
             );
         }
+    }
+
+    /**
+     * 파일 첨부 메시지 전송 (HTTP)
+     */
+    @Transactional
+    public void sendMessageWithFiles(String senderUsername, Long roomId, String content, List<MultipartFile> files) {
+
+        // 사용자 및 채팅방 조회
+        Employee sender = employeeRepository.findByUsername(senderUsername)
+                .orElseThrow(() -> new UsernameNotFoundException("존재하지 않는 사원 입니다"));
+
+        ChatRoom room = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 채팅방 입니다"));
+
+        ChatEmployee membership = chatEmployeeRepository
+                .findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(roomId, senderUsername)
+                .orElseThrow(() -> new AccessDeniedException("채팅방 멤버가 아니거나 이미 나간 사용자입니다."));
+
+        if (Boolean.FALSE.equals(room.getIsTeam())) {
+            // 나간 사용자를 포함하여 모든 멤버를 조회합니다.
+            List<ChatEmployee> allMembers = chatEmployeeRepository.findAllByChatRoomChatRoomId(roomId);
+
+            for (ChatEmployee member : allMembers) {
+                // 상대방이 나간 상태라면
+                if (!member.getEmployee().getEmployeeId().equals(sender.getEmployeeId()) && Boolean.TRUE.equals(member.getIsLeft())) {
+                    member.rejoinChatRoom();
+                    chatEmployeeRepository.save(member);
+                }
+            }
+        }
+
+        String messageContent = (content == null || content.isBlank()) ? "" : content.trim();
+
+        // 메시지 엔티티 먼저 저장
+        ChatMessage message = ChatMessage.createChatMessage(room, sender, messageContent);
+        ChatMessage savedMessage = chatMessageRepository.save(message);
+        Long chatMessageId = savedMessage.getChatMessageId();
+
+        // 공통 코드 조회
+        CommonCode chatOwnerType = commonCodeRepository
+                .findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.CHAT.name())
+                .stream().findFirst()
+                .orElseThrow(() -> new EntityNotFoundException("CHAT 공통 코드를 찾을 수 없습니다"));
+
+
+        // 파일 저장
+        List<AttachmentFileResponseDTO> finalAttachments =
+                attachmentFileService.uploadFiles(files, chatOwnerType.getCommonCodeId(), chatMessageId);
+
+        // 본인 메시지 읽음 처리
+        membership.updateLastReadMessage(savedMessage);
+        chatEmployeeRepository.save(membership);
+
+        // 미 읽음 수 계산
+        long unread = 0;
+        if (Boolean.TRUE.equals(room.getIsTeam())) {
+            unread = chatEmployeeRepository.countUnreadForMessage(
+                    room.getChatRoomId(),
+                    sender.getEmployeeId(),
+                    message.getCreatedAt()
+            );
+        } else {
+            unread = chatEmployeeRepository.countByChatRoomChatRoomIdAndEmployeeEmployeeIdNotAndIsLeftFalse(
+                    room.getChatRoomId(),
+                    sender.getEmployeeId()
+            );
+        }
+        // 브로드캐스트 준비
+        Long finalRoomId = room.getChatRoomId();
+        ChatMessageResponseDTO dto = ChatMessageResponseDTO.toDTO(savedMessage);
+        dto.setUnreadCount(unread);
+        dto.setAttachments(finalAttachments);
+
+        // STOMP로 브로드 캐스트 (HTTP로 받고 전파는 STOMP)
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + finalRoomId, dto);
+                notifyParticipantsOfNewMessage(room, savedMessage, sender.getEmployeeId());
+            }
+        });
     }
 }
