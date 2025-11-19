@@ -118,8 +118,12 @@ public class ApprovalServiceImpl implements ApprovalService {
                     .orElseThrow(() -> new EntityNotFoundException("휴가 종류 코드를 찾을 수 없습니다."));
         }
 
+
         // 2. 문서(Doc) 생성 및 저장 (ID 자동 생성)
         ApprovalDoc doc = approvalDocRepository.save(request.toEntity(creator, template, docStatus, vacationTypeCodeEntity));
+
+        // 입력 값 validation 조회
+        validateApprovalDocByTemplate(doc);
 
         // 3. 결재선(Lines) 생성
         List<ApprovalLineRequestDTO> lineRequests = request.getApprovalLines();
@@ -655,4 +659,47 @@ public class ApprovalServiceImpl implements ApprovalService {
         return ApprovalDocResponseDTO.toDTO(doc, lineDTOs, null,null);
     }
 
+    /**
+     * 템플릿별 필수값 검증
+     */
+    private void validateApprovalDocByTemplate(ApprovalDoc doc) {
+
+        ApprovalTemplate template = ApprovalTemplate.valueOf(doc.getApprovalTemplate().getValue2());
+
+        switch (template) {
+            case VACATION -> validateVacationDoc(doc);
+            case BUSINESS_TRIP -> validateTripDoc(doc);
+            default -> { /* Nothing */ }
+        }
+    }
+
+    private void validateVacationDoc(ApprovalDoc doc) {
+
+        if (doc.getVacationType() == null) {
+            throw new IllegalArgumentException("휴가 종류가 선택되지 않았습니다.");
+        }
+
+        if (doc.getVacationDays() == null) {
+            throw new IllegalArgumentException("휴가 사용 일수가 계산되지 않았습니다.");
+        }
+
+        if (doc.getStartDate() == null || doc.getEndDate() == null) {
+            throw new IllegalArgumentException("휴가 시작/종료 날짜가 설정되지 않았습니다.");
+        }
+
+    }
+    private void validateTripDoc(ApprovalDoc doc) {
+
+        if (doc.getTripLocation() == null || doc.getTripLocation().isBlank()) {
+            throw new IllegalArgumentException("출장지가 입력되지 않았습니다.");
+        }
+
+        if (doc.getTransportation() == null || doc.getTransportation().isBlank()) {
+            throw new IllegalArgumentException("교통편이 입력되지 않았습니다.");
+        }
+
+        if (doc.getStartDate() == null || doc.getEndDate() == null) {
+            throw new IllegalArgumentException("출장 시작/종료 날짜가 설정되지 않았습니다.");
+        }
+    }
 }

@@ -107,7 +107,7 @@ public class AttendanceServiceImpl implements AttendanceService {
 
             // ---- 반차 근무 제한 ----
             if (WORK_STATUS_MORNING_HALF.equals(status)) {
-                if (now.toLocalTime().isBefore(LocalTime.of(13, 0))) {
+                if (now.toLocalTime().isBefore(LocalTime.of(11, 0))) {
                     throw new AttendanceException("오전 반차 사용자는 오후 1시 이후 출근 가능합니다.");
                 }
             }
@@ -134,27 +134,47 @@ public class AttendanceServiceImpl implements AttendanceService {
         attendance.update(now, null);
 
         // ============================================
+        // 3-1) 반차 사용자의 NORMAL/LATE 자동 판정
+        // ============================================
+        String prevStatus = attendance.getWorkStatus().getValue1();
+        LocalTime timeNow = now.toLocalTime();
+
+        // 오전 반차: 11:00~14:00 정상 / 14:00 이후 지각
+        if (WORK_STATUS_MORNING_HALF.equals(prevStatus)) {
+            if (!timeNow.isBefore(LocalTime.of(11, 0)) && timeNow.isBefore(LocalTime.of(14, 0))) {
+                attendance.changeWorkStatus(getCommonCode(WOKR_STATUS_PREFIX, WORK_STATUS_NORMAL));
+            } else if (!timeNow.isBefore(LocalTime.of(14, 0))) {
+                attendance.changeWorkStatus(getCommonCode(WOKR_STATUS_PREFIX, WORK_STATUS_LATE));
+            }
+        }
+
+        // 오후 반차: 09:00 이전 정상 / 09:00~14:00 사이 출근 = 지각
+        if (WORK_STATUS_AFTERNOON_HALF.equals(prevStatus)) {
+            if (timeNow.isAfter(LocalTime.of(9, 0))) {
+                attendance.changeWorkStatus(getCommonCode(WOKR_STATUS_PREFIX, WORK_STATUS_LATE));
+            } else {
+                attendance.changeWorkStatus(getCommonCode(WOKR_STATUS_PREFIX, WORK_STATUS_NORMAL));
+            }
+        }
+
+        // ============================================
         // 4) 지각 판정 (반차 여부에 따라 기준 시간 다름)
         // ============================================
         String status = attendance.getWorkStatus().getValue1();
-        LocalTime lateStandardTime;
 
-        if (WORK_STATUS_MORNING_HALF.equals(status)) {
-            // 오전 반차 → 오후 1시 이후부터 지각
-            lateStandardTime = LocalTime.of(14, 0);
-        } else if (WORK_STATUS_AFTERNOON_HALF.equals(status)) {
-            // 오후 반차 → 오전 9시 기준 (오후 반차자는 오전만 근무)
-            lateStandardTime = LocalTime.of(9, 0);
+        // 반차 출근으로 정상/지각이 이미 결정된 경우 스킵
+        if (WORK_STATUS_MORNING_HALF.equals(prevStatus) || WORK_STATUS_AFTERNOON_HALF.equals(prevStatus)) {
+            log.info("[반차 출근 로직 적용] {}", status);
         } else {
-            // 일반 근무
-            lateStandardTime = LocalTime.of(9, 0);
-        }
+            // 일반 근무자 지각 판정만 수행
+            LocalTime lateStandardTime = LocalTime.of(9, 0);
 
-        if (now.toLocalTime().isAfter(lateStandardTime)) {
-            attendance.changeWorkStatus(getCommonCode(WOKR_STATUS_PREFIX, WORK_STATUS_LATE));
-            log.info("[지각] {}님이 {}에 출근했습니다.", employee.getName(), now.toLocalTime());
-        } else {
-            log.info("[정상 출근] {}님이 {}에 출근했습니다.", employee.getName(), now.toLocalTime());
+            if (now.toLocalTime().isAfter(lateStandardTime)) {
+                attendance.changeWorkStatus(getCommonCode(WOKR_STATUS_PREFIX, WORK_STATUS_LATE));
+                log.info("[지각] {}님이 {}에 출근했습니다.", employee.getName(), now.toLocalTime());
+            } else {
+                log.info("[정상 출근] {}님이 {}에 출근했습니다.", employee.getName(), now.toLocalTime());
+            }
         }
 
         Attendance saved = attendanceRepository.save(attendance);

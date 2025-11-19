@@ -143,29 +143,33 @@ class AttendanceServiceImplTest {
         class ClockOut {
 
             @Test
-            @DisplayName("성공 - 정상 퇴근 또는 조퇴")
-            void clockOut_Success() {
+            @DisplayName("성공 - 정상 퇴근 (18:00 이후 → CLOCK_OUT 고정)")
+            void clockOut_Success_Normal() {
+
                 Long employeeId = 1L;
+
                 Attendance attendance = Attendance.createAttendance(
-                        mockEmployee, LocalDate.now(), mockWorkStatusNormal
+                        mockEmployee,
+                        LocalDate.of(2025, 1, 1),
+                        mockWorkStatusNormal
                 );
+                attendance.update(LocalDateTime.of(2025, 1, 1, 9, 0), null);
 
                 given(attendanceRepository.findCurrentWorkingRecord(employeeId))
                         .willReturn(Optional.of(attendance));
 
+                // CLOCK_OUT 코드
                 given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "CLOCK_OUT"))
                         .willReturn(List.of(mockWorkStatusOut));
 
-                given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "EARLY_LEAVE"))
-                        .willReturn(List.of(mockWorkStatusEarlyLeave));
-
+                // save
                 given(attendanceRepository.save(any()))
                         .willAnswer(invocation -> invocation.getArgument(0));
 
                 AttendanceResponseDTO result = attendanceService.clockOut(employeeId);
 
                 assertThat(result).isNotNull();
-                assertThat(result.getWorkStatus()).isIn("CLOCK_OUT", "EARLY_LEAVE");
+                assertThat(result.getWorkStatus()).isEqualTo("CLOCK_OUT");
             }
 
             @Test

@@ -3,6 +3,7 @@ package org.goodee.startup_BE.approval.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.goodee.startup_BE.approval.entity.ApprovalDoc;
+import org.goodee.startup_BE.approval.enums.VacationType;
 import org.goodee.startup_BE.approval.repository.ApprovalDocRepository;
 import org.goodee.startup_BE.attendance.service.AnnualLeaveService;
 import org.goodee.startup_BE.attendance.service.AttendanceService;
@@ -13,6 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Slf4j
 @Service
@@ -40,31 +43,77 @@ public class VacationApprovalServiceImpl implements VacationApprovalService {
         LocalDate endDate = doc.getEndDate().toLocalDate();
         Double vacationDays = doc.getVacationDays();
 
-        // 3) 연차 차감 (이미 Double로 일수 계산되어 있음)
+        // 3) 연차 차감
         annualLeaveService.useAnnualLeave(employeeId, vacationDays);
 
         // 4) 근태 VACATION / 반차 처리
-        //    vacationType은 CommonCode(value1)에 저장된 문자열 (ANNUAL / MORNING_HALF / AFTERNOON_HALF)
-        String vacationType = (doc.getVacationType() != null && doc.getVacationType().getValue1() != null)
+        String vacationTypeRaw = (doc.getVacationType() != null && doc.getVacationType().getValue1() != null)
                 ? doc.getVacationType().getValue1()
-                : "ANNUAL"; // null 방어: 기본은 연차 취급
+                : "ANNUAL";
 
         LocalDate d = startDate;
         while (!d.isAfter(endDate)) {
-            // 날짜별로 휴가/반차 상태 반영
-            attendanceService.markVacation(employeeId, d, vacationType);
+            attendanceService.markVacation(employeeId, d, vacationTypeRaw);
             d = d.plusDays(1);
         }
 
+        // ============================================================
         // 5) 일정 자동 생성
+        // ============================================================
+
+        // VacationType enum 변환
+        VacationType vacationType;
+        try {
+            vacationType = VacationType.valueOf(vacationTypeRaw);
+        } catch (Exception e) {
+            vacationType = VacationType.ANNUAL;
+        }
+
+        // 정책 기반 시간 정의
+        final LocalTime MORNING_HALF_START = LocalTime.of(9, 0);
+        final LocalTime MORNING_HALF_END   = LocalTime.of(14, 0);
+
+        final LocalTime AFTERNOON_HALF_START = LocalTime.of(14, 0);
+        final LocalTime AFTERNOON_HALF_END   = LocalTime.of(18, 0);
+
+        final LocalTime FULL_DAY_START = LocalTime.of(9, 0);
+        final LocalTime FULL_DAY_END   = LocalTime.of(18, 0);
+
+        // 일정 생성 변수
+        String title;
+        LocalDateTime scheduleStart;
+        LocalDateTime scheduleEnd;
+
+        switch (vacationType) {
+            case MORNING_HALF:
+                title = "오전 반차";
+                scheduleStart = startDate.atTime(MORNING_HALF_START);
+                scheduleEnd = startDate.atTime(MORNING_HALF_END);
+                break;
+
+            case AFTERNOON_HALF:
+                title = "오후 반차";
+                scheduleStart = startDate.atTime(AFTERNOON_HALF_START);
+                scheduleEnd = startDate.atTime(AFTERNOON_HALF_END);
+                break;
+
+            case ANNUAL:
+            default:
+                title = "휴가";
+                scheduleStart = startDate.atTime(FULL_DAY_START);
+                scheduleEnd = endDate.atTime(FULL_DAY_END);
+                break;
+        }
+
+        // 일정 생성
         scheduleService.createSchedule(
                 ScheduleRequestDTO.builder()
                         .employeeId(employeeId)
-                        .title("휴가")
+                        .title(title)
                         .categoryCode(ScheduleCategory.VACATION.name())
-                        .startTime(startDate.atTime(9, 0))
-                        .endTime(endDate.atTime(23, 59, 59))
-                        .content("휴가 일정(자동등록)")
+                        .startTime(scheduleStart)
+                        .endTime(scheduleEnd)
+                        .content(title + " 일정(자동등록)")
                         .build()
         );
     }
