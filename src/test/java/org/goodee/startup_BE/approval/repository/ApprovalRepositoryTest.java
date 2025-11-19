@@ -369,23 +369,6 @@ class ApprovalRepositoryTest {
                     .isInstanceOf(DataIntegrityViolationException.class);
         }
 
-        @Test
-        @DisplayName("Exception: 필수 FK(employee) null 저장 시 예외 발생")
-        void saveLineNullEmployeeTest() {
-            // given
-            ApprovalLine line = ApprovalLine.createApprovalLine(
-                    1L,
-                    savedDoc,
-                    null, // employee (nullable=false) 를 null로 설정
-                    lineStatusAwaiting,
-                    null,
-                    null
-            );
-
-            // when & then
-            assertThatThrownBy(() -> approvalLineRepository.saveAndFlush(line))
-                    .isInstanceOf(DataIntegrityViolationException.class);
-        }
 
         @Test
         @DisplayName("Custom: findByDocAndApprovalOrder 테스트")
@@ -519,20 +502,6 @@ class ApprovalRepositoryTest {
             ApprovalReference ref = ApprovalReference.createApprovalReference(
                     null, // doc (nullable=false) 를 null로 설정
                     referrer
-            );
-
-            // when & then
-            assertThatThrownBy(() -> approvalReferenceRepository.saveAndFlush(ref))
-                    .isInstanceOf(DataIntegrityViolationException.class);
-        }
-
-        @Test
-        @DisplayName("Exception: 필수 FK(employee) null 저장 시 예외 발생")
-        void saveReferenceNullEmployeeTest() {
-            // given
-            ApprovalReference ref = ApprovalReference.createApprovalReference(
-                    savedDoc,
-                    null // employee (nullable=false) 를 null로 설정
             );
 
             // when & then

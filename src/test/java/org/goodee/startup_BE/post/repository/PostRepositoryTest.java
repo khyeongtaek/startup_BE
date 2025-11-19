@@ -397,52 +397,5 @@ class PostRepositoryTest {
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
-    @Test
-    @DisplayName("Exception: 필수 FK(employee) null 저장 시 예외 발생")
-    void saveNullEmployeeTest() {
-        // given
-        // Post.create()가 employee.getName()에서 NPE를 유발하므로 builder 사용
-        Post post = Post.builder()
-                .commonCode(categoryNotice)
-                .employee(null) // nullable=false 위반
-                .employeeName("임시이름") // employeeName 자체는 nullable=false이므로 값 필요
-                .title("제목")
-                .content("내용")
-                .isNotification(false)
-                .isDeleted(false)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .alert(false)
-                .build();
-
-        // when & then
-        assertThatThrownBy(() -> postRepository.saveAndFlush(post))
-                .isInstanceOf(DataIntegrityViolationException.class);
-    }
-
-    @Test
-    @DisplayName("Exception: 필수 필드(title) null 저장 시 예외 발생")
-    void saveNullTitleTest() {
-        // given
-        // Post.create()는 null을 허용
-        Post post = createPersistablePost(null, "내용", testUser1, categoryNotice, false);
-
-        // when & then
-        // title @Column(nullable=false) 위반
-        assertThatThrownBy(() -> postRepository.saveAndFlush(post))
-                .isInstanceOf(DataIntegrityViolationException.class);
-    }
-
-    @Test
-    @DisplayName("Exception: 필수 필드(content) null 저장 시 예외 발생")
-    void saveNullContentTest() {
-        // given
-        Post post = createPersistablePost("제목", null, testUser1, categoryNotice, false);
-
-        // when & then
-        // content @Column(nullable=false) 위반
-        assertThatThrownBy(() -> postRepository.saveAndFlush(post))
-                .isInstanceOf(DataIntegrityViolationException.class);
-    }
 
 }

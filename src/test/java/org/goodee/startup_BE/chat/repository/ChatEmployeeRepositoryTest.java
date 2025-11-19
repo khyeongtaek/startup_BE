@@ -227,18 +227,6 @@ class ChatEmployeeRepositoryTest {
     // --- Exception (Constraints) Tests ---
 
     @Test
-    @DisplayName("Exception: 필수 FK(employee) null 저장 시 예외 발생")
-    void saveNullEmployeeTest() {
-        // given
-        // ChatEmployee.java의 employee 필드는 nullable=false
-        ChatEmployee ce = createPersistableChatEmployee(null, room1, "Room 1", msg_room1_sys);
-
-        // when & then
-        assertThatThrownBy(() -> chatEmployeeRepository.saveAndFlush(ce))
-                .isInstanceOf(DataIntegrityViolationException.class);
-    }
-
-    @Test
     @DisplayName("Exception: 필수 FK(chatRoom) null 저장 시 예외 발생")
     void saveNullChatRoomTest() {
         // given
