@@ -4,8 +4,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import org.goodee.startup_BE.chat.entity.ChatMessage;
 import org.goodee.startup_BE.chat.entity.ChatRoom;
+import org.goodee.startup_BE.common.dto.AttachmentFileResponseDTO;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter @Setter
 @NoArgsConstructor
@@ -21,6 +23,8 @@ public class ChatMessageResponseDTO {
     private String senderName;      // 선택: 표시용(있으면 편리)
     private String content;         // 내용
     private LocalDateTime createdAt;// 생성 시각
+
+    private List<AttachmentFileResponseDTO> attachments;
 
     @Builder.Default
     private long unreadCount = 0;  // 미읽음 카운트
