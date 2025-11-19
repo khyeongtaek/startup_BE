@@ -259,20 +259,4 @@ class PostViewLogRepositoryTest {
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
-    @Test
-    @DisplayName("Exception: 필수 FK (employee) null 저장 시 예외 발생")
-    void saveNullEmployeeTest() {
-        // given: 지역 변수 선언 및 초기화
-        TestEntities entities = createAndSaveTestEntities();
-        // PostViewLog.java의 @JoinColumn(nullable = false) 위반
-        PostViewLog incompleteLog = PostViewLog.builder()
-                .post(entities.testPost1)
-                .employee(null)
-                .viewedAt(LocalDateTime.now())
-                .build();
-
-        // when & then
-        assertThatThrownBy(() -> postViewLogRepository.saveAndFlush(incompleteLog))
-                .isInstanceOf(DataIntegrityViolationException.class);
-    }
 }

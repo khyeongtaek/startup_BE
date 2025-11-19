@@ -8,6 +8,8 @@ import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.Comment;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -57,11 +59,13 @@ public class ApprovalDoc {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "creator_id", nullable = false)
     @Comment("기안자 ID")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee creator;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "updater_id")
     @Comment("수정자")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee updater;
 
     @ManyToOne(fetch = FetchType.LAZY)

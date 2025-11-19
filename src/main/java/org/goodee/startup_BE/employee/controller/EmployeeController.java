@@ -72,6 +72,26 @@ public class EmployeeController {
                 .build());
     }
 
+    @Operation(summary = "(관리자) 사원 삭제",
+            description = "관리자가 특정 사원을 삭제합니다. (ADMIN 권한 필요)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "사원 삭제 성공"),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자", content = @Content),
+            @ApiResponse(responseCode = "403", description = "접근 권한 없음 (ADMIN 아님)", content = @Content)
+    })
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<APIResponseDTO<Void>> deleteEmployee(
+            @Parameter(description = "삭제할 사원의 ID (employee_id)", required = true, example = "1")
+            @PathVariable("id") Long employeeId
+    ) {
+        employeeService.deleteEmployee(employeeId);
+
+        return ResponseEntity.ok(APIResponseDTO.<Void>builder()
+                .message("사원 삭제 성공")
+                .build());
+    }
+
     @Operation(summary = "특정 사원 인사 정보 수정 이력 조회 (페이징)", description = "사원 ID를 기준으로 특정 사원의 인사 정보 수정 이력 목록을 조회. (페이징 지원)")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "사원 이력 조회 성공"),

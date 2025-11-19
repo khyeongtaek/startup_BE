@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -30,7 +32,8 @@ public class ScheduleParticipant {
 
     // 참석자
     @ManyToOne(fetch=FetchType.LAZY)
-    @JoinColumn(name="participant", referencedColumnName = "employee_id" , nullable = false)
+    @JoinColumn(name="participant", referencedColumnName = "employee_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee participant;
 
     // 참석 상태 (참석 / 거절 / 보류)
