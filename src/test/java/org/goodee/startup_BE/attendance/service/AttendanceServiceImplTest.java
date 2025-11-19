@@ -17,9 +17,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDate;
+import java.time.*;
 import java.util.List;
 import java.util.Optional;
 
@@ -89,7 +90,7 @@ class AttendanceServiceImplTest {
             given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "NORMAL"))
                     .willReturn(List.of(mockWorkStatusNormal));
             given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "LATE"))
-                    .willReturn(List.of(mockWorkStatusLate)); // ✅ 지각 코드 추가
+                    .willReturn(List.of(mockWorkStatusLate));
             given(attendanceRepository.countByEmployeeEmployeeId(employeeId)).willReturn(0L);
             given(annualLeaveService.createIfNotExists(employeeId)).willReturn(null);
             given(attendanceRepository.save(any(Attendance.class)))
@@ -162,22 +163,25 @@ class AttendanceServiceImplTest {
     class ClockOut {
 
         @Test
-        @DisplayName("성공 - 정상 퇴근")
+        @DisplayName("성공 - 정상 퇴근 또는 조퇴 (시간 기반)")
         void clockOut_Success() {
             // given
             Long employeeId = 1L;
-            LocalDate today = LocalDate.now();
-            Attendance attendance = Attendance.createAttendance(mockEmployee, today, mockWorkStatusNormal);
+            Attendance attendance = Attendance.createAttendance(
+                    mockEmployee, LocalDate.now(), mockWorkStatusNormal
+            );
 
             given(attendanceRepository.findCurrentWorkingRecord(employeeId))
                     .willReturn(Optional.of(attendance));
 
-
-            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "CLOCK_OUT"))
+            // EARLY_LEAVE 또는 CLOCK_OUT 둘 다 대응
+            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(eq("WS"), eq("CLOCK_OUT")))
                     .willReturn(List.of(mockWorkStatusOut));
 
+            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(eq("WS"), eq("EARLY_LEAVE")))
+                    .willReturn(List.of(mockWorkStatusEarlyLeave));
 
-            given(attendanceRepository.save(any(Attendance.class)))
+            given(attendanceRepository.save(any()))
                     .willAnswer(invocation -> invocation.getArgument(0));
 
             // when
@@ -186,7 +190,8 @@ class AttendanceServiceImplTest {
             // then
             assertThat(result).isNotNull();
             assertThat(result.getWorkStatus()).isIn("CLOCK_OUT", "EARLY_LEAVE");
-            verify(attendanceRepository, times(1)).save(any(Attendance.class));
+
+            verify(attendanceRepository, times(1)).save(any());
         }
 
         @Test
