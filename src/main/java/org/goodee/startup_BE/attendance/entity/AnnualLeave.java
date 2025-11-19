@@ -20,12 +20,12 @@ public class AnnualLeave {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-
     private Long leaveId;
 
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
+    @JoinColumn(name = "employee_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee employee;
 
     @Column(name = "total_days")

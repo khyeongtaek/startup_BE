@@ -262,9 +262,12 @@ public class ScheduleServiceImpl implements  ScheduleService{
                 .map(ScheduleParticipantResponseDTO::toDTO)
                 .collect(java.util.stream.Collectors.toList());
 
-        //   작성자(일정 생성자)가 목록에 없는 경우 수동 추가
+        //   작성자(일정 생성자)가 목록에 없는 경우 수동 추가 (null-safe)
         boolean alreadyIncluded = dtos.stream()
-                .anyMatch(dto -> dto.getParticipantEmployeeId().equals(schedule.getEmployee().getEmployeeId()));
+                .anyMatch(dto -> java.util.Objects.equals(
+                        dto.getParticipantEmployeeId(),
+                        schedule.getEmployee().getEmployeeId()
+                ));
 
         if (!alreadyIncluded) { //   작성자 추가 로직
             dtos.add(ScheduleParticipantResponseDTO.builder()
