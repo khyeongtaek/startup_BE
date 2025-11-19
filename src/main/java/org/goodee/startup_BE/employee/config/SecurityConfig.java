@@ -9,6 +9,7 @@ import org.goodee.startup_BE.common.dto.APIResponseDTO;
 import org.goodee.startup_BE.common.exception.ExceptionHandlerFilter;
 import org.goodee.startup_BE.employee.enums.Role;
 import org.goodee.startup_BE.employee.filter.JwtAuthenticationFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -49,6 +50,9 @@ public class SecurityConfig {
             "/v3/api-docs/**",
 
     };
+
+    @Value("${allowed.origin}")
+    private String allowedOrigin;
 
     //----- 시큐리티 필터 체인
     @Bean
@@ -121,7 +125,7 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         // React App 허용
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
+        configuration.setAllowedOrigins(Arrays.asList(allowedOrigin));
         // HTTP 메소드 허용
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         // 모든 헤더 허용
