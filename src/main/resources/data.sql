@@ -277,8 +277,9 @@ VALUES
     ('WS4', '결근', 'ABSENT', '결근', NULL, 4, 1, 1, NOW(), NOW(), false),
     ('WS5', '휴가', 'VACATION', '휴가', NULL, 5, 1, 1, NOW(), NOW(), false),
     ('WS6', '외근', 'OUT_ON_BUSINESS', '외근', NULL , 6 , 1, 1, NOW(), NOW(), false ),
-    ('WS7', '퇴근', 'CLOCK_OUT', '퇴근', NULL , 6 , 1, 1, NOW(), NOW(), false );
-
+    ('WS7', '퇴근', 'CLOCK_OUT', '퇴근', NULL , 6 , 1, 1, NOW(), NOW(), false ),
+    ('WS8', '오전 반차', 'MORNING_HALF', '오전 반차', NULL,8, 1, 1, NOW(), NOW(), false),
+    ( 'WS9', '오후 반차', 'AFTERNOON_HALF', '오후 반차',NULL ,9, 1, 1, NOW(), NOW(), false);
 
 /*
 * =============================================

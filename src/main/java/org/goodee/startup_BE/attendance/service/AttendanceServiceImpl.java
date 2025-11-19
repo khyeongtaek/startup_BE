@@ -38,12 +38,10 @@ public class AttendanceServiceImpl implements AttendanceService {
     private final AttendanceWorkHistoryService attendanceWorkHistoryService;
     private final AttendanceWorkHistoryRepository historyRepository;
 
-
     // 공통 코드 Prefix 정의
     private static final String WOKR_STATUS_PREFIX = WorkStatus.PREFIX;
 
-    // Value 1 정의
-    // 근무 상태
+    // Value1 정의 (근무 상태)
     private static final String WORK_STATUS_NORMAL = WorkStatus.NORMAL.name();
     private static final String WORK_STATUS_LATE = WorkStatus.LATE.name();
     private static final String WORK_STATUS_EARLY_LEAVE = WorkStatus.EARLY_LEAVE.name();
@@ -51,9 +49,8 @@ public class AttendanceServiceImpl implements AttendanceService {
     private static final String WORK_STATUS_VACATION = WorkStatus.VACATION.name();
     private static final String WORK_STATUS_OUT_ON_BUSINESS = WorkStatus.OUT_ON_BUSINESS.name();
     private static final String WORK_STATUS_CLOCK_OUT = WorkStatus.CLOCK_OUT.name();
-
-
-
+    private static final String WORK_STATUS_MORNING_HALF = WorkStatus.MORNING_HALF.name();
+    private static final String WORK_STATUS_AFTERNOON_HALF = WorkStatus.AFTERNOON_HALF.name();
 
     // 오늘 출근 기록 조회
     @Override
@@ -83,49 +80,88 @@ public class AttendanceServiceImpl implements AttendanceService {
     @Override
     public AttendanceResponseDTO clockIn(Long employeeId) {
         LocalDate today = LocalDate.now();
+        LocalDateTime now = LocalDateTime.now();
 
-        // 이미 출근한 경우 예외
-        if (attendanceRepository.findByEmployeeEmployeeIdAndAttendanceDate(employeeId, today).isPresent()) {
-            throw new DuplicateAttendanceException("출근 기록이 이미 존재합니다.");
-        }
+        // 오늘 기록 여부 확인
+        Attendance attendance = attendanceRepository
+                .findByEmployeeEmployeeIdAndAttendanceDate(employeeId, today)
+                .orElse(null);
 
-        // 직원 조회
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
 
-        // 연차 자동생성
+        // 연차 자동 생성 (단 출근 기록 새로 만들 경우에만)
         annualLeaveService.createIfNotExists(employeeId);
 
+        // ============================================
+        // 1) 이미 Attendance가 존재하는 경우 (휴가/반차 포함)
+        // ============================================
+        if (attendance != null) {
 
-        // 근무 상태 코드 NORMAL 조회
-        List<CommonCode> codes = commonCodeRepository
-                .findByCodeStartsWithAndKeywordExactMatchInValues(WorkStatus.PREFIX, WORK_STATUS_NORMAL);
-        if (codes.isEmpty()) {
-            throw new AttendanceException("근무 상태 코드 'NORMAL'을 찾을 수 없습니다.");
+            // 이미 출근했다면 예외
+            if (attendance.getStartTime() != null) {
+                throw new DuplicateAttendanceException("이미 출근 기록이 존재합니다.");
+            }
+
+            String status = attendance.getWorkStatus().getValue1();
+
+            // ---- 반차 근무 제한 ----
+            if (WORK_STATUS_MORNING_HALF.equals(status)) {
+                if (now.toLocalTime().isBefore(LocalTime.of(13, 0))) {
+                    throw new AttendanceException("오전 반차 사용자는 오후 1시 이후 출근 가능합니다.");
+                }
+            }
+
+            if (WORK_STATUS_AFTERNOON_HALF.equals(status)) {
+                if (now.toLocalTime().isAfter(LocalTime.of(14, 0))) {
+                    throw new AttendanceException("오후 반차 사용자는 오전 근무만 가능합니다.");
+                }
+            }
+
+        } else {
+            // ============================================
+            // 2) Attendance가 없는 경우 → NORMAL로 새로 생성
+            // ============================================
+            CommonCode normalCode = getCommonCode(WOKR_STATUS_PREFIX, WORK_STATUS_NORMAL);
+
+            attendance = Attendance.createAttendance(employee, today, normalCode);
+            attendance.setWorkDate(attendanceRepository.countByEmployeeEmployeeId(employeeId) + 1);
         }
 
-        CommonCode workStatus = codes.get(0);
+        // ============================================
+        // 3) 출근 시간 기록
+        // ============================================
+        attendance.update(now, null);
 
+        // ============================================
+        // 4) 지각 판정 (반차 여부에 따라 기준 시간 다름)
+        // ============================================
+        String status = attendance.getWorkStatus().getValue1();
+        LocalTime lateStandardTime;
 
-        Long workCount = attendanceRepository.countByEmployeeEmployeeId(employeeId) + 1;
+        if (WORK_STATUS_MORNING_HALF.equals(status)) {
+            // 오전 반차 → 오후 1시 이후부터 지각
+            lateStandardTime = LocalTime.of(14, 0);
+        } else if (WORK_STATUS_AFTERNOON_HALF.equals(status)) {
+            // 오후 반차 → 오전 9시 기준 (오후 반차자는 오전만 근무)
+            lateStandardTime = LocalTime.of(9, 0);
+        } else {
+            // 일반 근무
+            lateStandardTime = LocalTime.of(9, 0);
+        }
 
-        // 출근 기록 생성
-        Attendance attendance = Attendance.createAttendance(employee, today, workStatus);
-        attendance.setWorkDate(workCount);
-        attendance.update(LocalDateTime.now(), null);  // 출근 시간 기록
-
-        //  출근 시각 기준으로 지각 판정
-
-        LocalDateTime now = LocalDateTime.now();
-
-        if (now.toLocalTime().isAfter(LocalTime.of(9, 0))) {
+        if (now.toLocalTime().isAfter(lateStandardTime)) {
             attendance.changeWorkStatus(getCommonCode(WOKR_STATUS_PREFIX, WORK_STATUS_LATE));
             log.info("[지각] {}님이 {}에 출근했습니다.", employee.getName(), now.toLocalTime());
         } else {
             log.info("[정상 출근] {}님이 {}에 출근했습니다.", employee.getName(), now.toLocalTime());
         }
+
         Attendance saved = attendanceRepository.save(attendance);
 
+        // ============================================
+        // 5) 이력 기록
+        // ============================================
         attendanceWorkHistoryService.recordHistory(saved, employee, saved.getWorkStatus().getValue1());
 
         return AttendanceResponseDTO.builder()
@@ -149,14 +185,14 @@ public class AttendanceServiceImpl implements AttendanceService {
 
         // 근무 상태 코드 CLOCK_OUT 조회
         List<CommonCode> codes = commonCodeRepository
-                .findByCodeStartsWithAndKeywordExactMatchInValues("WS", "CLOCK_OUT");
+                .findByCodeStartsWithAndKeywordExactMatchInValues(WorkStatus.PREFIX, WORK_STATUS_CLOCK_OUT);
         if (codes.isEmpty()) {
             throw new AttendanceException("근무 상태 코드 'CLOCK_OUT'을 찾을 수 없습니다.");
         }
 
         CommonCode workStatus = codes.get(0);
 
-        //  이미 퇴근한 기록 방지
+        // 이미 퇴근한 기록 방지
         if (attendance.getEndTime() != null) {
             throw new IllegalStateException("이미 퇴근 처리가 완료된 상태입니다.");
         }
@@ -168,7 +204,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         LocalDateTime endTime = LocalDateTime.now();
         attendance.update(attendance.getStartTime(), endTime);
 
-        //  조퇴 판정
+        // 조퇴 판정
         if (endTime.toLocalTime().isBefore(LocalTime.of(18, 0))) {
             attendance.changeWorkStatus(getCommonCode(WOKR_STATUS_PREFIX, WORK_STATUS_EARLY_LEAVE));
             log.info("[조퇴] {}님이 {}에 퇴근했습니다.", attendance.getEmployee().getName(), endTime.toLocalTime());
@@ -242,14 +278,14 @@ public class AttendanceServiceImpl implements AttendanceService {
         // weekStart가 없으면 이번 주 월요일
         LocalDate startOfWeek = (weekStart != null)
                 ? weekStart
-                : LocalDate.now().with(java.time.DayOfWeek.MONDAY);
+                : LocalDate.now().with(DayOfWeek.MONDAY);
         LocalDate endOfWeek = startOfWeek.plusDays(6);
 
         List<Attendance> weeklyRecords = attendanceRepository.findWeeklyRecords(employeeId, startOfWeek, endOfWeek);
 
         long totalMinutes = weeklyRecords.stream()
                 .filter(a -> a.getStartTime() != null && a.getEndTime() != null)
-                .mapToLong(a -> java.time.Duration.between(a.getStartTime(), a.getEndTime()).toMinutes())
+                .mapToLong(a -> Duration.between(a.getStartTime(), a.getEndTime()).toMinutes())
                 .sum();
 
         long targetMinutes = 40 * 60;
@@ -273,7 +309,6 @@ public class AttendanceServiceImpl implements AttendanceService {
         return result;
     }
 
-
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> getWeeklyWorkSummary(Long employeeId) {
@@ -294,7 +329,6 @@ public class AttendanceServiceImpl implements AttendanceService {
         // 목표 근무시간 (기본 40시간)
         long targetMinutes = 40 * 60;
 
-        // ✅ 프론트에서 필요한 형태로 변환
         List<Map<String, Object>> recordList = weeklyRecords.stream()
                 .map(a -> {
                     Map<String, Object> record = new HashMap<>();
@@ -308,7 +342,7 @@ public class AttendanceServiceImpl implements AttendanceService {
 
         // 응답 데이터 구성
         Map<String, Object> result = new HashMap<>();
-        result.put("records", recordList); // ✅ 주간 상세 내역 포함
+        result.put("records", recordList);
         result.put("totalMinutes", totalMinutes);
         result.put("targetMinutes", targetMinutes);
         result.put("totalHours", totalMinutes / 60);
@@ -316,7 +350,6 @@ public class AttendanceServiceImpl implements AttendanceService {
 
         return result;
     }
-
 
     @Override
     @Transactional
@@ -331,7 +364,7 @@ public class AttendanceServiceImpl implements AttendanceService {
 
         // 복귀: OUT_ON_BUSINESS 직전 "같은 Attendance"의 상태로 복원
         if (WORK_STATUS_NORMAL.equals(statusCode)) {
-            //  오늘 출근건(history는 같은 attendance_id 기준으로만 조회)
+            // 오늘 출근건 (history는 같은 attendance_id 기준)
             List<AttendanceWorkHistory> histories =
                     historyRepository.findByAttendanceAttendanceIdOrderByActionTimeDesc(attendance.getAttendanceId());
 
@@ -349,7 +382,7 @@ public class AttendanceServiceImpl implements AttendanceService {
 
         // 최종 상태 코드로 CommonCode 조회
         CommonCode newStatus = commonCodeRepository
-                .findByCodeStartsWithAndKeywordExactMatchInValues("WS", finalStatusValue)
+                .findByCodeStartsWithAndKeywordExactMatchInValues(WorkStatus.PREFIX, finalStatusValue)
                 .stream()
                 .findFirst()
                 .orElseThrow(() -> new AttendanceException("해당 근무 상태 코드를 찾을 수 없습니다."));
@@ -361,6 +394,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         attendanceWorkHistoryService.recordHistory(attendance, attendance.getEmployee(), newStatus.getValue1());
         return newStatus.getValue1();
     }
+
     /**
      * 공통 코드 조회
      *
@@ -384,7 +418,6 @@ public class AttendanceServiceImpl implements AttendanceService {
         }
     }
 
-
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> getAttendanceSummary(Long employeeId) {
@@ -397,37 +430,39 @@ public class AttendanceServiceImpl implements AttendanceService {
         List<Attendance> allRecords = attendanceRepository.findByEmployeeEmployeeId(employeeId);
         Long totalMinutes = allRecords.stream()
                 .filter(a -> a.getStartTime() != null && a.getEndTime() != null)
-                .mapToLong(a -> java.time.Duration.between(a.getStartTime(), a.getEndTime()).toMinutes())
+                .mapToLong(a -> Duration.between(a.getStartTime(), a.getEndTime()).toMinutes())
                 .sum();
 
         Long totalHours = totalMinutes / 60;
 
-        // (3) 잔여 연차 (getAnnualLeave → 없으면 자동 생성)
+        // (3) 잔여 연차
         AnnualLeave leave = annualLeaveService.getAnnualLeave(employeeId);
-        Long remainingLeave = 0L;
+        Double remainingLeave = 0.0;
         if (leave != null && leave.getRemainingDays() != null) {
-            remainingLeave = leave.getRemainingDays().longValue();
+            remainingLeave = leave.getRemainingDays();
         }
 
         // (4) 이번 주 지각 횟수
-        LocalDate startOfWeek = LocalDate.now().with(java.time.DayOfWeek.MONDAY);
-        LocalDate endOfWeek = LocalDate.now().with(java.time.DayOfWeek.SUNDAY);
+        LocalDate startOfWeek = LocalDate.now().with(DayOfWeek.MONDAY);
+        LocalDate endOfWeek = LocalDate.now().with(DayOfWeek.SUNDAY);
         Long lateCount = attendanceRepository.countLatesThisWeek(employeeId, startOfWeek, endOfWeek);
         if (lateCount == null) lateCount = 0L;
 
-        //  (5) 결과 맵 구성
+        // (5) 결과 맵 구성
         Map<String, Object> result = new HashMap<>();
         result.put("totalDays", totalDays);
-        result.put("totalHours", totalHours); // 기존 유지
-        result.put("totalMinutes", totalMinutes); // 새로 추가
+        result.put("totalHours", totalHours);
+        result.put("totalMinutes", totalMinutes);
         result.put("remainingLeave", remainingLeave);
         result.put("lateCount", lateCount);
 
         return result;
     }
 
+    // 🔥 휴가 / 반차 등록: VacationType(ANNUAL / MORNING_HALF / AFTERNOON_HALF)에 따라 상태 코드 다르게 반영
+    @Override
     @Transactional
-    public void markVacation(Long employeeId, LocalDate date) {
+    public void markVacation(Long employeeId, LocalDate date, String vacationType) {
 
         // 1) 해당 날짜 Attendance 조회 or 새로 생성
         Attendance attendance = attendanceRepository
@@ -435,18 +470,26 @@ public class AttendanceServiceImpl implements AttendanceService {
                 .orElseGet(() -> {
                     Employee employee = employeeRepository.findById(employeeId)
                             .orElseThrow(() -> new ResourceNotFoundException("사원 정보를 찾을 수 없습니다."));
-                    CommonCode defaultStatus = getCommonCode(WorkStatus.PREFIX, WorkStatus.VACATION.name());
+                    CommonCode defaultStatus = getCommonCode(WorkStatus.PREFIX, WORK_STATUS_VACATION);
                     Attendance newA = Attendance.createAttendance(employee, date, defaultStatus);
                     return attendanceRepository.save(newA);
                 });
 
-        // 2) 근태 상태 VACATION 으로 업데이트
-        CommonCode vacationStatus = getCommonCode(WorkStatus.PREFIX, WorkStatus.VACATION.name());
-        attendance.changeWorkStatus(vacationStatus);
+        // 2) vacationType(문자열) → WorkStatus value1 매핑
+        String statusValue = switch (vacationType) {
+            case "MORNING_HALF" -> WORK_STATUS_MORNING_HALF;
+            case "AFTERNOON_HALF" -> WORK_STATUS_AFTERNOON_HALF;
+            default -> WORK_STATUS_VACATION; // ANNUAL 또는 기타는 전부 '휴가' 처리
+        };
 
+        // 3) 해당 WorkStatus 코드 조회
+        CommonCode statusCode = getCommonCode(WorkStatus.PREFIX, statusValue);
+
+        // 4) 상태 변경 및 저장
+        attendance.changeWorkStatus(statusCode);
         attendanceRepository.save(attendance);
 
-        // 3) 이력 기록
-        attendanceWorkHistoryService.recordHistory(attendance, attendance.getEmployee(), WorkStatus.VACATION.name());
+        // 5) 이력 기록
+        attendanceWorkHistoryService.recordHistory(attendance, attendance.getEmployee(), statusValue);
     }
 }

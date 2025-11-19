@@ -76,7 +76,7 @@ public class ApprovalDoc {
     private CommonCode vacationType;   // nullable: 출장 문서는 null
 
     @Comment("휴가 사용 일수")
-    private Integer vacationDays;
+    private Double vacationDays;
 
     @Lob
     @Column(columnDefinition = "LONGTEXT")
@@ -152,7 +152,7 @@ public class ApprovalDoc {
     public void updateUpdater(Employee updater) { this.updater = updater; }
 
 
-    public void updateVacationInfo(CommonCode vacationType, Integer vacationDays, String vacationReason) {
+    public void updateVacationInfo(CommonCode vacationType, Double vacationDays, String vacationReason) {
         this.vacationType = vacationType;
         this.vacationDays = vacationDays;
         this.vacationReason = vacationReason;

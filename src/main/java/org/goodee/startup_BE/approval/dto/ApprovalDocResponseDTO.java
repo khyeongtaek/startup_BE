@@ -61,7 +61,7 @@ public class ApprovalDocResponseDTO {
 
     // 휴가
     private CommonCodeResponseDTO vacationType;
-    private Integer vacationDays;
+    private Double vacationDays;
     private String vacationReason;
 
     // 출장

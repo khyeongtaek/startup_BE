@@ -46,7 +46,7 @@ public class ApprovalLine {
     private ApprovalDoc doc;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
+    @JoinColumn(name = "employee_id")
     @Comment("결재자 ID")
     private Employee employee;
 

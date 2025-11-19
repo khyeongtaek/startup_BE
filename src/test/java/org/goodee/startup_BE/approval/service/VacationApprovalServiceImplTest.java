@@ -78,7 +78,7 @@ class VacationApprovalServiceImplTest {
         // ApprovalDoc 필드 Stub
         given(mockDoc.getStartDate()).willReturn(start.atStartOfDay());
         given(mockDoc.getEndDate()).willReturn(end.atTime(23, 59, 59));
-        given(mockDoc.getVacationDays()).willReturn(3);
+        given(mockDoc.getVacationDays()).willReturn(3.0);
         given(mockDoc.getCreator()).willReturn(mockCreator);
 
         // Repository Stub
@@ -90,11 +90,11 @@ class VacationApprovalServiceImplTest {
         // then
         // 1) 연차 차감
         then(annualLeaveService).should(times(1))
-                .useAnnualLeave(employeeId, 3L);
+                .useAnnualLeave(employeeId, 3.0);
 
         // 2) 매일 근태 VACATION
         then(attendanceService).should(times(3))
-                .markVacation(eq(employeeId), any(LocalDate.class));
+                .markVacation(eq(employeeId), any(LocalDate.class), eq("ANNUAL"));
 
         // 3) 일정 생성
         then(scheduleService).should(times(1))

@@ -46,7 +46,7 @@ public class ApprovalDocRequestDTO {
 
     // 휴가(AT1)
     private Long vacationTypeCode;   // CommonCode ID
-    private Integer vacationDays;
+    private Double vacationDays;
     private String vacationReason;
 
     // 출장(AT2)
