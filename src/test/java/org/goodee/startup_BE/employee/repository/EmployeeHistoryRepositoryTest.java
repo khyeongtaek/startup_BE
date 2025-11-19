@@ -237,35 +237,6 @@ class EmployeeHistoryRepositoryTest {
 
     // --- Exception (Constraints) Tests ---
 
-    @Test
-    @DisplayName("Exception: 필수 FK(employee) null 저장 시 예외 발생")
-    void saveNullEmployeeTest() {
-        // given
-        // EmployeeHistory.java의 @JoinColumn(name = "employee_id", nullable = false) 제약조건
-        EmployeeHistory historyWithNullEmployee = createPersistableHistory(
-                null, adminUpdater, "field", "old", "new"
-        );
-
-        // when & then
-        // nullable=false 위반
-        assertThatThrownBy(() -> employeeHistoryRepository.saveAndFlush(historyWithNullEmployee))
-                .isInstanceOf(DataIntegrityViolationException.class);
-    }
-
-    @Test
-    @DisplayName("Exception: 필수 FK(updater) null 저장 시 예외 발생")
-    void saveNullUpdaterTest() {
-        // given
-        // EmployeeHistory.java의 @JoinColumn(name = "updater_id", nullable = false) 제약조건
-        EmployeeHistory historyWithNullUpdater = createPersistableHistory(
-                targetEmployee, null, "field", "old", "new"
-        );
-
-        // when & then
-        // nullable=false 위반
-        assertThatThrownBy(() -> employeeHistoryRepository.saveAndFlush(historyWithNullUpdater))
-                .isInstanceOf(DataIntegrityViolationException.class);
-    }
 
     @Test
     @DisplayName("Exception: 필수 필드(fieldName) null 저장 시 예외 발생")

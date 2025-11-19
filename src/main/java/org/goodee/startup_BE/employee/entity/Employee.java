@@ -9,6 +9,8 @@ import lombok.NoArgsConstructor;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Comment;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -117,12 +119,14 @@ public class Employee implements UserDetails {
     @JoinColumn(name = "creator_id", updatable = false)
     @Comment("생성자")
     @Schema(description = "생성자 (Employee)", accessMode = Schema.AccessMode.READ_ONLY)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee creator;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "updater_id")
     @Comment("수정자")
     @Schema(description = "수정자 (Employee)", accessMode = Schema.AccessMode.READ_ONLY)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee updater;
 
 

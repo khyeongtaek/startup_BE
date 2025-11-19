@@ -9,6 +9,8 @@ import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -26,7 +28,7 @@ public class Notification {
 
     @Comment("수신자 ID")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(nullable = false)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee employee;
 
     @Comment("알림 출처 (Common Code")

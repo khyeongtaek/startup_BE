@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -46,11 +48,13 @@ public class CommonCode {
     @Comment("작성자 (직원 ID)")
     @JoinColumn(name = "creator_id")
     @ManyToOne(fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee creator;
 
     @Comment("수정자 (직원 ID)")
     @JoinColumn(name = "updater_id")
     @ManyToOne(fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee updater;
 
     @Column(nullable = false, updatable = false)

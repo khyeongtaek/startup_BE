@@ -5,6 +5,8 @@ import lombok.*;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.DynamicUpdate;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -28,7 +30,8 @@ public class Post {
     private CommonCode commonCode;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
+    @JoinColumn(name = "employee_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee employee;
 
     @Column(name = "employee_name", nullable = false, columnDefinition = "LONGTEXT")

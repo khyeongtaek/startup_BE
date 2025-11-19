@@ -3,6 +3,8 @@ package org.goodee.startup_BE.post.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.goodee.startup_BE.employee.entity.Employee;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -25,7 +27,8 @@ public class PostComment {
     private Post post;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
+    @JoinColumn(name = "employee_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee employee;
 
     @Column(name = "content", nullable = false,columnDefinition = "LONGTEXT")
