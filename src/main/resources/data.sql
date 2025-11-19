@@ -861,21 +861,21 @@ VALUES
       "id": "worklog-all",
       "title": "전체업무일지",
       "type": "item",
-      "url": "/worklog/list",
+      "url": "/worklog/list/all",
       "target": false
     }', 'MN19', NULL, 1, 1, 1, NOW(), NOW(), false),
     ('MN21', '부서업무일지', '{
       "id": "worklog-department",
       "title": "부서업무일지",
       "type": "item",
-      "url": "/worklog/list?type=department",
+      "url": "/worklog/list/department",
       "target": false
     }', 'MN19', NULL, 2, 1, 1, NOW(), NOW(), false),
     ('MN22', '나의업무일지', '{
       "id": "worklog-personal",
       "title": "나의업무일지",
       "type": "item",
-      "url": "/worklog/list?type=personal",
+      "url": "/worklog/list/personal",
       "target": false
     }', 'MN19', NULL, 3, 1, 1, NOW(), NOW(), false),
 
@@ -959,14 +959,14 @@ VALUES
     }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
     ('RO9', '업무일지 작성/수정', '{
       "id": "worklog-write",
-      "title": "업무일지 작성,",
+      "title": "업무일지 작성",
       "type": "route",
       "url": "/worklog/write/:worklogId?",
       "componentPath": "features/worklog/pages/WorkLogWritePage"
-    }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false)
+    }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
     ('RO10', '업무일지 상세', '{
       "id": "worklog-detail",
-      "title": "업무일지 상세,",
+      "title": "업무일지 상세",
       "type": "route",
       "url": "/worklog/detail/:worklogId",
       "componentPath": "features/worklog/pages/WorkLogDetailPage"
