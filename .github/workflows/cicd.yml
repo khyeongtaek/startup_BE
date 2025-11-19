@@ -24,6 +24,7 @@ jobs:
           echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}" >> .env
           echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
           echo "ALLOWED_ORIGIN=${{ secrets.ALLOWED_ORIGIN }}" >> .env
+          echo "FILE_STORAGE=${{ secrets.FILE_STORAGE }}" >> .env
 
       # 3. EC2로 파일 전송 (플러그인-https://github.com/appleboy/ssh-action)
       - name: Copy file to EC2
@@ -46,6 +47,10 @@ jobs:
           script: |
             # website 디렉터리로 이동
             cd /home/ubuntu/website/backend
+            # 파일저장소 폴더 생성
+            mkdir -p /home/ubuntu/website/uploads
+            # 권한 설정 (필요시, 도커가 쓸 수 있도록)
+            chmod 777 /home/ubuntu/website/uploads
             # 기존 컨테이너 중지 및 삭제
             docker compose down || true
             # 사용하지 않는 이미지 삭제
