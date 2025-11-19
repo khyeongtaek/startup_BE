@@ -3,6 +3,7 @@ package org.goodee.startup_BE.chat.contorller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.goodee.startup_BE.chat.dto.MessageSendPayloadDTO;
 import org.goodee.startup_BE.chat.service.ChatService;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -24,10 +25,10 @@ public class ChatMessageController {
     public void sendMessage(
             Authentication authentication,
             @DestinationVariable("roomId") Long roomId,
-            @Payload String content
+            @Payload MessageSendPayloadDTO payload
     ) {
         if (authentication == null) return; // 인증되지 않은 소스 무시
-        chatService.sendMessage(authentication.getName(), roomId, content);
+        chatService.sendMessage(authentication.getName(), roomId, payload);
         // 브로드캐스트는 서비스에서 afterCommit으로 수행됨
     }
 }
