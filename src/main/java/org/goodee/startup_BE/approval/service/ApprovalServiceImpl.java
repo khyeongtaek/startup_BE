@@ -485,7 +485,7 @@ public class ApprovalServiceImpl implements ApprovalService {
                             .employeeId(doc.getCreator().getEmployeeId())
                             .ownerTypeCommonCodeId(ownerCode.getCommonCodeId())
                             .url("/approval/detail/" + doc.getDocId())
-                            .title("상신한 결재가 " + finalDocStatus.getValue1() + "되었습니다.") // APPROVED 또는 REJECTED
+                            .title("상신한 결재가 " + finalDocStatus.getValue2() + "되었습니다.") // APPROVED 또는 REJECTED
                             .content(doc.getTitle())
                             .build());
         } else { // 최종 완료가 아니라면 다음 결재자에게만 알림 보냄.

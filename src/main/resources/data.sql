@@ -20,10 +20,10 @@ INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
     ('AD0', '문서 상태', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
-    ('AD1', '임시저장', 'DRAFT', NULL, NULL, 1, 1, 1, NOW(), NOW(), false),
-    ('AD2', '진행중', 'IN_PROGRESS', NULL, NULL, 2, 1, 1, NOW(), NOW(), false),
-    ('AD3', '최종 승인', 'APPROVED', NULL, NULL, 3, 1, 1, NOW(), NOW(), false),
-    ('AD4', '최종 반려', 'REJECTED', NULL, NULL, 4, 1, 1, NOW(), NOW(), false);
+    ('AD1', '임시저장', 'DRAFT', '임시 저장', NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('AD2', '진행중', 'IN_PROGRESS', '진행중', NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('AD3', '최종 승인', 'APPROVED', '최종 승인', NULL, 3, 1, 1, NOW(), NOW(), false),
+    ('AD4', '최종 반려', 'REJECTED', '반려', NULL, 4, 1, 1, NOW(), NOW(), false);
 
 
 /*
@@ -38,10 +38,10 @@ INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
     ('AL0', '결재선 상태', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
-    ('AL1', '미결', 'PENDING', NULL, NULL, 1, 1, 1, NOW(), NOW(), false),
-    ('AL2', '대기', 'AWAITING', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
-    ('AL3', '승인', 'APPROVED', NULL, NULL, 2, 1, 1, NOW(), NOW(), false),
-    ('AL4', '반려', 'REJECTED', NULL, NULL, 3, 1, 1, NOW(), NOW(), false);
+    ('AL1', '미결', 'PENDING', '미결', NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('AL2', '대기', 'AWAITING', '대기', NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('AL3', '승인', 'APPROVED', '승인', NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('AL4', '반려', 'REJECTED', '반려', NULL, 3, 1, 1, NOW(), NOW(), false);
 
 
 /*
