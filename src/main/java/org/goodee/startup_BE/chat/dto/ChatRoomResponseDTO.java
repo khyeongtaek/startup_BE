@@ -18,15 +18,17 @@ public class ChatRoomResponseDTO {
     private String displayName;     // 방 이름
     private Boolean isTeam;         // 팀방 여부
     private LocalDateTime createdAt;// 생성 시각
+    private Long memberCount;       // 채팅방에 참여 중인 인원 수
 
     /** 엔티티 -> DTO 변환 */
-    public static ChatRoomResponseDTO toDTO(ChatRoom chatRoom) {
+    public static ChatRoomResponseDTO toDTO(ChatRoom chatRoom, Long memberCount) {
         return ChatRoomResponseDTO.builder()
                 .chatRoomId(chatRoom.getChatRoomId())
                 .employeeId(chatRoom.getEmployee().getEmployeeId())
                 .displayName(chatRoom.getName())
                 .isTeam(chatRoom.getIsTeam())
                 .createdAt(chatRoom.getCreatedAt())
+                .memberCount(memberCount)
                 .build();
     }
 }

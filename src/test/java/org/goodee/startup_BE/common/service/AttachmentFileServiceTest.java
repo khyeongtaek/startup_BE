@@ -1,11 +1,10 @@
-package org.goodee.startup_BE.attachmentFile;
+package org.goodee.startup_BE.common.service;
 
 import org.goodee.startup_BE.common.dto.AttachmentFileResponseDTO;
 import org.goodee.startup_BE.common.entity.AttachmentFile;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.repository.AttachmentFileRepository;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
-import org.goodee.startup_BE.common.service.AttachmentFileServiceImpl;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,14 +13,12 @@ import org.springframework.context.annotation.Import;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.mock.web.MockMultipartFile;
 
 import jakarta.persistence.EntityManager;
 import java.io.IOException;
 import java.nio.file.*;
-import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.*;
@@ -35,7 +32,7 @@ import static org.assertj.core.api.Assertions.*;
 	"spring.jpa.database-platform=org.hibernate.dialect.H2Dialect"
 })
 @Import(AttachmentFileServiceImpl.class)
-class AttachmentFileServiceTests {
+class AttachmentFileServiceTest {
 	
 	@Autowired
 	AttachmentFileServiceImpl attachmentFileService;
