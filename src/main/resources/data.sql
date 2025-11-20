@@ -253,8 +253,26 @@ VALUES
     ('OT3', '사원', 'EMPLOYEE', '', '', 0, 1, 1, NOW(), NOW(), false),
     ('OT4', '전자결재', 'APPROVAL', '', '', 0, 1, 1, NOW(), NOW(), false),
     ('OT5', '채팅 초대', 'TEAMCHATNOTI', '', '', 0, 1, 1, NOW(), NOW(), false),
-    ('OT6', '일정 초대', 'SCHEDULEINVITE', '', '', 0, 1, 1, NOW(), NOW(), false);
+    ('OT6', '일정 초대', 'SCHEDULEINVITE', '', '', 0, 1, 1, NOW(), NOW(), false),
+    ('OT7', '채팅 메시지', 'CHAT', '', '', 0, 1, 1, NOW(), NOW(), false);
+/*
+* =============================================
+* Schedule Color (일정 색상)
+* code: CL + 번호 (Color)
+* value1: 색상 코드 (영문)
+* value2: HEX 코드
+* =============================================
+*/
 
+INSERT INTO tbl_common_code
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
+VALUES
+    ('CL0', '색상 코드', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('CL1', '파란색', 'BLUE', '#3498db', NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('CL2', '빨간색', 'RED', '#e74c3c', NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('CL3', '초록색', 'GREEN', '#27ae60', NULL, 3, 1, 1, NOW(), NOW(), false),
+    ('CL4', '노란색', 'YELLOW', '#f1c40f', NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('CL5', '회색', 'GRAY', '#7f8c8d', NULL, 5, 1, 1, NOW(), NOW(), false);
 
 
 
@@ -913,7 +931,7 @@ VALUES
       "id": "approval-detail",
       "title": "결재 상세",
       "type": "route",
-      "url": "/approval/detail/:docId"
+      "url": "/approval/detail/:docId",
       "componentPath": "features/approval/pages/ApprovalDetailPage"
     }', NULL, NULL, 2, 1, 1, NOW(), NOW(), false),
     ('RO3', '결재 목록', '{
