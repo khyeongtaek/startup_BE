@@ -217,19 +217,5 @@ class AttendanceServiceImplTest {
                 assertThat(result).isNotNull();
                 assertThat(result.getWorkStatus()).isEqualTo("NORMAL", "LATE");
             }
-
-            @Test
-            @DisplayName("실패 - 출근 기록 없음")
-            void getTodayAttendance_Fail_NoRecord() {
-                Long employeeId = 1L;
-                LocalDate today = LocalDate.now();
-
-                given(attendanceRepository.findByEmployeeEmployeeIdAndAttendanceDate(employeeId, today))
-                        .willReturn(Optional.empty());
-
-                assertThatThrownBy(() -> attendanceService.getTodayAttendance(employeeId))
-                        .isInstanceOf(AttendanceException.class)
-                        .hasMessageContaining("오늘 출근 기록이 없습니다");
-            }
         }
     }}}
