@@ -7,7 +7,6 @@ import org.goodee.startup_BE.chat.dto.*;
 import org.goodee.startup_BE.chat.entity.ChatEmployee;
 import org.goodee.startup_BE.chat.entity.ChatMessage;
 import org.goodee.startup_BE.chat.entity.ChatRoom;
-import org.goodee.startup_BE.chat.enums.MessageType;
 import org.goodee.startup_BE.chat.repository.ChatEmployeeRepository;
 import org.goodee.startup_BE.chat.repository.ChatMessageRepository;
 import org.goodee.startup_BE.chat.repository.ChatRoomRepository;
@@ -56,8 +55,8 @@ public class ChatServiceImpl implements ChatService {
     private final SimpMessagingTemplate simpMessagingTemplate;
     private final AttachmentFileService attachmentFileService;
 
-
-
+    // 파일 전송 시 사용할 대체 텍스트 상수 정의
+    private static final String FILE_UPLOAD_MESSAGE = "파일을 전송 했습니다.";
 
     // 채팅방 생성
     @Override
@@ -81,14 +80,16 @@ public class ChatServiceImpl implements ChatService {
         if (invitees.size() != inviteeEmployeeId.size()) {
             throw new EntityNotFoundException("최대 대상 중 존재하지 않은 사원이 있습니다.");
         }
-        // 모든 참여자 목록: 채팅방 생성자 + 초대 대상
+
+        // 모든 참여자 목록
         List<Employee> allParticipants = new ArrayList<>();
         allParticipants.add(creator);
         allParticipants.addAll(invitees);
 
-        // 팀 채팅방 여부 ( invitees.size() == 0이면 false = 1:1 채팅방, invitees.size() >= 1이면 true = 팀 채팅방)
-        boolean isTeamChat = invitees.size() >= 2; // 초대 대상이 2명 이상이면 팀방
+        // 팀 채팅방 여부 확인
+        boolean isTeamChat = invitees.size() >= 2;
 
+        // 1:1 채팅방인 경우 기존 방 검색 로직
         if (!isTeamChat && invitees.size() == 1) {
             Employee invitee = invitees.get(0); // 1:1 채팅의 상대방
 
@@ -98,7 +99,7 @@ public class ChatServiceImpl implements ChatService {
                 ChatRoom existingRoom = existingRoomOpt.get(0);
                 Long existingRoomId = existingRoom.getChatRoomId();
 
-                // 두 참가자의 ChatEmployee 정보를 모두 가져와서 재활성화
+                // 멤버 재활성화 로직
                 List<ChatEmployee> members = chatEmployeeRepository.findAllByChatRoomChatRoomId(existingRoomId);
                 ChatMessage lastMessageForNotify = null;
 
@@ -106,44 +107,54 @@ public class ChatServiceImpl implements ChatService {
 
                 for (ChatEmployee member : members) {
                     if (Boolean.TRUE.equals(member.getIsLeft())) {
-                        member.rejoinChatRoom(); // isLeft = false, joinedAt = now()
+                        member.rejoinChatRoom();
                         chatEmployeeRepository.save(member);
                     }
-                    // 알림에 사용할 마지막 메시지를 찾기 위해
                     lastMessageForNotify = member.getLastReadMessage();
                 }
 
-                // 프론트엔드가 이 방으로 이동할 수 있도록 DTO 반환
+                // 기존 방 반환 시, 1:1 채팅방이면 상대방 정보로 DTO 구성 (여기선 기존 ChatRoomResponseDTO 사용)
                 ChatRoomResponseDTO roomDTO = ChatRoomResponseDTO.toDTO(existingRoom, currentMemberCount);
 
-                // 두 참가자에게 기존 방이 재활성화되었음을 알림 (채팅 목록 갱신)
-                // (findRoomsByUsername의 로직과 유사하게 DTO를 만들어 전송)
+                // 상대방 정보로 덮어쓰기 (1:1인 경우)
+                String inviteePositionName = (invitee.getPosition() != null) ? invitee.getPosition().getValue1() : "";
+
+                roomDTO = ChatRoomResponseDTO.builder()
+                        .chatRoomId(existingRoom.getChatRoomId())
+                        .name(existingRoom.getEmployee().getName()) // 방 생성자(본인) 이름 유지
+                        .displayName(invitee.getName())             // 방 제목 -> 상대방 이름
+                        .isTeam(false)
+                        .createdAt(existingRoom.getCreatedAt())
+                        .memberCount(currentMemberCount)
+                        .profileImg(invitee.getProfileImg())        // 프로필 -> 상대방 이미지
+                        .positionName(inviteePositionName)          // 직급 -> 상대방 직급
+                        .build();
+
+
+                // 알림 전송 (기존 로직 유지)
                 final ChatMessage finalLastMessage = lastMessageForNotify;
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
-                        // notifyParticipantsOfNewMessage를 직접 호출하기보다,
-                        // createRoom의 응답을 받은 프론트가 해당 방으로 이동할 것을 기대함.
-                        // 다만, 상대방(invitee)의 목록 갱신을 위해 알림을 보냄.
                         notifyParticipantsOfNewMessage(existingRoom, finalLastMessage, creator.getEmployeeId());
                     }
                 });
 
-                return roomDTO; // 새 방을 만들지 않고 기존 방 DTO를 반환
+                return roomDTO;
             }
         }
 
-        // chatRoom에 저장
+        // 새 채팅방 생성 및 저장
         ChatRoom chatRoom = ChatRoom.createChatRoom(creator, roomName, isTeamChat);
         ChatRoom savedChatRoom = chatRoomRepository.save(chatRoom);
         Long chatRoomId = savedChatRoom.getChatRoomId();
 
-        // "채팅방이 생성되었습니다" 시스템 메시지 생성
+        // 시스템 메시지 생성
         String systemMessageContent = String.format("%s님이 채팅방을 생성 했습니다.", creator.getName());
         ChatMessage initialMessage = ChatMessage.createSystemMessage(savedChatRoom, systemMessageContent);
         ChatMessage savedInitialMessage = chatMessageRepository.save(initialMessage);
 
-        // 채팅방 생성자 및 초대 대상 ChatEmployee 저장
+        // ChatEmployee 저장
         List<ChatEmployee> chatEmployees = allParticipants.stream()
                 .map(emp -> ChatEmployee.createChatEmployee(
                         emp,
@@ -155,28 +166,25 @@ public class ChatServiceImpl implements ChatService {
 
         chatEmployeeRepository.saveAll(chatEmployees);
 
-        // WebSocket 브로드캐스트 (/topic/rooms/{roomId})
+        // WebSocket 브로드캐스트
         ChatMessageResponseDTO messageDTO = ChatMessageResponseDTO.toDTO(savedInitialMessage);
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
                 simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + chatRoomId, messageDTO);
-
                 notifyParticipantsOfNewMessage(savedChatRoom, savedInitialMessage, null);
             }
         });
-        // TEAM 채팅방 이면, 초대 대상에게 알림 받기
+
+        // 팀 채팅방 알림 전송 로직 (기존과 동일)
         if (isTeamChat) {
             try {
                 CommonCode chatInviteCode = commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.TEAMCHATNOTI.name())
                         .stream()
                         .findFirst()
                         .orElseThrow(() -> new EntityNotFoundException("요청 하신 CommonCOde 또는 KeyWord 를 찾을 수 없습니다"));
-
                 Long chatInviteCodeId = chatInviteCode.getCommonCodeId();
-
-                // 알림 전송 로직 호출
                 for (Employee recipient : invitees) {
                     NotificationRequestDTO notificationRequestDTO = NotificationRequestDTO.builder()
                             .employeeId(recipient.getEmployeeId())
@@ -191,9 +199,30 @@ public class ChatServiceImpl implements ChatService {
                 log.warn("채팅방 생성 알림 전송에 실패 하였습니다.", chatRoomId, e.getMessage());
             }
         }
+
         Long memberCount = (long) (allParticipants.size());
 
-        return ChatRoomResponseDTO.toDTO(savedChatRoom, memberCount);
+        // 새 방 반환 시, 1:1 채팅방이면 상대방 정보로 DTO 구성
+        ChatRoomResponseDTO responseDTO = ChatRoomResponseDTO.toDTO(savedChatRoom, memberCount);
+
+        if (!isTeamChat && invitees.size() == 1) {
+            Employee invitee = invitees.get(0);
+
+            String inviteePositionName = (invitee.getPosition() != null) ? invitee.getPosition().getValue1() : "";
+
+            responseDTO = ChatRoomResponseDTO.builder()
+                    .chatRoomId(savedChatRoom.getChatRoomId())
+                    .name(savedChatRoom.getEmployee().getName()) // 방 생성자
+                    .displayName(invitee.getName())              // 상대방 이름
+                    .isTeam(false)
+                    .createdAt(savedChatRoom.getCreatedAt())
+                    .memberCount(memberCount)
+                    .profileImg(invitee.getProfileImg())         // 상대방 이미지
+                    .positionName(inviteePositionName)           // 상대방 직급
+                    .build();
+        }
+
+        return responseDTO;
     }
 
     // 채팅방에 사용자 초대
@@ -449,7 +478,7 @@ public class ChatServiceImpl implements ChatService {
                 .orElseThrow(() -> new EntityNotFoundException("CHAT 공통 코드를 찾을 수 없습니다"));
 
         List<AttachmentFile> allAttachments =
-        attachmentFileRepository.findAllByOwnerTypeAndOwnerIdInAndIsDeletedFalse(chatOwnerType, messageIds);
+                attachmentFileRepository.findAllByOwnerTypeAndOwnerIdInAndIsDeletedFalse(chatOwnerType, messageIds);
 
         Map<Long, List<AttachmentFileResponseDTO>> attachmentsMap = allAttachments.stream()
                 .collect(Collectors.groupingBy(
@@ -466,7 +495,12 @@ public class ChatServiceImpl implements ChatService {
                 );
                 dto.setUnreadCount(currentUnreadCount);
             }
-            dto.setAttachments(attachmentsMap.get(message.getChatMessageId()));
+            List<AttachmentFileResponseDTO> attachments = attachmentsMap.get(message.getChatMessageId());
+            dto.setAttachments(attachments);
+
+            if (attachments != null && !attachments.isEmpty() && FILE_UPLOAD_MESSAGE.equals(dto.getContent())) {
+                dto.setContent(null);
+            }
 
             return dto;
         });
@@ -558,7 +592,6 @@ public class ChatServiceImpl implements ChatService {
      */
     @Override
     @Transactional(readOnly = true)
-    // 1. 반환 타입 변경
     public List<ChatRoomListResponseDTO> findRoomsByUsername(String username) {
 
         Employee user = employeeRepository.findByUsername(username)
@@ -566,7 +599,6 @@ public class ChatServiceImpl implements ChatService {
 
         List<ChatEmployee> memberships = chatEmployeeRepository.findAllByEmployeeAndIsLeftFalse(user);
 
-        // 2. DTO 리스트 타입 변경
         List<ChatRoomListResponseDTO> dtos = new ArrayList<>();
 
         for (ChatEmployee membership : memberships) {
@@ -577,7 +609,7 @@ public class ChatServiceImpl implements ChatService {
 
             long unreadCount = 0;
             if (membership.getLastReadMessage() != null &&
-                membership.getLastReadMessage().getCreatedAt().isAfter(membership.getJoinedAt())) {
+                    membership.getLastReadMessage().getCreatedAt().isAfter(membership.getJoinedAt())) {
                 unreadCount = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThanAndEmployeeIsNotNull(
                         room,
                         membership.getLastReadMessage().getChatMessageId()
@@ -587,7 +619,7 @@ public class ChatServiceImpl implements ChatService {
             }
             long currentMemberCount = chatEmployeeRepository.countByChatRoomChatRoomIdAndIsLeftFalse(room.getChatRoomId());
 
-            // 3. 서비스 로직을 DTO 팩토리 메소드 호출로 대체 (하드코딩 제거)
+            // DTO 팩토리 메소드 호출 (직급 포함)
             if (Boolean.FALSE.equals(room.getIsTeam())) {
                 // 1:1 채팅방
                 List<ChatEmployee> allMembers = chatEmployeeRepository.findAllByChatRoomChatRoomId(room.getChatRoomId());
@@ -597,25 +629,24 @@ public class ChatServiceImpl implements ChatService {
                         .filter(emp -> !emp.getEmployeeId().equals(user.getEmployeeId()))
                         .findFirst();
 
+                String otherUserName = "정보 없음";
+                String otherUserProfileImg = null;
+                String otherUserPosition = "";
 
                 if (otherUserOpt.isPresent()) {
                     Employee otherUser = otherUserOpt.get();
+                    // 화면 표시용 이름 (username -> name 권장)
+                    otherUserName = otherUser.getName();
+                    otherUserProfileImg = otherUser.getProfileImg();
 
-                    String otherUserName;
-                    String otherUserProfileImg;
-
-                    if (otherUser == null) {
-                        otherUserName = "정보 없음";
-                        otherUserProfileImg = null;
-                    } else {
-                        otherUserName = otherUser.getUsername();
-                        otherUserProfileImg = otherUser.getProfileImg();
+                    if(otherUser.getPosition() != null) {
+                        otherUserPosition = otherUser.getPosition().getValue1();
                     }
-                    dtos.add(ChatRoomListResponseDTO.toDTO(room, otherUserName, otherUserProfileImg, unreadCount, optLastMessage, currentMemberCount));
-                } else {
-                    // (예외 처리: 상대방이 나갔거나 데이터가 없는 1:1방)
-                    // 필요시 ofLeftUserRoom() 같은 정적 메소드 DTO에 추가
                 }
+
+                dtos.add(ChatRoomListResponseDTO.toDTO(
+                        room, otherUserName, otherUserProfileImg, otherUserPosition, unreadCount, optLastMessage, currentMemberCount
+                ));
             } else {
                 // 팀 채팅방
                 dtos.add(ChatRoomListResponseDTO.toDTO(
@@ -624,37 +655,33 @@ public class ChatServiceImpl implements ChatService {
             }
         }
 
-        // 4. 정렬 로직 (DTO 필드명 확인 필요)
+        // 정렬 로직
         dtos.sort((dto1, dto2) -> {
-            if (dto1.getLastMessage() == null || dto2.getLastMessage() == null) return 0;
-            return dto2.getLastMessage().compareTo(dto1.getLastMessage());
+            if (dto1.getLastMessageCreatedAt() == null) return 1;
+            if (dto2.getLastMessageCreatedAt() == null) return -1;
+            return dto2.getLastMessageCreatedAt().compareTo(dto1.getLastMessageCreatedAt());
         });
 
         return dtos;
     }
 
-    // 알림 전송을 위한 헬퍼 메소드 추가
+    // 알림 전송을 위한 헬퍼 메소드
 
     /**
      * 새 메시지 발생 시, 관련자들에게 개인 큐로 전송
-     * 1. 채팅방 목록 업데이트 (/user/queue/chat-list-update)
-     * 2. 총 안 읽은 개수 업데이트 (/user/queue/unread-count)
-     *
-     * @param room     발생한 채팅방
-     * @param message  발생한 메시지 (LastMessage용)
-     * @param senderId 메시지 전송자 ID (알림에서 제외하기 위함, 시스템 메시지면 null)
      */
     private void notifyParticipantsOfNewMessage(ChatRoom room, ChatMessage message, Long senderId) {
 
         // 채팅방에 참여중인 모든 멤버 조회
         List<ChatEmployee> participants = chatEmployeeRepository.findAllByChatRoomChatRoomIdAndIsLeftFalse(room.getChatRoomId());
 
-        // 1:1 채팅방인 경우
+        // 1:1 채팅방인 경우 전송자(상대방) 정보를 미리 조회
         Employee sender = null;
         if (senderId != null) {
             sender = employeeRepository.findById(senderId)
                     .orElse(null);
         }
+
         for (ChatEmployee participant : participants) {
             Employee recipient = participant.getEmployee();
 
@@ -662,10 +689,10 @@ public class ChatServiceImpl implements ChatService {
 
             if (recipient == null) continue;
 
-            // 채팅방 목록 DTO
+            // 안 읽은 갯수 계산
             long unreadCount = 0;
             if (participant.getLastReadMessage() != null &&
-                participant.getLastReadMessage().getCreatedAt().isAfter(participant.getJoinedAt())) {
+                    participant.getLastReadMessage().getCreatedAt().isAfter(participant.getJoinedAt())) {
                 unreadCount = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThanAndEmployeeIsNotNull(
                         room,
                         participant.getLastReadMessage().getChatMessageId()
@@ -679,11 +706,13 @@ public class ChatServiceImpl implements ChatService {
                 // 1:1 방일 때
                 String otherUserName;
                 String otherUserProfileImg;
+                String otherUserPosition = "";
 
                 Employee otherUser = null;
                 if (senderId != null) {
-                    otherUser = sender;
+                    otherUser = sender; // 메시지 보낸 사람이 상대방
                 } else {
+                    // 시스템 메시지 등 senderId가 없는 경우, 참가자 목록에서 본인 제외하고 찾기
                     otherUser = participants.stream()
                             .map(ChatEmployee::getEmployee)
                             .filter(emp -> emp != null && !emp.getEmployeeId().equals(recipient.getEmployeeId()))
@@ -695,12 +724,15 @@ public class ChatServiceImpl implements ChatService {
                     otherUserName = "정보 없음";
                     otherUserProfileImg = null;
                 } else {
-                    otherUserName = otherUser.getUsername();
+                    otherUserName = otherUser.getName(); // 화면 표시용 이름
                     otherUserProfileImg = otherUser.getProfileImg();
+                    if(otherUser.getPosition() != null) {
+                        otherUserPosition = otherUser.getPosition().getValue1();
+                    }
                 }
 
                 listDto = ChatRoomListResponseDTO.toDTO(
-                        room, otherUserName, otherUserProfileImg,  unreadCount, Optional.of(message), currentMemberCount
+                        room, otherUserName, otherUserProfileImg, otherUserPosition, unreadCount, Optional.of(message), currentMemberCount
                 );
             } else {
                 // 팀 채팅방일 때
@@ -724,9 +756,6 @@ public class ChatServiceImpl implements ChatService {
 
     /**
      * 특정 사용자의 총 안 읽은 메시지 개수를 계산하여 개인 큐로 전송합니다.
-     *
-     * @param employeeId 대상 직원 ID
-     * @param username   대상 직원 username (STOMP 전송용)
      */
     private void calculateAndSendTotalUnreadCount(Long employeeId, String username) {
         long totalUnread = chatEmployeeRepository.sumTotalUnreadMessagesByEmployeeId(employeeId);
@@ -760,14 +789,14 @@ public class ChatServiceImpl implements ChatService {
 
         ChatRoom room = membership.getChatRoom();
 
-        // findRoomsByUsername와 동일한 로직 수행 (마지막 메시지)
+        // 마지막 메시지 조회
         Optional<ChatMessage> optLastMessage = chatMessageRepository
                 .findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc(room, membership.getJoinedAt());
 
-        // findRoomsByUsername와 동일한 로직 수행 (안 읽은 개수)
+        // 안 읽은 개수
         long unreadCount = 0;
         if (membership.getLastReadMessage() != null &&
-            membership.getLastReadMessage().getCreatedAt().isAfter(membership.getJoinedAt())) {
+                membership.getLastReadMessage().getCreatedAt().isAfter(membership.getJoinedAt())) {
             unreadCount = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThanAndEmployeeIsNotNull(
                     room,
                     membership.getLastReadMessage().getChatMessageId()
@@ -778,7 +807,7 @@ public class ChatServiceImpl implements ChatService {
 
         long currentMemberCount = chatEmployeeRepository.countByChatRoomChatRoomIdAndIsLeftFalse(room.getChatRoomId());
 
-        // findRoomsByUsername와 동일한 DTO 변환 로직 수행
+        // DTO 생성 로직
         if (Boolean.FALSE.equals(room.getIsTeam())) {
             // 1:1 채팅방: 상대방 정보 필요
             List<ChatEmployee> allMembers = chatEmployeeRepository.findAllByChatRoomChatRoomId(room.getChatRoomId());
@@ -793,20 +822,24 @@ public class ChatServiceImpl implements ChatService {
 
                 String otherUserName;
                 String otherUserProfileImg;
+                String otherUserPosition = "";
 
                 if (otherUser == null) {
                     otherUserName = "정보 없음";
                     otherUserProfileImg = null;
                 } else {
-                    otherUserName = otherUser.getUsername();
+                    otherUserName = otherUser.getName(); // 화면 표시용 이름
                     otherUserProfileImg = otherUser.getProfileImg();
+                    if(otherUser.getPosition() != null) {
+                        otherUserPosition = otherUser.getPosition().getValue1();
+                    }
                 }
+
                 return ChatRoomListResponseDTO.toDTO(
-                        room, otherUserName, otherUserProfileImg, unreadCount, optLastMessage, currentMemberCount
+                        room, otherUserName, otherUserProfileImg, otherUserPosition, unreadCount, optLastMessage, currentMemberCount
                 );
             } else {
-                // (예외: 상대방이 나간 1:1 방) - findRoomsByUsername의 로직을 그대로 따름
-                // DTO에 정적 메소드 (ofLeftUserRoom 등)가 있다면 그것을 사용
+                // (예외: 상대방이 나간 1:1 방 등)
                 throw new EntityNotFoundException("1:1 채팅방의 상대방 정보를 찾을 수 없습니다.");
             }
         } else {
@@ -847,7 +880,15 @@ public class ChatServiceImpl implements ChatService {
             }
         }
 
-        String messageContent = (content == null || content.isBlank()) ? "" : content.trim();
+        String messageContent;
+        boolean isPlaceholder = false;
+
+        if (content == null || content.isBlank()) {
+            messageContent = FILE_UPLOAD_MESSAGE;
+            isPlaceholder = true;
+        } else {
+            messageContent = content.trim();
+        }
 
         // 메시지 엔티티 먼저 저장
         ChatMessage message = ChatMessage.createChatMessage(room, sender, messageContent);
@@ -888,6 +929,10 @@ public class ChatServiceImpl implements ChatService {
         ChatMessageResponseDTO dto = ChatMessageResponseDTO.toDTO(savedMessage);
         dto.setUnreadCount(unread);
         dto.setAttachments(finalAttachments);
+
+        if (isPlaceholder) {
+            dto.setContent(null);
+        }
 
         // STOMP로 브로드 캐스트 (HTTP로 받고 전파는 STOMP)
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
