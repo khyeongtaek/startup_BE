@@ -2,6 +2,7 @@ package org.goodee.startup_BE.work_log.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
+import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.work_log.entity.WorkLog;
 
 import java.time.LocalDateTime;
@@ -34,6 +35,9 @@ public class WorkLogResponseDTO {
 	@Schema(description = "내용", example = "미팅 결과 요약 및 액션 아이템 정리")
 	private String content;         // 내용
 	
+	private Long workTypeId;
+	private Long workOptionId;
+	
 	@Builder.Default
 	@Schema(description = "읽음 여부 (리스트에서 true면 이미 열람함)", example = "false")
 	private Boolean isRead = false; // 읽음 여부
@@ -41,11 +45,16 @@ public class WorkLogResponseDTO {
 	public static WorkLogResponseDTO toDTO(WorkLog workLog) {
 		if(workLog == null) return null;
 		
+		Employee writer = workLog.getEmployee();
+		String writerName = (writer == null) ? "삭제된 사용자" : writer.getName();;
+		
 		return WorkLogResponseDTO.builder()
 			       .workLogId(workLog.getWorkLogId())
-			       .employeeName(workLog.getEmployee().getName())
+			       .employeeName(writerName)
 			       .workTypeName(workLog.getWorkType().getValue2())
 			       .workOptionName(workLog.getWorkOption().getValue2())
+			       .workTypeId(workLog.getWorkType().getCommonCodeId())
+			       .workOptionId(workLog.getWorkOption().getCommonCodeId())
 			       .workDate(workLog.getWorkDate())
 			       .title(workLog.getTitle())
 			       .content(workLog.getContent())

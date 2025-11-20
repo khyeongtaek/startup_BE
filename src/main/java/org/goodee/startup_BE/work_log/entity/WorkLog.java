@@ -22,7 +22,7 @@ public class WorkLog {
     private Long workLogId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
+    @JoinColumn(name = "employee_id")
     @Comment("작성자(직원) ID")
     private Employee employee;
 
@@ -64,13 +64,13 @@ public class WorkLog {
     @PrePersist
     protected void onPrePersist() {
         if(isDeleted == null) isDeleted = false;
-//        if(createdAt == null) createdAt = LocalDateTime.now();
-//        updatedAt = LocalDateTime.now();
+        if(createdAt == null) createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
     protected void onPreUpdate() {
-//        updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
     protected WorkLog() {}
