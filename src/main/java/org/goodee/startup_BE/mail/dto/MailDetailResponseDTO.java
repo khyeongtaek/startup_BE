@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import org.goodee.startup_BE.common.dto.AttachmentFileResponseDTO;
+import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.mail.entity.Mail;
 import org.goodee.startup_BE.mail.entity.Mailbox;
 
@@ -83,15 +84,20 @@ public class MailDetailResponseDTO {
 		List<String> safeBcc = (bccList == null) ? Collections.emptyList() : bccList;
 		List<AttachmentFileResponseDTO> safeFiles = (attachmentFiles == null) ? Collections.emptyList() : attachmentFiles;
 		
+		Employee sender = mail.getEmployee();
+		Long senderId = (sender == null) ? null : sender.getEmployeeId();
+		String senderName = (sender == null) ? "정보 없음" : sender.getName();
+		String senderEmail = (sender == null) ? null : sender.getEmail();
+		
 		return MailDetailResponseDTO.builder()
 			       .mailId(mail.getMailId())
 			       .title(mail.getTitle())
 			       .content(mail.getContent())
 			       .sendAt(mail.getSendAt())
 			       .emlPath(mail.getEmlPath())
-			       .senderId(mail.getEmployee().getEmployeeId())
-			       .senderName(mail.getEmployee().getName())
-			       .senderEmail(mail.getEmployee().getEmail())
+			       .senderId(senderId)
+			       .senderName(senderName)
+			       .senderEmail(senderEmail)
 			       .to(safeTo)
 			       .cc(safeCc)
 			       .bcc(safeBcc)
