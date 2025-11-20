@@ -203,25 +203,13 @@ public class AttendanceServiceImpl implements AttendanceService {
         Attendance attendance = attendanceRepository.findCurrentWorkingRecord(employeeId)
                 .orElseThrow(() -> new IllegalStateException("출근 기록이 없습니다."));
 
-        // 근무 상태 코드 CLOCK_OUT 조회
-        List<CommonCode> codes = commonCodeRepository
-                .findByCodeStartsWithAndKeywordExactMatchInValues(WorkStatus.PREFIX, WORK_STATUS_CLOCK_OUT);
-        if (codes.isEmpty()) {
-            throw new AttendanceException("근무 상태 코드 'CLOCK_OUT'을 찾을 수 없습니다.");
-        }
-
-        CommonCode workStatus = codes.get(0);
-
-        // 이미 퇴근한 기록 방지
         if (attendance.getEndTime() != null) {
             throw new IllegalStateException("이미 퇴근 처리가 완료된 상태입니다.");
         }
 
-        // 퇴근 시간 업데이트
-        attendance.changeWorkStatus(workStatus);
-        attendance.update(attendance.getStartTime(), LocalDateTime.now());
-
         LocalDateTime endTime = LocalDateTime.now();
+
+        // 1. 퇴근 시간 업데이트 (1번만)
         attendance.update(attendance.getStartTime(), endTime);
 
         // 조퇴 판정
