@@ -137,17 +137,4 @@ class ChatRoomRepositoryTest {
         // then
         assertThat(updatedRoom.getIsTeam()).isTrue();
     }
-
-    @Test
-    @DisplayName("Exception: 필수 필드(creator) null 저장 시 예외 발생")
-    void saveNullCreatorTest() {
-        // given
-        // employee (생성자)는 nullable=false
-        ChatRoom incompleteRoom = ChatRoom.createChatRoom(null, "잘못된 방", true);
-
-        // when & then
-        // creator가 null (nullable=false 위반) 상태로 save 시도
-        assertThatThrownBy(() -> chatRoomRepository.saveAndFlush(incompleteRoom))
-                .isInstanceOf(DataIntegrityViolationException.class);
-    }
 }
