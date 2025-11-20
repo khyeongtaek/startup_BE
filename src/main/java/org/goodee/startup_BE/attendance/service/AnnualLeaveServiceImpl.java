@@ -27,7 +27,7 @@ public class AnnualLeaveServiceImpl implements AnnualLeaveService {
         Long currentYear = (long) LocalDate.now().getYear();
         return annualLeaveRepository
                 .findByEmployeeEmployeeIdAndYear(employeeId, currentYear)
-                .orElseGet(() -> createIfNotExists(employeeId));
+                .orElse(null);
     }
 
     //  직원 연차 자동 생성 (없을 경우)

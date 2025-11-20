@@ -60,7 +60,22 @@ public class AttendanceServiceImpl implements AttendanceService {
 
         Attendance attendance = attendanceRepository
                 .findByEmployeeEmployeeIdAndAttendanceDate(employeeId, today)
-                .orElseThrow(() -> new AttendanceException("오늘 출근 기록이 없습니다."));
+                .orElse(null);
+
+        if (attendance == null) {
+            return AttendanceResponseDTO.builder()
+                    .attendanceId(null)
+                    .employeeId(employeeId)
+                    .employeeName(null)
+                    .attendanceDate(today)
+                    .workDate(0L)
+                    .startTime(null)
+                    .endTime(null)
+                    .workStatus(null)
+                    .createdAt(null)
+                    .updatedAt(null)
+                    .build();
+        }
 
         return AttendanceResponseDTO.builder()
                 .attendanceId(attendance.getAttendanceId())
@@ -430,44 +445,55 @@ public class AttendanceServiceImpl implements AttendanceService {
     @Transactional(readOnly = true)
     public Map<String, Object> getAttendanceSummary(Long employeeId) {
 
-        // (1) 전체 근무일수
-        Long totalDays = attendanceRepository.countByEmployeeEmployeeId(employeeId);
-        if (totalDays == null) totalDays = 0L;
+        try {
+            // (1) 전체 근무일수
+            Long totalDays = attendanceRepository.countByEmployeeEmployeeId(employeeId);
+            if (totalDays == null) totalDays = 0L;
 
-        // (2) 전체 근무시간 (출근~퇴근 시간 합계)
-        List<Attendance> allRecords = attendanceRepository.findByEmployeeEmployeeId(employeeId);
-        Long totalMinutes = allRecords.stream()
-                .filter(a -> a.getStartTime() != null && a.getEndTime() != null)
-                .mapToLong(a -> Duration.between(a.getStartTime(), a.getEndTime()).toMinutes())
-                .sum();
+            // (2) 전체 근무시간 (출근~퇴근 시간 합계)
+            List<Attendance> allRecords = attendanceRepository.findByEmployeeEmployeeId(employeeId);
+            Long totalMinutes = allRecords.stream()
+                    .filter(a -> a.getStartTime() != null && a.getEndTime() != null)
+                    .mapToLong(a -> Duration.between(a.getStartTime(), a.getEndTime()).toMinutes())
+                    .sum();
 
-        Long totalHours = totalMinutes / 60;
+            Long totalHours = totalMinutes / 60;
 
-        // (3) 잔여 연차
-        AnnualLeave leave = annualLeaveService.getAnnualLeave(employeeId);
-        Double remainingLeave = 0.0;
-        if (leave != null && leave.getRemainingDays() != null) {
-            remainingLeave = leave.getRemainingDays();
+            // (3) 잔여 연차
+            AnnualLeave leave = annualLeaveService.getAnnualLeave(employeeId);
+            Double remainingLeave = 0.0;
+            if (leave != null && leave.getRemainingDays() != null) {
+                remainingLeave = leave.getRemainingDays();
+            }
+
+            // (4) 이번 주 지각 횟수
+            LocalDate startOfWeek = LocalDate.now().with(DayOfWeek.MONDAY);
+            LocalDate endOfWeek = LocalDate.now().with(DayOfWeek.SUNDAY);
+            Long lateCount = attendanceRepository.countLatesThisWeek(employeeId, startOfWeek, endOfWeek);
+            if (lateCount == null) lateCount = 0L;
+
+            // (5) 결과 맵 구성
+            Map<String, Object> result = new HashMap<>();
+            result.put("totalDays", totalDays);
+            result.put("totalHours", totalHours);
+            result.put("totalMinutes", totalMinutes);
+            result.put("remainingLeave", remainingLeave);
+            result.put("lateCount", lateCount);
+
+            return result;
+        } catch (Exception e) {
+            // 🔥 데이터 없을 때도 절대 500 발생시키지 않기 위해 안전하게 빈 summary 반환
+            Map<String, Object> empty = new HashMap<>();
+            empty.put("totalDays", 0);
+            empty.put("totalHours", 0);
+            empty.put("totalMinutes", 0);
+            empty.put("remainingLeave", 0);
+            empty.put("lateCount", 0);
+            return empty;
+
         }
-
-        // (4) 이번 주 지각 횟수
-        LocalDate startOfWeek = LocalDate.now().with(DayOfWeek.MONDAY);
-        LocalDate endOfWeek = LocalDate.now().with(DayOfWeek.SUNDAY);
-        Long lateCount = attendanceRepository.countLatesThisWeek(employeeId, startOfWeek, endOfWeek);
-        if (lateCount == null) lateCount = 0L;
-
-        // (5) 결과 맵 구성
-        Map<String, Object> result = new HashMap<>();
-        result.put("totalDays", totalDays);
-        result.put("totalHours", totalHours);
-        result.put("totalMinutes", totalMinutes);
-        result.put("remainingLeave", remainingLeave);
-        result.put("lateCount", lateCount);
-
-        return result;
     }
-
-    // 🔥 휴가 / 반차 등록: VacationType(ANNUAL / MORNING_HALF / AFTERNOON_HALF)에 따라 상태 코드 다르게 반영
+    //  휴가 / 반차 등록: VacationType(ANNUAL / MORNING_HALF / AFTERNOON_HALF)에 따라 상태 코드 다르게 반영
     @Override
     @Transactional
     public void markVacation(Long employeeId, LocalDate date, String vacationType) {
