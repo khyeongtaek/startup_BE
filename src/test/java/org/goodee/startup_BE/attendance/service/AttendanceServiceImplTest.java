@@ -91,32 +91,45 @@ class AttendanceServiceImplTest {
         @DisplayName("성공 - 정상 출근")
         void clockIn_Success() {
             Long employeeId = 1L;
-            LocalDate today = LocalDate.now();
 
-            given(attendanceRepository.findByEmployeeEmployeeIdAndAttendanceDate(employeeId, today))
-                    .willReturn(Optional.empty());
-            given(employeeRepository.findById(employeeId)).willReturn(Optional.of(mockEmployee));
-            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "NORMAL"))
-                    .willReturn(List.of(mockWorkStatusNormal));
+            LocalDateTime fakeNow = LocalDateTime.of(2025, 1, 1, 8, 30);
+            LocalDate fakeToday = fakeNow.toLocalDate();
 
-            lenient().when(commonCodeRepository
-                            .findByCodeStartsWithAndKeywordExactMatchInValues("WS", "LATE"))
-                    .thenReturn(List.of(mockWorkStatusLate));
+            try (MockedStatic<LocalDateTime> mocked = mockStatic(LocalDateTime.class, CALLS_REAL_METHODS)) {
 
-            lenient().when(attendanceRepository.countByEmployeeEmployeeId(employeeId))
-                    .thenReturn(0L);
+                // now(), now(zoneId) 모두 고정
+                mocked.when(LocalDateTime::now).thenReturn(fakeNow);
+                mocked.when(() -> LocalDateTime.now(any(ZoneId.class))).thenReturn(fakeNow);
 
-            lenient().when(annualLeaveService.createIfNotExists(employeeId))
-                    .thenReturn(null);
+                // LocalDate.now()도 고정 (중요)
+                try (MockedStatic<LocalDate> mockedDate = mockStatic(LocalDate.class, CALLS_REAL_METHODS)) {
+                    mockedDate.when(LocalDate::now).thenReturn(fakeToday);
 
-            given(attendanceRepository.save(any(Attendance.class)))
-                    .willAnswer(invocation -> invocation.getArgument(0));
+                    given(attendanceRepository.findByEmployeeEmployeeIdAndAttendanceDate(employeeId, fakeToday))
+                            .willReturn(Optional.empty());
+                    given(employeeRepository.findById(employeeId)).willReturn(Optional.of(mockEmployee));
+                    given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "NORMAL"))
+                            .willReturn(List.of(mockWorkStatusNormal));
 
-            AttendanceResponseDTO result = attendanceService.clockIn(employeeId);
+                    lenient().when(commonCodeRepository
+                                    .findByCodeStartsWithAndKeywordExactMatchInValues("WS", "LATE"))
+                            .thenReturn(List.of(mockWorkStatusLate));
 
-            assertThat(result).isNotNull();
-            assertThat(result.getWorkStatus()).isIn("NORMAL", "LATE");
-            verify(attendanceRepository, times(1)).save(any(Attendance.class));
+                    lenient().when(attendanceRepository.countByEmployeeEmployeeId(employeeId))
+                            .thenReturn(0L);
+                    lenient().when(annualLeaveService.createIfNotExists(employeeId))
+                            .thenReturn(null);
+
+                    given(attendanceRepository.save(any(Attendance.class)))
+                            .willAnswer(invocation -> invocation.getArgument(0));
+
+                    AttendanceResponseDTO result = attendanceService.clockIn(employeeId);
+
+                    assertThat(result).isNotNull();
+                    assertThat(result.getWorkStatus()).isIn("NORMAL", "LATE");
+                    verify(attendanceRepository, times(1)).save(any(Attendance.class));
+                }
+            }
         }
 
         @Test
