@@ -185,6 +185,110 @@ public class MailServiceImpl implements MailService{
 		}
 	}
 	
+  // 수신자 상세정보(name, email, profile, position) - 리스트 조회
+  private List<MailReceiverDTO> resolveReceiverInfos(Mail mail, CommonCode toCode) {
+	  
+	  // 1) 이 메일의 TO 수신자 이메일들 조회
+	  List<String> receiverEmails = mailReceiverRepository
+		                                .findAllByMailAndType(mail, toCode)
+		                                .stream()
+		                                .map(MailReceiver::getEmail)
+		                                .map(String::trim)
+		                                .filter(e -> !e.isEmpty())
+		                                .toList();
+	  
+	  if (receiverEmails.isEmpty()) return Collections.emptyList();
+	  
+	  // 2) 이메일 기반 Employee 전체 조회
+	  List<Employee> employees = employeeRepository.findAllByEmailIn(receiverEmails);
+	  
+	  Map<String, Employee> empMap = employees.stream()
+		                                 .filter(e -> e.getEmail() != null)
+		                                 .collect(Collectors.toMap(
+			                                 e -> e.getEmail().trim().toLowerCase(),
+			                                 e -> e,
+			                                 (a, b) -> a
+		                                 ));
+	  
+	  // 3) 순서 유지한 DTO 생성
+	  return receiverEmails.stream()
+		         .map(email -> {
+			         Employee emp = empMap.get(email.trim().toLowerCase());
+			         
+			         if (emp == null) {
+				         return MailReceiverDTO.builder()
+					                .employeeId(null)
+					                .name(email)
+					                .email(email)
+					                .profileImg(null)
+					                .position(null)
+					                .department(null)
+					                .build();
+			         }
+			         
+			         return MailReceiverDTO.builder()
+				                .employeeId(emp.getEmployeeId())
+				                .name(emp.getName())
+				                .email(emp.getEmail())
+				                .profileImg(emp.getProfileImg())
+				                .position(emp.getPosition() != null ? emp.getPosition().getValue1() : null) // 직급
+				                .department(emp.getDepartment() != null ? emp.getDepartment().getValue1() : null)
+				                .build();
+		         })
+		         .toList();
+  }
+	
+	private List<MailReceiverDTO> mapReceiverDTO(Mail mail, CommonCode typeCode) {
+		
+		// 수신자 엔티티 조회
+		List<MailReceiver> receivers = mailReceiverRepository.findAllByMailAndType(mail, typeCode);
+		
+		// 이메일만 추출
+		List<String> emails = receivers.stream()
+			                      .map(MailReceiver::getEmail)
+			                      .filter(Objects::nonNull)
+			                      .map(String::trim)
+			                      .toList();
+		
+		if (emails.isEmpty()) return Collections.emptyList();
+		
+		// 이메일로 직원 조회
+		List<Employee> employees = employeeRepository.findAllByEmailIn(emails);
+		
+		// map(email → 직원)
+		Map<String, Employee> byEmail = employees.stream()
+			                                .collect(Collectors.toMap(
+				                                e -> e.getEmail().trim().toLowerCase(),
+				                                e -> e,
+				                                (a, b) -> a
+			                                ));
+		
+		// 최종 MailReceiverDTO 변환
+		return emails.stream().map(email -> {
+			String key = email.trim().toLowerCase();
+			Employee emp = byEmail.get(key);
+			
+			if (emp == null) {
+				return MailReceiverDTO.builder()
+					       .email(email)
+					       .name("정보 없음")
+					       .profileImg(null)
+					       .position(null)
+					       .department(null)
+					       .employeeId(null)
+					       .build();
+			}
+			
+			return MailReceiverDTO.builder()
+				       .employeeId(emp.getEmployeeId())
+				       .email(emp.getEmail())
+				       .name(emp.getName())
+				       .profileImg(emp.getProfileImg())
+				       .position(emp.getPosition() != null ? emp.getPosition().getValue1() : null)
+				       .department(emp.getDepartment() != null ? emp.getDepartment().getValue1() : null)
+				       .build();
+		}).toList();
+	}
 	
 	// 메일 작성
 	@Override
@@ -342,14 +446,15 @@ public class MailServiceImpl implements MailService{
 			commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(ReceiverType.PREFIX, ReceiverType.BCC.name()), "BCC 코드가 존재하지 않습니다."
 		);
 		
-		List<String> toList = mapEmailWithName(mail, toCode);
-		List<String> ccList = mapEmailWithName(mail, ccCode);
-		List<String> bccList = null;
+		List<MailReceiverDTO> toList = mapReceiverDTO(mail, toCode);
+		List<MailReceiverDTO> ccList = mapReceiverDTO(mail, ccCode);
+		List<MailReceiverDTO> bccList = null;
 		
-		boolean ISender = mail.getEmployee() != null && mail.getEmployee().getEmployeeId().equals(employee.getEmployeeId());
+		boolean ISender = mail.getEmployee() != null &&
+			                  mail.getEmployee().getEmployeeId().equals(employee.getEmployeeId());
+		
 		if (ISender) {
-			// 숨은참조는 작성자만 볼 수 있음
-			bccList = mapEmailWithName(mail, bccCode);
+			bccList = mapReceiverDTO(mail, bccCode);
 		}
 		
 		// 첨부파일 조회
@@ -426,17 +531,21 @@ public class MailServiceImpl implements MailService{
 		return mailboxList.map(mb -> {
 			Mail mail = mb.getMail();
 			
-			List<String> receiverNames = resolveReceiverNames(mail, toCode);
+			List<MailReceiverDTO> receivers = resolveReceiverInfos(mail, toCode);
 			Employee sender = mail.getEmployee();
 			
 			return MailboxListDTO.builder()
 				       .boxId(mb.getBoxId())
 				       .mailId(mail.getMailId())
 				       .senderName(resolveSenderName(sender))
+				       .senderPosition(sender != null ? sender.getPosition().getValue1() : null)
+				       .senderDepartment(sender != null ? sender.getDepartment().getValue1() : null)
+				       .senderProfileImg(sender != null ? sender.getProfileImg() : null)
+				       .senderEmail(sender != null ? sender.getEmail() : null)
 				       .title(mail.getTitle())
 				       .receivedAt(mail.getSendAt())
 				       .isRead(Boolean.TRUE.equals(mb.getIsRead()))
-				       .receivers(receiverNames)
+				       .receivers(receivers)
 				       .build();
 		});
 	}

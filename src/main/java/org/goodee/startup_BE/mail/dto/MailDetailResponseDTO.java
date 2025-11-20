@@ -41,14 +41,17 @@ public class MailDetailResponseDTO {
 	private String senderName;
 	@Schema(description = "발신자 이메일", example = "sender@example.com")
 	private String senderEmail;
+	private String senderProfileImg;
+	private String senderPosition;
+	private String senderDepartment;
 	
 	// 수신자 정보
 	@ArraySchema(schema = @Schema(description = "수신자 이메일", example = "user1@example.com"))
-	private List<String> to;
+	private List<MailReceiverDTO> to;
 	@ArraySchema(schema = @Schema(description = "참조자 이메일", example = "user2@example.com"))
-	private List<String> cc;
+	private List<MailReceiverDTO> cc;
 	@ArraySchema(schema = @Schema(description = "숨은참조자 이메일", example = "user3@example.com"))
-	private List<String> bcc;
+	private List<MailReceiverDTO> bcc;
 	
 	// 메일함 정보
 	@Schema(description = "메일함 항목 ID(boxId)", example = "55")
@@ -76,18 +79,21 @@ public class MailDetailResponseDTO {
 	private int attachmentCount;
 	
 	public static MailDetailResponseDTO toDTO(
-		Mail mail, List<String> toList, List<String> ccList, List<String> bccList,
+		Mail mail, List<MailReceiverDTO> toList, List<MailReceiverDTO> ccList, List<MailReceiverDTO> bccList,
 		Mailbox mailbox, List<AttachmentFileResponseDTO> attachmentFiles
 	) {
-		List<String> safeTo  = (toList  == null) ? Collections.emptyList() : toList;
-		List<String> safeCc  = (ccList  == null) ? Collections.emptyList() : ccList;
-		List<String> safeBcc = (bccList == null) ? Collections.emptyList() : bccList;
+		List<MailReceiverDTO> safeTo  = (toList  == null) ? Collections.emptyList() : toList;
+		List<MailReceiverDTO> safeCc  = (ccList  == null) ? Collections.emptyList() : ccList;
+		List<MailReceiverDTO> safeBcc = (bccList == null) ? Collections.emptyList() : bccList;
 		List<AttachmentFileResponseDTO> safeFiles = (attachmentFiles == null) ? Collections.emptyList() : attachmentFiles;
 		
 		Employee sender = mail.getEmployee();
 		Long senderId = (sender == null) ? null : sender.getEmployeeId();
 		String senderName = (sender == null) ? "정보 없음" : sender.getName();
 		String senderEmail = (sender == null) ? null : sender.getEmail();
+		String senderProfileImg = (sender == null) ? null : sender.getProfileImg();
+		String senderPosition = (sender == null) ? null : sender.getPosition().getValue1();
+		String senderDepartment = (sender == null) ? null : sender.getDepartment().getValue1();
 		
 		return MailDetailResponseDTO.builder()
 			       .mailId(mail.getMailId())
@@ -98,6 +104,9 @@ public class MailDetailResponseDTO {
 			       .senderId(senderId)
 			       .senderName(senderName)
 			       .senderEmail(senderEmail)
+			       .senderProfileImg(senderProfileImg)
+			       .senderPosition(senderPosition)
+			       .senderDepartment(senderDepartment)
 			       .to(safeTo)
 			       .cc(safeCc)
 			       .bcc(safeBcc)
