@@ -7,6 +7,7 @@ import org.goodee.startup_BE.chat.dto.*;
 import org.goodee.startup_BE.chat.entity.ChatEmployee;
 import org.goodee.startup_BE.chat.entity.ChatMessage;
 import org.goodee.startup_BE.chat.entity.ChatRoom;
+import org.goodee.startup_BE.chat.enums.MessageType;
 import org.goodee.startup_BE.chat.repository.ChatEmployeeRepository;
 import org.goodee.startup_BE.chat.repository.ChatMessageRepository;
 import org.goodee.startup_BE.chat.repository.ChatRoomRepository;
@@ -101,6 +102,8 @@ public class ChatServiceImpl implements ChatService {
                 List<ChatEmployee> members = chatEmployeeRepository.findAllByChatRoomChatRoomId(existingRoomId);
                 ChatMessage lastMessageForNotify = null;
 
+                long currentMemberCount = members.stream().filter(member -> Boolean.FALSE.equals(member.getIsLeft())).count();
+
                 for (ChatEmployee member : members) {
                     if (Boolean.TRUE.equals(member.getIsLeft())) {
                         member.rejoinChatRoom(); // isLeft = false, joinedAt = now()
@@ -111,7 +114,7 @@ public class ChatServiceImpl implements ChatService {
                 }
 
                 // 프론트엔드가 이 방으로 이동할 수 있도록 DTO 반환
-                ChatRoomResponseDTO roomDTO = ChatRoomResponseDTO.toDTO(existingRoom);
+                ChatRoomResponseDTO roomDTO = ChatRoomResponseDTO.toDTO(existingRoom, currentMemberCount);
 
                 // 두 참가자에게 기존 방이 재활성화되었음을 알림 (채팅 목록 갱신)
                 // (findRoomsByUsername의 로직과 유사하게 DTO를 만들어 전송)
@@ -137,7 +140,7 @@ public class ChatServiceImpl implements ChatService {
 
         // "채팅방이 생성되었습니다" 시스템 메시지 생성
         String systemMessageContent = String.format("%s님이 채팅방을 생성 했습니다.", creator.getName());
-        ChatMessage initialMessage = ChatMessage.createChatMessage(savedChatRoom, null, systemMessageContent);
+        ChatMessage initialMessage = ChatMessage.createSystemMessage(savedChatRoom, systemMessageContent);
         ChatMessage savedInitialMessage = chatMessageRepository.save(initialMessage);
 
         // 채팅방 생성자 및 초대 대상 ChatEmployee 저장
@@ -188,7 +191,9 @@ public class ChatServiceImpl implements ChatService {
                 log.warn("채팅방 생성 알림 전송에 실패 하였습니다.", chatRoomId, e.getMessage());
             }
         }
-        return ChatRoomResponseDTO.toDTO(savedChatRoom);
+        Long memberCount = (long) (allParticipants.size());
+
+        return ChatRoomResponseDTO.toDTO(savedChatRoom, memberCount);
     }
 
     // 채팅방에 사용자 초대
@@ -257,7 +262,7 @@ public class ChatServiceImpl implements ChatService {
 
         String names = allAffectedInvitees.stream().map(Employee::getName).collect(Collectors.joining(", "));
         ChatMessage systemMsg = chatMessageRepository.save(
-                ChatMessage.createChatMessage(room, null, inviter.getName() + "님이 " + names + "님을 초대했습니다.")
+                ChatMessage.createSystemMessage(room, inviter.getName() + "님이 " + names + "님을 초대했습니다.")
         );
 
         List<ChatEmployee> newLinks = newInvitees.stream()
@@ -321,7 +326,7 @@ public class ChatServiceImpl implements ChatService {
         // 팀 채팅방인 경우에만 시스템 메시지 생성/브로드캐스트
         final ChatMessage systemMessage = isTeamRoom
                 ? chatMessageRepository.save(
-                ChatMessage.createChatMessage(room, null, leaver.getName() + "님이 채팅방에서 나가셨습니다."))
+                ChatMessage.createSystemMessage(room, leaver.getName() + "님이 채팅방에서 나가셨습니다."))
                 : null;
 
         // 남은 인원 수 확인(0명이면 채팅방 삭제)
@@ -580,6 +585,7 @@ public class ChatServiceImpl implements ChatService {
             } else {
                 unreadCount = chatMessageRepository.countByChatRoomAndCreatedAtAfterAndEmployeeIsNotNull(room, membership.getJoinedAt());
             }
+            long currentMemberCount = chatEmployeeRepository.countByChatRoomChatRoomIdAndIsLeftFalse(room.getChatRoomId());
 
             // 3. 서비스 로직을 DTO 팩토리 메소드 호출로 대체 (하드코딩 제거)
             if (Boolean.FALSE.equals(room.getIsTeam())) {
@@ -591,10 +597,21 @@ public class ChatServiceImpl implements ChatService {
                         .filter(emp -> !emp.getEmployeeId().equals(user.getEmployeeId()))
                         .findFirst();
 
+
                 if (otherUserOpt.isPresent()) {
-                    dtos.add(ChatRoomListResponseDTO.toDTO(
-                            room, otherUserOpt.get(), unreadCount, optLastMessage
-                    ));
+                    Employee otherUser = otherUserOpt.get();
+
+                    String otherUserName;
+                    String otherUserProfileImg;
+
+                    if (otherUser == null) {
+                        otherUserName = "정보 없음";
+                        otherUserProfileImg = null;
+                    } else {
+                        otherUserName = otherUser.getUsername();
+                        otherUserProfileImg = otherUser.getProfileImg();
+                    }
+                    dtos.add(ChatRoomListResponseDTO.toDTO(room, otherUserName, otherUserProfileImg, unreadCount, optLastMessage, currentMemberCount));
                 } else {
                     // (예외 처리: 상대방이 나갔거나 데이터가 없는 1:1방)
                     // 필요시 ofLeftUserRoom() 같은 정적 메소드 DTO에 추가
@@ -602,7 +619,7 @@ public class ChatServiceImpl implements ChatService {
             } else {
                 // 팀 채팅방
                 dtos.add(ChatRoomListResponseDTO.toDTO(
-                        room, unreadCount, optLastMessage
+                        room, unreadCount, optLastMessage, currentMemberCount
                 ));
             }
         }
@@ -633,13 +650,17 @@ public class ChatServiceImpl implements ChatService {
         List<ChatEmployee> participants = chatEmployeeRepository.findAllByChatRoomChatRoomIdAndIsLeftFalse(room.getChatRoomId());
 
         // 1:1 채팅방인 경우
-        Employee otherUserFor1to1 = null;
-        if (Boolean.FALSE.equals(room.getIsTeam()) && senderId != null) {
-            otherUserFor1to1 = employeeRepository.findById(senderId)
+        Employee sender = null;
+        if (senderId != null) {
+            sender = employeeRepository.findById(senderId)
                     .orElse(null);
         }
         for (ChatEmployee participant : participants) {
             Employee recipient = participant.getEmployee();
+
+            long currentMemberCount = chatEmployeeRepository.countByChatRoomChatRoomIdAndIsLeftFalse(room.getChatRoomId());
+
+            if (recipient == null) continue;
 
             // 채팅방 목록 DTO
             long unreadCount = 0;
@@ -656,21 +677,35 @@ public class ChatServiceImpl implements ChatService {
             ChatRoomListResponseDTO listDto;
             if (Boolean.FALSE.equals(room.getIsTeam())) {
                 // 1:1 방일 때
-                Employee otherUser = (otherUserFor1to1 != null) ? otherUserFor1to1 :
-                        participants.stream()
-                                .map(ChatEmployee::getEmployee)
-                                .filter(emp -> !emp.getEmployeeId().equals(recipient.getEmployeeId()))
-                                .findFirst().orElse(null);
+                String otherUserName;
+                String otherUserProfileImg;
 
-                if (otherUser == null) continue;
+                Employee otherUser = null;
+                if (senderId != null) {
+                    otherUser = sender;
+                } else {
+                    otherUser = participants.stream()
+                            .map(ChatEmployee::getEmployee)
+                            .filter(emp -> emp != null && !emp.getEmployeeId().equals(recipient.getEmployeeId()))
+                            .findFirst()
+                            .orElse(null);
+                }
+
+                if (otherUser == null) {
+                    otherUserName = "정보 없음";
+                    otherUserProfileImg = null;
+                } else {
+                    otherUserName = otherUser.getUsername();
+                    otherUserProfileImg = otherUser.getProfileImg();
+                }
 
                 listDto = ChatRoomListResponseDTO.toDTO(
-                        room, otherUser, unreadCount, Optional.of(message)
+                        room, otherUserName, otherUserProfileImg,  unreadCount, Optional.of(message), currentMemberCount
                 );
             } else {
                 // 팀 채팅방일 때
                 listDto = ChatRoomListResponseDTO.toDTO(
-                        room, unreadCount, Optional.of(message)
+                        room, unreadCount, Optional.of(message), currentMemberCount
                 );
             }
             // 채팅방 목록 업데이트 알림 전송
@@ -741,6 +776,8 @@ public class ChatServiceImpl implements ChatService {
             unreadCount = chatMessageRepository.countByChatRoomAndCreatedAtAfterAndEmployeeIsNotNull(room, membership.getJoinedAt());
         }
 
+        long currentMemberCount = chatEmployeeRepository.countByChatRoomChatRoomIdAndIsLeftFalse(room.getChatRoomId());
+
         // findRoomsByUsername와 동일한 DTO 변환 로직 수행
         if (Boolean.FALSE.equals(room.getIsTeam())) {
             // 1:1 채팅방: 상대방 정보 필요
@@ -752,8 +789,20 @@ public class ChatServiceImpl implements ChatService {
                     .findFirst();
 
             if (otherUserOpt.isPresent()) {
+                Employee otherUser = otherUserOpt.get();
+
+                String otherUserName;
+                String otherUserProfileImg;
+
+                if (otherUser == null) {
+                    otherUserName = "정보 없음";
+                    otherUserProfileImg = null;
+                } else {
+                    otherUserName = otherUser.getUsername();
+                    otherUserProfileImg = otherUser.getProfileImg();
+                }
                 return ChatRoomListResponseDTO.toDTO(
-                        room, otherUserOpt.get(), unreadCount, optLastMessage
+                        room, otherUserName, otherUserProfileImg, unreadCount, optLastMessage, currentMemberCount
                 );
             } else {
                 // (예외: 상대방이 나간 1:1 방) - findRoomsByUsername의 로직을 그대로 따름
@@ -763,7 +812,7 @@ public class ChatServiceImpl implements ChatService {
         } else {
             // 팀 채팅방
             return ChatRoomListResponseDTO.toDTO(
-                    room, unreadCount, optLastMessage
+                    room, unreadCount, optLastMessage, currentMemberCount
             );
         }
     }
