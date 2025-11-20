@@ -98,10 +98,17 @@ class AttendanceServiceImplTest {
             given(employeeRepository.findById(employeeId)).willReturn(Optional.of(mockEmployee));
             given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "NORMAL"))
                     .willReturn(List.of(mockWorkStatusNormal));
-            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "LATE"))
-                    .willReturn(List.of(mockWorkStatusLate));
-            given(attendanceRepository.countByEmployeeEmployeeId(employeeId)).willReturn(0L);
-            given(annualLeaveService.createIfNotExists(employeeId)).willReturn(null);
+
+            lenient().when(commonCodeRepository
+                            .findByCodeStartsWithAndKeywordExactMatchInValues("WS", "LATE"))
+                    .thenReturn(List.of(mockWorkStatusLate));
+
+            lenient().when(attendanceRepository.countByEmployeeEmployeeId(employeeId))
+                    .thenReturn(0L);
+
+            lenient().when(annualLeaveService.createIfNotExists(employeeId))
+                    .thenReturn(null);
+
             given(attendanceRepository.save(any(Attendance.class)))
                     .willAnswer(invocation -> invocation.getArgument(0));
 
