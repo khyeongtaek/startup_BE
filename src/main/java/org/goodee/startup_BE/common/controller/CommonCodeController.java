@@ -10,6 +10,7 @@ import org.goodee.startup_BE.common.dto.CommonCodeRequestDTO;
 import org.goodee.startup_BE.common.dto.CommonCodeResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.service.CommonCodeService;
+import org.goodee.startup_BE.common.service.CommonCodeServiceImpl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -24,6 +25,7 @@ import java.util.List;
 public class CommonCodeController {
 
   private final CommonCodeService commonCodeService;
+  private final CommonCodeServiceImpl commonCodeServiceImpl;
 
   @Operation(summary = "특정 prefix 하위 코드 조회 (Root 제외)", description = "특정 prefix를 가진 공통 코드의 하위 코드 목록을 조회. (Root 코드 자체는 제외)")
   @ApiResponses(value = {
@@ -92,4 +94,19 @@ public class CommonCodeController {
             .data(commonCodeService.updateCode(authentication.getName(), request))
             .build());
   }
+
+    @Operation(summary = "휴가 종류 목록 조회", description = "연차/반차 등 휴가 종류 CommonCode 조회")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "휴가 종류 조회 성공")
+    })
+    @GetMapping("/vacation-types")
+    public ResponseEntity<APIResponseDTO<List<CommonCodeResponseDTO>>> getVacationTypes() {
+
+        List<CommonCodeResponseDTO> list = commonCodeService.getVacationTypes();
+
+        return ResponseEntity.ok(APIResponseDTO.<List<CommonCodeResponseDTO>>builder()
+                .message("휴가 종류 조회 성공")
+                .data(list)
+                .build());
+    }
 }

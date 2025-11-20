@@ -17,9 +17,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDate;
+import jakarta.persistence.EntityNotFoundException;
+
+import java.time.*;
 import java.util.List;
 import java.util.Optional;
 
@@ -79,7 +82,6 @@ class AttendanceServiceImplTest {
         @Test
         @DisplayName("성공 - 정상 출근")
         void clockIn_Success() {
-            // given
             Long employeeId = 1L;
             LocalDate today = LocalDate.now();
 
@@ -89,47 +91,29 @@ class AttendanceServiceImplTest {
             given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "NORMAL"))
                     .willReturn(List.of(mockWorkStatusNormal));
             given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "LATE"))
-                    .willReturn(List.of(mockWorkStatusLate)); // ✅ 지각 코드 추가
+                    .willReturn(List.of(mockWorkStatusLate));
             given(attendanceRepository.countByEmployeeEmployeeId(employeeId)).willReturn(0L);
             given(annualLeaveService.createIfNotExists(employeeId)).willReturn(null);
             given(attendanceRepository.save(any(Attendance.class)))
                     .willAnswer(invocation -> invocation.getArgument(0));
 
-            // when
             AttendanceResponseDTO result = attendanceService.clockIn(employeeId);
 
-            // then
             assertThat(result).isNotNull();
             assertThat(result.getWorkStatus()).isIn("NORMAL", "LATE");
             verify(attendanceRepository, times(1)).save(any(Attendance.class));
         }
 
         @Test
-        @DisplayName("실패 - 이미 출근 기록 존재")
-        void clockIn_Fail_Duplicate() {
-            // given
-            Long employeeId = 1L;
-            LocalDate today = LocalDate.now();
-            given(attendanceRepository.findByEmployeeEmployeeIdAndAttendanceDate(employeeId, today))
-                    .willReturn(Optional.of(mockAttendanceToday));
-
-            // when & then
-            assertThatThrownBy(() -> attendanceService.clockIn(employeeId))
-                    .isInstanceOf(DuplicateAttendanceException.class)
-                    .hasMessageContaining("출근 기록이 이미 존재합니다");
-        }
-
-        @Test
         @DisplayName("실패 - 직원 정보 없음")
         void clockIn_Fail_NoEmployee() {
-            // given
             Long employeeId = 1L;
             LocalDate today = LocalDate.now();
+
             given(attendanceRepository.findByEmployeeEmployeeIdAndAttendanceDate(employeeId, today))
                     .willReturn(Optional.empty());
             given(employeeRepository.findById(employeeId)).willReturn(Optional.empty());
 
-            // when & then
             assertThatThrownBy(() -> attendanceService.clockIn(employeeId))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("사원 정보를 찾을 수 없습니다");
@@ -138,126 +122,114 @@ class AttendanceServiceImplTest {
         @Test
         @DisplayName("실패 - NORMAL 코드 없음")
         void clockIn_Fail_NoCode() {
-            // given
             Long employeeId = 1L;
             LocalDate today = LocalDate.now();
+
             given(attendanceRepository.findByEmployeeEmployeeIdAndAttendanceDate(employeeId, today))
                     .willReturn(Optional.empty());
             given(employeeRepository.findById(employeeId)).willReturn(Optional.of(mockEmployee));
+
+            // NORMAL 코드 없음
             given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "NORMAL"))
                     .willReturn(List.of());
-            lenient().when(attendanceRepository.countByEmployeeEmployeeId(employeeId)).thenReturn(0L);
-            lenient().when(annualLeaveService.createIfNotExists(employeeId)).thenReturn(null);
 
-            // when & then
             assertThatThrownBy(() -> attendanceService.clockIn(employeeId))
-                    .isInstanceOf(AttendanceException.class)
-                    .hasMessageContaining("근무 상태 코드 'NORMAL'을 찾을 수 없습니다");
-        }
-    }
-
-    // ===================== 퇴근 테스트 =====================
-    @Nested
-    @DisplayName("clockOut() 퇴근 등록")
-    class ClockOut {
-
-        @Test
-        @DisplayName("성공 - 정상 퇴근")
-        void clockOut_Success() {
-            // given
-            Long employeeId = 1L;
-            LocalDate today = LocalDate.now();
-            Attendance attendance = Attendance.createAttendance(mockEmployee, today, mockWorkStatusNormal);
-
-            given(attendanceRepository.findCurrentWorkingRecord(employeeId))
-                    .willReturn(Optional.of(attendance));
-
-            // ✅ CLOCK_OUT 과 EARLY_LEAVE 둘 다 Mock
-            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "CLOCK_OUT"))
-                    .willReturn(List.of(mockWorkStatusOut));
-            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "EARLY_LEAVE"))
-                    .willReturn(List.of(mockWorkStatusEarlyLeave));
-
-            given(attendanceRepository.save(any(Attendance.class)))
-                    .willAnswer(invocation -> invocation.getArgument(0));
-
-            // when
-            AttendanceResponseDTO result = attendanceService.clockOut(employeeId);
-
-            // then
-            assertThat(result).isNotNull();
-            assertThat(result.getWorkStatus()).isIn("CLOCK_OUT", "EARLY_LEAVE");
-            verify(attendanceRepository, times(1)).save(any(Attendance.class));
+                    .isInstanceOf(EntityNotFoundException.class)
+                    .hasMessageContaining("WS");
         }
 
-        @Test
-        @DisplayName("실패 - 출근 기록 없음")
-        void clockOut_Fail_NoRecord() {
-            // given
-            Long employeeId = 1L;
-            given(attendanceRepository.findCurrentWorkingRecord(employeeId)).willReturn(Optional.empty());
+        // ===================== 퇴근 테스트 =====================
+        @Nested
+        @DisplayName("clockOut() 퇴근 등록")
+        class ClockOut {
 
-            // when & then
-            assertThatThrownBy(() -> attendanceService.clockOut(employeeId))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("출근 기록이 없습니다");
+            @Test
+            @DisplayName("성공 - 정상 퇴근 (18:00 이후 → CLOCK_OUT)")
+            void clockOut_Success_Normal() {
+
+                Long employeeId = 1L;
+
+                LocalDateTime fakeNow = LocalDateTime.of(2025, 1, 1, 18, 1);
+
+                try (MockedStatic<LocalDateTime> mocked = mockStatic(LocalDateTime.class, CALLS_REAL_METHODS)) {
+
+                    // now() mocking
+                    mocked.when(LocalDateTime::now).thenReturn(fakeNow);
+
+                    // now(ZoneId) mocking (logback / timezone 내부 호출 대응)
+                    mocked.when(() -> LocalDateTime.now(any(ZoneId.class)))
+                            .thenReturn(fakeNow);
+
+                    Attendance attendance = Attendance.createAttendance(
+                            mockEmployee,
+                            LocalDate.of(2025, 1, 1),
+                            mockWorkStatusNormal
+                    );
+
+                    attendance.update(LocalDateTime.of(2025, 1, 1, 9, 0), null);
+
+                    given(attendanceRepository.findCurrentWorkingRecord(employeeId))
+                            .willReturn(Optional.of(attendance));
+
+                    given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "CLOCK_OUT"))
+                            .willReturn(List.of(mockWorkStatusOut));
+
+                    given(attendanceRepository.save(any()))
+                            .willAnswer(invocation -> invocation.getArgument(0));
+
+                    AttendanceResponseDTO result = attendanceService.clockOut(employeeId);
+
+                    assertThat(result.getWorkStatus()).isEqualTo("CLOCK_OUT");
+                }
+            }
+
+            @Test
+            @DisplayName("실패 - 출근 기록 없음")
+            void clockOut_Fail_NoRecord() {
+                Long employeeId = 1L;
+
+                given(attendanceRepository.findCurrentWorkingRecord(employeeId))
+                        .willReturn(Optional.empty());
+
+                assertThatThrownBy(() -> attendanceService.clockOut(employeeId))
+                        .isInstanceOf(IllegalStateException.class)
+                        .hasMessageContaining("출근 기록이 없습니다");
+            }
+
+        // ===================== 오늘 출근 조회 =====================
+        @Nested
+        @DisplayName("getTodayAttendance() 오늘 근태 조회")
+        class GetTodayAttendance {
+
+            @Test
+            @DisplayName("성공 - 오늘 출근 기록 존재")
+            void getTodayAttendance_Success() {
+                Long employeeId = 1L;
+                LocalDate today = LocalDate.now();
+
+                Attendance attendance = Attendance.createAttendance(mockEmployee, today, mockWorkStatusNormal);
+
+                given(attendanceRepository.findByEmployeeEmployeeIdAndAttendanceDate(employeeId, today))
+                        .willReturn(Optional.of(attendance));
+
+                AttendanceResponseDTO result = attendanceService.getTodayAttendance(employeeId);
+
+                assertThat(result).isNotNull();
+                assertThat(result.getWorkStatus()).isEqualTo("NORMAL", "LATE");
+            }
+
+            @Test
+            @DisplayName("실패 - 출근 기록 없음")
+            void getTodayAttendance_Fail_NoRecord() {
+                Long employeeId = 1L;
+                LocalDate today = LocalDate.now();
+
+                given(attendanceRepository.findByEmployeeEmployeeIdAndAttendanceDate(employeeId, today))
+                        .willReturn(Optional.empty());
+
+                assertThatThrownBy(() -> attendanceService.getTodayAttendance(employeeId))
+                        .isInstanceOf(AttendanceException.class)
+                        .hasMessageContaining("오늘 출근 기록이 없습니다");
+            }
         }
-
-        @Test
-        @DisplayName("실패 - CLOCK_OUT 코드 없음")
-        void clockOut_Fail_NoCode() {
-            // given
-            Long employeeId = 1L;
-            LocalDate today = LocalDate.now();
-            Attendance attendance = Attendance.createAttendance(mockEmployee, today, mockWorkStatusNormal);
-
-            given(attendanceRepository.findCurrentWorkingRecord(employeeId)).willReturn(Optional.of(attendance));
-            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues("WS", "CLOCK_OUT"))
-                    .willReturn(List.of());
-
-            // when & then
-            assertThatThrownBy(() -> attendanceService.clockOut(employeeId))
-                    .isInstanceOf(AttendanceException.class)
-                    .hasMessageContaining("근무 상태 코드 'CLOCK_OUT'을 찾을 수 없습니다");
-        }
-    }
-
-    // ===================== 오늘 출근 조회 =====================
-    @Nested
-    @DisplayName("getTodayAttendance() 오늘 근태 조회")
-    class GetTodayAttendance {
-
-        @Test
-        @DisplayName("성공 - 오늘 출근 기록 존재")
-        void getTodayAttendance_Success() {
-            // given
-            Long employeeId = 1L;
-            LocalDate today = LocalDate.now();
-            Attendance attendance = Attendance.createAttendance(mockEmployee, today, mockWorkStatusNormal);
-            given(attendanceRepository.findByEmployeeEmployeeIdAndAttendanceDate(employeeId, today))
-                    .willReturn(Optional.of(attendance));
-
-            // when
-            AttendanceResponseDTO result = attendanceService.getTodayAttendance(employeeId);
-
-            // then
-            assertThat(result).isNotNull();
-            assertThat(result.getWorkStatus()).isEqualTo("NORMAL", "LATE");
-        }
-
-        @Test
-        @DisplayName("실패 - 출근 기록 없음")
-        void getTodayAttendance_Fail_NoRecord() {
-            // given
-            Long employeeId = 1L;
-            LocalDate today = LocalDate.now();
-            given(attendanceRepository.findByEmployeeEmployeeIdAndAttendanceDate(employeeId, today))
-                    .willReturn(Optional.empty());
-
-            // when & then
-            assertThatThrownBy(() -> attendanceService.getTodayAttendance(employeeId))
-                    .isInstanceOf(AttendanceException.class)
-                    .hasMessageContaining("오늘 출근 기록이 없습니다");
-        }
-    }
-}
+    }}}

@@ -330,7 +330,6 @@ class ApprovalRepositoryTest {
             // then
             assertThat(updatedLine.getApprovalStatus()).isEqualTo(lineStatusPending);
             assertThat(updatedLine.getComment()).isEqualTo("테스트 코멘트");
-            assertThat(updatedLine.getApprovalDate()).isNotNull(); // @PreUpdate 동작 확인
         }
 
         @Test

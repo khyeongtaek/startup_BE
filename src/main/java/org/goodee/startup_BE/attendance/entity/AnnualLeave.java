@@ -20,20 +20,19 @@ public class AnnualLeave {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-
     private Long leaveId;
 
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
+    @JoinColumn(name = "employee_id")
     @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee employee;
 
     @Column(name = "total_days")
-    private Long totalDays;
+    private Double totalDays;
 
     @Column(name = "used_days")
-    private Long usedDays;
+    private Double usedDays;
 
 
     @Column(name="leave_year")
@@ -53,8 +52,8 @@ public class AnnualLeave {
     public static AnnualLeave createInitialLeave(Employee employee) {
         return AnnualLeave.builder()
                 .employee(employee)
-                .totalDays(15L)
-                .usedDays(0L)
+                .totalDays(15.0)
+                .usedDays(0.0)
                 .year((long) LocalDateTime.now().getYear())
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -65,22 +64,22 @@ public class AnnualLeave {
 
     // 잔여 연차 조회
     @Transient
-    public Long getRemainingDays() {
+    public Double getRemainingDays() {
         return this.totalDays - this.usedDays;
     }
 
 
     // 연차 사용
-    public void useDays(Long days) {
+    public void useDays(Double days) {
         if (days == null || days <= 0) {
             throw new IllegalArgumentException("사용 일수는 1일 이상이어야 합니다.");
         }
 
-        Long remaining = getRemainingDays();
+        Double remaining = getRemainingDays();
 
         if (days > remaining) {
             throw new IllegalStateException(
-                    String.format("남은 연차가 부족합니다. (요청: %d일, 잔여: %d일)", days, remaining)
+                    String.format("남은 연차가 부족합니다. (요청: %.1f일, 잔여: %.1f일)", days, remaining)
             );
         }
 
@@ -90,7 +89,7 @@ public class AnnualLeave {
 
 
     // 연차 사용 취소
-    public void refundDays(Long days) {
+    public void refundDays(Double days) {
         if (days == null || days <= 0) {
             throw new IllegalArgumentException("환원 일수는 1일 이상이어야 합니다.");
         }
@@ -114,10 +113,10 @@ public class AnnualLeave {
             this.year = (long) LocalDateTime.now().getYear();
         }
         if (this.totalDays == null) {
-            this.totalDays = 15L;
+            this.totalDays = 15.0;
         }
         if (this.usedDays == null) {
-            this.usedDays = 0L;
+            this.usedDays = 0.0;
         }
     }
 

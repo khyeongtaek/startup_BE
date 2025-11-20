@@ -46,8 +46,8 @@ class AnnualLeaveServiceImplTest {
         mockLeave = AnnualLeave.builder()
                 .leaveId(1L)
                 .employee(mockEmployee)
-                .totalDays(15L)
-                .usedDays(5L)
+                .totalDays(15.0)
+                .usedDays(5.0)
                 .year((long) LocalDate.now().getYear())
                 .isDeleted(false)
                 .build();
@@ -168,7 +168,7 @@ class AnnualLeaveServiceImplTest {
             given(annualLeaveRepository.save(any(AnnualLeave.class))).willReturn(mockLeave);
 
             // when
-            AnnualLeave result = annualLeaveService.useAnnualLeave(employeeId, 2L);
+            AnnualLeave result = annualLeaveService.useAnnualLeave(employeeId, 2.0);
 
             // then
             assertThat(result).isNotNull();
@@ -182,8 +182,8 @@ class AnnualLeaveServiceImplTest {
             Long employeeId = 1L;
             AnnualLeave leave = AnnualLeave.builder()
                     .employee(mockEmployee)
-                    .totalDays(2L)
-                    .usedDays(2L)
+                    .totalDays(2.0)
+                    .usedDays(2.0)
                     .year((long) LocalDate.now().getYear())
                     .build();
 
@@ -191,7 +191,7 @@ class AnnualLeaveServiceImplTest {
                     .willReturn(Optional.of(leave));
 
             // when & then
-            assertThatThrownBy(() -> annualLeaveService.useAnnualLeave(employeeId, 3L))
+            assertThatThrownBy(() -> annualLeaveService.useAnnualLeave(employeeId, 3.0))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("남은 연차가 부족");
         }
@@ -212,7 +212,7 @@ class AnnualLeaveServiceImplTest {
             given(annualLeaveRepository.save(any(AnnualLeave.class))).willReturn(mockLeave);
 
             // when
-            AnnualLeave result = annualLeaveService.refundAnnualLeave(employeeId, 1L);
+            AnnualLeave result = annualLeaveService.refundAnnualLeave(employeeId, 1.0);
 
             // then
             assertThat(result).isNotNull();
@@ -226,8 +226,8 @@ class AnnualLeaveServiceImplTest {
             Long employeeId = 1L;
             AnnualLeave leave = AnnualLeave.builder()
                     .employee(mockEmployee)
-                    .totalDays(15L)
-                    .usedDays(1L)
+                    .totalDays(15.0)
+                    .usedDays(1.0)
                     .year((long) LocalDate.now().getYear())
                     .build();
 
@@ -235,9 +235,9 @@ class AnnualLeaveServiceImplTest {
                     .willReturn(Optional.of(leave));
 
             // when & then
-            assertThatThrownBy(() -> annualLeaveService.refundAnnualLeave(employeeId, 5L))
+            assertThatThrownBy(() -> annualLeaveService.refundAnnualLeave(employeeId, 5.0))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("환원할 일수가 사용 일수보다 많");
+                    .hasMessageContaining("환원할 일수가 사용 일수보다 많습니다.");
         }
     }
 

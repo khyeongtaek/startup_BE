@@ -55,7 +55,7 @@ public class AnnualLeaveController {
             @Parameter(description = "연차를 사용할 직원 ID", required = true, example = "1")
             @PathVariable Long employeeId,
             @Parameter(description = "사용할 연차 일수", required = true, example = "2")
-            @RequestParam Long days
+            @RequestParam Double days
     ) {
         AnnualLeave updated = annualLeaveService.useAnnualLeave(employeeId, days);
         AnnualLeaveResponseDTO responseDTO = AnnualLeaveResponseDTO.toDTO(updated);
@@ -79,7 +79,7 @@ public class AnnualLeaveController {
             @Parameter(description = "연차를 복원할 직원 ID", required = true, example = "1")
             @PathVariable Long employeeId,
             @Parameter(description = "복원할 연차 일수", required = true, example = "1")
-            @RequestParam Long days
+            @RequestParam Double days
     ) {
         AnnualLeave updated = annualLeaveService.refundAnnualLeave(employeeId, days);
         AnnualLeaveResponseDTO responseDTO = AnnualLeaveResponseDTO.toDTO(updated);
