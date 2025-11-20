@@ -3,7 +3,6 @@ package org.goodee.startup_BE.chat.dto;
 import lombok.*;
 import org.goodee.startup_BE.chat.entity.ChatMessage;
 import org.goodee.startup_BE.chat.entity.ChatRoom;
-import org.goodee.startup_BE.employee.entity.Employee;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -27,6 +26,9 @@ public class ChatRoomListResponseDTO {
     private String lastMessage;
     // 채팅방 목록 정렬을 위한 마지막 메시지
     private LocalDateTime lastMessageCreatedAt;
+    // 팀채팅방 여부
+    private Boolean isTeam;
+    private Long memberCount;
 
 
     /**
@@ -34,9 +36,11 @@ public class ChatRoomListResponseDTO {
      */
     public static ChatRoomListResponseDTO toDTO(
             ChatRoom room,
-            Employee otherUser,
+            String otherUserName,
+            String otherUserProfile,
             long unreadCount,
-            Optional<ChatMessage> lastMessageOpt
+            Optional<ChatMessage> lastMessageOpt,
+            long memberCount
     ) {
         String lastMessageContent = lastMessageOpt
                 .map(ChatMessage::getContent)
@@ -49,11 +53,13 @@ public class ChatRoomListResponseDTO {
 
         return ChatRoomListResponseDTO.builder()
                 .chatRoomId(room.getChatRoomId())
-                .name(otherUser.getName()) // 상대방 이름
-                .profile(otherUser.getProfileImg())
+                .name(otherUserName) // 상대방 이름
+                .profile(otherUserProfile)
                 .unreadCount(unreadCount)
                 .lastMessage(lastMessageContent)
                 .lastMessageCreatedAt(lastTime)
+                .isTeam(room.getIsTeam())
+                .memberCount(memberCount)
                 .build();
     }
 
@@ -63,7 +69,8 @@ public class ChatRoomListResponseDTO {
     public static ChatRoomListResponseDTO toDTO(
             ChatRoom room,
             long unreadCount,
-            Optional<ChatMessage> lastMessageOpt
+            Optional<ChatMessage> lastMessageOpt,
+            long memberCount
     ) {
         String lastMessageContent = lastMessageOpt
                 .map(ChatMessage::getContent)
@@ -80,6 +87,8 @@ public class ChatRoomListResponseDTO {
                 .unreadCount(unreadCount)
                 .lastMessage(lastMessageContent)
                 .lastMessageCreatedAt(lastTime)
+                .isTeam(room.getIsTeam())
+                .memberCount(memberCount)
                 .build();
     }
 }
