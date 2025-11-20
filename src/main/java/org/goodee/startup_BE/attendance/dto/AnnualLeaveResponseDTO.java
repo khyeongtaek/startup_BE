@@ -17,9 +17,9 @@ public class AnnualLeaveResponseDTO {
     private Long leaveId;
     private Long employeeId;
     private String employeeName;
-    private Long totalDays;
-    private Long usedDays;
-    private Long remainingDays;
+    private Double totalDays;
+    private Double usedDays;
+    private Double remainingDays;
     private Long year;
 
     public static AnnualLeaveResponseDTO toDTO(AnnualLeave entity) {

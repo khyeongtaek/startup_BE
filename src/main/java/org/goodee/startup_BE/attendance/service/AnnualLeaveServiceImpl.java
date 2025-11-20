@@ -46,7 +46,7 @@ public class AnnualLeaveServiceImpl implements AnnualLeaveService {
 
     //  연차 사용
     @Override
-    public AnnualLeave useAnnualLeave(Long employeeId, Long days) {
+    public AnnualLeave useAnnualLeave(Long employeeId, Double days) {
         AnnualLeave leave = getAnnualLeave(employeeId);
         leave.useDays(days);
         return annualLeaveRepository.save(leave);
@@ -54,7 +54,7 @@ public class AnnualLeaveServiceImpl implements AnnualLeaveService {
 
     //  연차 사용 취소
     @Override
-    public AnnualLeave refundAnnualLeave(Long employeeId, Long days) {
+    public AnnualLeave refundAnnualLeave(Long employeeId, Double days) {
         AnnualLeave leave = getAnnualLeave(employeeId);
         leave.refundDays(days);
         return annualLeaveRepository.save(leave);

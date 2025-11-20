@@ -22,4 +22,7 @@ public interface CommonCodeService {
 
    // 코드 수정
     CommonCodeResponseDTO updateCode(String username, CommonCodeRequestDTO commonCodeRequestDTO);
+
+    // 휴가 종류
+    public List<CommonCodeResponseDTO> getVacationTypes();
 }

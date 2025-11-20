@@ -20,10 +20,10 @@ INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
     ('AD0', '문서 상태', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
-    ('AD1', '임시저장', 'DRAFT', NULL, NULL, 1, 1, 1, NOW(), NOW(), false),
-    ('AD2', '진행중', 'IN_PROGRESS', NULL, NULL, 2, 1, 1, NOW(), NOW(), false),
-    ('AD3', '최종 승인', 'APPROVED', NULL, NULL, 3, 1, 1, NOW(), NOW(), false),
-    ('AD4', '최종 반려', 'REJECTED', NULL, NULL, 4, 1, 1, NOW(), NOW(), false);
+    ('AD1', '임시저장', 'DRAFT', '임시 저장', NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('AD2', '진행중', 'IN_PROGRESS', '진행중', NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('AD3', '최종 승인', 'APPROVED', '최종 승인', NULL, 3, 1, 1, NOW(), NOW(), false),
+    ('AD4', '최종 반려', 'REJECTED', '반려', NULL, 4, 1, 1, NOW(), NOW(), false);
 
 
 /*
@@ -38,10 +38,10 @@ INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
     ('AL0', '결재선 상태', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
-    ('AL1', '미결', 'PENDING', NULL, NULL, 1, 1, 1, NOW(), NOW(), false),
-    ('AL2', '대기', 'AWAITING', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
-    ('AL3', '승인', 'APPROVED', NULL, NULL, 2, 1, 1, NOW(), NOW(), false),
-    ('AL4', '반려', 'REJECTED', NULL, NULL, 3, 1, 1, NOW(), NOW(), false);
+    ('AL1', '미결', 'PENDING', '미결', NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('AL2', '대기', 'AWAITING', '대기', NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('AL3', '승인', 'APPROVED', '승인', NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('AL4', '반려', 'REJECTED', '반려', NULL, 3, 1, 1, NOW(), NOW(), false);
 
 
 /*
@@ -254,24 +254,7 @@ VALUES
     ('OT4', '전자결재', 'APPROVAL', '', '', 0, 1, 1, NOW(), NOW(), false),
     ('OT5', '채팅 초대', 'TEAMCHATNOTI', '', '', 0, 1, 1, NOW(), NOW(), false),
     ('OT6', '일정 초대', 'SCHEDULEINVITE', '', '', 0, 1, 1, NOW(), NOW(), false);
-/*
-* =============================================
-* Schedule Color (일정 색상)
-* code: CL + 번호 (Color)
-* value1: 색상 코드 (영문)
-* value2: HEX 코드
-* =============================================
-*/
 
-INSERT INTO tbl_common_code
-(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
-VALUES
-    ('CL0', '색상 코드', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
-    ('CL1', '파란색', 'BLUE', '#3498db', NULL, 1, 1, 1, NOW(), NOW(), false),
-    ('CL2', '빨간색', 'RED', '#e74c3c', NULL, 2, 1, 1, NOW(), NOW(), false),
-    ('CL3', '초록색', 'GREEN', '#27ae60', NULL, 3, 1, 1, NOW(), NOW(), false),
-    ('CL4', '노란색', 'YELLOW', '#f1c40f', NULL, 4, 1, 1, NOW(), NOW(), false),
-    ('CL5', '회색', 'GRAY', '#7f8c8d', NULL, 5, 1, 1, NOW(), NOW(), false);
 
 
 
@@ -294,8 +277,9 @@ VALUES
     ('WS4', '결근', 'ABSENT', '결근', NULL, 4, 1, 1, NOW(), NOW(), false),
     ('WS5', '휴가', 'VACATION', '휴가', NULL, 5, 1, 1, NOW(), NOW(), false),
     ('WS6', '외근', 'OUT_ON_BUSINESS', '외근', NULL , 6 , 1, 1, NOW(), NOW(), false ),
-    ('WS7', '퇴근', 'CLOCK_OUT', '퇴근', NULL , 6 , 1, 1, NOW(), NOW(), false );
-
+    ('WS7', '퇴근', 'CLOCK_OUT', '퇴근', NULL , 6 , 1, 1, NOW(), NOW(), false ),
+    ('WS8', '오전 반차', 'MORNING_HALF', '오전 반차', NULL,8, 1, 1, NOW(), NOW(), false),
+    ( 'WS9', '오후 반차', 'AFTERNOON_HALF', '오후 반차',NULL ,9, 1, 1, NOW(), NOW(), false);
 
 /*
 * =============================================
@@ -682,8 +666,18 @@ INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
     ('AT0', '결재 양식', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
-    ('AT1', '휴가 신청서', '휴가 신청서', 'VACATION', '/forms/vacation', 1, 1, 1, NOW(), NOW(), false),
-    ('AT2', '출장 계획서', '출장 계획서', 'BUSINESS_TRIP', '/forms/biztrip', 2, 1, 1, NOW(), NOW(), false);
+    ('AT1', '휴가 신청서', '휴가 신청서', 'VACATION', 'LeaveTemplate', 1, 1, 1, NOW(), NOW(), false),
+    ('AT2', '출장 계획서', '출장 계획서', 'BUSINESS_TRIP', 'BusinessTripTemplate', 2, 1, 1, NOW(), NOW(), false);
+
+INSERT INTO tbl_common_code
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at,
+ is_disabled)
+VALUES ('VT0', '휴가 종류', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+       ('VT1', '연차', 'ANNUAL', '연차', NULL, 1, 1, 1, NOW(), NOW(), false),
+       ('VT2', '오전반차', 'MORNING_HALF', '오전 반차', NULL, 2, 1, 1, NOW(), NOW(), false),
+       ('VT3', '오후반차', 'AFTERNOON_HALF', '오후 반차', NULL, 3, 1, 1, NOW(), NOW(), false);
+
+
 
 
 /*
@@ -919,8 +913,8 @@ VALUES
       "id": "approval-detail",
       "title": "결재 상세",
       "type": "route",
-      "url": "/approval/detail",
-      "componentPath": null
+      "url": "/approval/detail/:docId"
+      "componentPath": "features/approval/pages/ApprovalDetailPage"
     }', NULL, NULL, 2, 1, 1, NOW(), NOW(), false),
     ('RO3', '결재 목록', '{
       "id": "approval-list",
