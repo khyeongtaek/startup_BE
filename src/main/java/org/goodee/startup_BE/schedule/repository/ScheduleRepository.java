@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -38,5 +39,22 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
            order by sp.schedule.startTime asc
            """)
     List<Schedule> findInvitedVisible(@Param("employeeId") Long employeeId);
+
+
+    // 직원 휴가 체크
+    @Query("""
+    select count(s) > 0
+    from Schedule s
+    where s.isDeleted = false
+      and s.employee.employeeId = :employeeId
+      and s.startTime <= :endOfDay
+      and s.endTime >= :startOfDay
+      and s.category.value1 in ('VACATION', 'MORNING_HALF', 'AFTERNOON_HALF')
+""")
+    boolean existsVacationOn(
+            @Param("employeeId") Long employeeId,
+            @Param("startOfDay") LocalDateTime startOfDay,
+            @Param("endOfDay") LocalDateTime endOfDay
+    );
 }
 

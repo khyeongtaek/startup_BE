@@ -106,4 +106,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
             "AND a.isDeleted = false")
     Long countLatesThisWeek(Long employeeId, LocalDate startOfWeek, LocalDate endOfWeek);
 
+
+    // 출근 기록 존재 여부 확인
+    boolean existsByEmployeeEmployeeIdAndAttendanceDate(Long employeeId, LocalDate attendanceDate);
 }

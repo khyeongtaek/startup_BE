@@ -17,10 +17,13 @@ import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.exception.ResourceNotFoundException;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
+import org.goodee.startup_BE.schedule.repository.ScheduleRepository;
+import org.goodee.startup_BE.schedule.service.HolidayService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +40,9 @@ public class AttendanceServiceImpl implements AttendanceService {
     private final AnnualLeaveService annualLeaveService;
     private final AttendanceWorkHistoryService attendanceWorkHistoryService;
     private final AttendanceWorkHistoryRepository historyRepository;
+    private final HolidayService holidayService;
+    private final ScheduleRepository scheduleRepository;
+
 
     // 공통 코드 Prefix 정의
     private static final String WOKR_STATUS_PREFIX = WorkStatus.PREFIX;
@@ -482,7 +488,7 @@ public class AttendanceServiceImpl implements AttendanceService {
 
             return result;
         } catch (Exception e) {
-            // 🔥 데이터 없을 때도 절대 500 발생시키지 않기 위해 안전하게 빈 summary 반환
+            // 데이터 없을 때도 절대 500 발생시키지 않기 위해 안전하게 빈 summary 반환
             Map<String, Object> empty = new HashMap<>();
             empty.put("totalDays", 0);
             empty.put("totalHours", 0);
@@ -525,5 +531,50 @@ public class AttendanceServiceImpl implements AttendanceService {
 
         // 5) 이력 기록
         attendanceWorkHistoryService.recordHistory(attendance, attendance.getEmployee(), statusValue);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LocalDate> getAbsentDays(Long employeeId, int year, int month) {
+
+        List<LocalDate> absentDays = new ArrayList<>();
+
+        LocalDate first = LocalDate.of(year, month, 1);
+        LocalDate last = first.withDayOfMonth(first.lengthOfMonth());
+
+        for (LocalDate day = first; !day.isAfter(last); day = day.plusDays(1)) {
+
+            if (day.isAfter(LocalDate.now())) continue;
+            // 1) 주말 제외
+            if (day.getDayOfWeek() == DayOfWeek.SATURDAY ||
+                    day.getDayOfWeek() == DayOfWeek.SUNDAY) {
+                continue;
+            }
+
+            // 2) 공휴일(LocalDateTime 기반)
+            if (holidayService.isHoliday(day.atStartOfDay())) {
+                continue;
+            }
+
+            // 3) 출근 기록 존재 여부
+            boolean hasAttendance =
+                    attendanceRepository.existsByEmployeeEmployeeIdAndAttendanceDate(employeeId, day);
+
+            if (hasAttendance) continue;
+
+            // 4) 휴가 체크
+            LocalDateTime dayStart = day.atStartOfDay();
+            LocalDateTime dayEnd = day.atTime(LocalTime.MAX);
+
+            boolean hasVacation =
+                    scheduleRepository.existsVacationOn(employeeId, dayStart, dayEnd);
+
+            if (hasVacation) continue;
+
+            // 5) 결근 확정
+            absentDays.add(day);
+        }
+
+        return absentDays;
     }
 }

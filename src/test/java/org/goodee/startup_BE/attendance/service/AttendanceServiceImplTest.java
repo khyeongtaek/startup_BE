@@ -10,6 +10,8 @@ import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.exception.ResourceNotFoundException;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
+import org.goodee.startup_BE.schedule.repository.ScheduleRepository;
+import org.goodee.startup_BE.schedule.service.HolidayService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -49,6 +51,12 @@ class AttendanceServiceImplTest {
 
     @Mock
     private AttendanceWorkHistoryService attendanceWorkHistoryService;
+
+    @Mock
+    private HolidayService holidayService;
+
+    @Mock
+    private ScheduleRepository scheduleRepository;
 
     private Employee mockEmployee;
     private CommonCode mockWorkStatusNormal;
@@ -218,4 +226,103 @@ class AttendanceServiceImplTest {
                 assertThat(result.getWorkStatus()).isEqualTo("NORMAL", "LATE");
             }
         }
+            // ===================== 결근 테스트 =====================
+            @Nested
+            @DisplayName("getAbsentDays() 결근 조회")
+            class GetAbsentDays {
+
+                @BeforeEach
+                void lenientStub() {
+                    // 기본값: 모든 날짜 → 출근 기록 없음
+                    lenient().when(attendanceRepository.existsByEmployeeEmployeeIdAndAttendanceDate(anyLong(), any(LocalDate.class)))
+                            .thenReturn(false);
+
+                    // 기본값: 모든 날짜 → 휴가 없음
+                    lenient().when(scheduleRepository.existsVacationOn(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class)))
+                            .thenReturn(false);
+
+                    // 기본값: 모든 날짜 → 공휴일 아님
+                    lenient().when(holidayService.isHoliday(any(LocalDateTime.class)))
+                            .thenReturn(false);
+                }
+
+                @Test
+                @DisplayName("성공 - 특정 날짜 결근")
+                void getAbsentDays_Success() {
+
+                    Long employeeId = 1L;
+                    int year = 2025;
+                    int month = 1;
+
+                    LocalDate target = LocalDate.of(2025, 1, 2);
+
+                    // target 날짜에 대해 출근 기록 없음 → 결근
+                    lenient().when(attendanceRepository.existsByEmployeeEmployeeIdAndAttendanceDate(employeeId, target))
+                            .thenReturn(false);
+
+                    List<LocalDate> result = attendanceService.getAbsentDays(employeeId, year, month);
+
+                    assertThat(result).contains(target);
+                }
+
+                @Test
+                @DisplayName("성공 - 출근 기록이 있으면 결근 아님")
+                void getAbsentDays_NoAbsent_WhenAttendanceExists() {
+
+                    Long employeeId = 1L;
+                    int year = 2025;
+                    int month = 1;
+
+                    LocalDate day = LocalDate.of(2025, 1, 3);
+
+                    // 해당 날짜만 출근 처리
+                    lenient().when(attendanceRepository.existsByEmployeeEmployeeIdAndAttendanceDate(employeeId, day))
+                            .thenReturn(true);
+
+                    List<LocalDate> result = attendanceService.getAbsentDays(employeeId, year, month);
+
+                    assertThat(result).doesNotContain(day);
+                }
+
+                @Test
+                @DisplayName("성공 - 휴가가 있으면 결근 아님")
+                void getAbsentDays_NoAbsent_WhenVacationExists() {
+
+                    Long employeeId = 1L;
+                    int year = 2025;
+                    int month = 1;
+
+                    LocalDate day = LocalDate.of(2025, 1, 4);
+
+                    // 출근 기록 없음
+                    lenient().when(attendanceRepository.existsByEmployeeEmployeeIdAndAttendanceDate(employeeId, day))
+                            .thenReturn(false);
+
+                    // 휴가 있음
+                    lenient().when(scheduleRepository.existsVacationOn(eq(employeeId), any(LocalDateTime.class), any(LocalDateTime.class)))
+                            .thenReturn(true);
+
+                    List<LocalDate> result = attendanceService.getAbsentDays(employeeId, year, month);
+
+                    assertThat(result).doesNotContain(day);
+                }
+
+                @Test
+                @DisplayName("성공 - 공휴일은 결근 아님")
+                void getAbsentDays_NoAbsent_WhenHoliday() {
+
+                    Long employeeId = 1L;
+                    int year = 2025;
+                    int month = 1;
+
+                    LocalDate day = LocalDate.of(2025, 1, 1);
+
+                    lenient().when(holidayService.isHoliday(day.atStartOfDay()))
+                            .thenReturn(true);
+
+                    List<LocalDate> result = attendanceService.getAbsentDays(employeeId, year, month);
+
+                    assertThat(result).doesNotContain(day);
+                }
+            }
     }}}
