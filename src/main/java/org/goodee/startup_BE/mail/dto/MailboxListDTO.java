@@ -22,6 +22,10 @@ public class MailboxListDTO {
 	
 	@Schema(description = "보낸 사람", example = "홍길동")
 	private String senderName;
+	private String senderPosition;
+	private String senderDepartment;
+	private String senderProfileImg;
+	private String senderEmail;
 	
 	@Schema(description = "제목", example = "회의 자료 공유드립니다")
 	private String title;
@@ -33,5 +37,5 @@ public class MailboxListDTO {
 	private Boolean isRead;
 	
 	@Schema(description = "수신자들")
-	private List<String> receivers;
+	private List<MailReceiverDTO> receivers;
 }

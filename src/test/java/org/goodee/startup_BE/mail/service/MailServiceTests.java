@@ -8,11 +8,7 @@ import org.goodee.startup_BE.common.service.AttachmentFileService;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.exception.ResourceNotFoundException;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
-import org.goodee.startup_BE.mail.dto.MailDetailResponseDTO;
-import org.goodee.startup_BE.mail.dto.MailMoveRequestDTO;
-import org.goodee.startup_BE.mail.dto.MailSendRequestDTO;
-import org.goodee.startup_BE.mail.dto.MailSendResponseDTO;
-import org.goodee.startup_BE.mail.dto.MailboxListDTO;
+import org.goodee.startup_BE.mail.dto.*;
 import org.goodee.startup_BE.mail.entity.Mail;
 import org.goodee.startup_BE.mail.entity.MailReceiver;
 import org.goodee.startup_BE.mail.entity.Mailbox;
@@ -370,7 +366,8 @@ class MailServiceTests {
 		
 		assertThat(senderDetail.getBcc()).isNotNull();
 		assertThat(senderDetail.getBcc()).hasSize(1);
-		assertThat(senderDetail.getBcc().get(0)).contains("bccuser5@test.com"); //
+		assertThat(senderDetail.getBcc().get(0).getEmail())
+			.isEqualTo("bccuser5@test.com");
 		
 		// 수신자 메일박스 하나 골라서 삭제 상태 2로 설정
 		Mailbox recvBox = mailboxRepository
@@ -599,7 +596,7 @@ class MailServiceTests {
 		MailSendRequestDTO req1 = MailSendRequestDTO.builder()
 			                          .title("첫 번째 메일")
 			                          .content("내용1")
-			                          .to(List.of(receiver.getEmail()))  // "listrecv@test.com"
+			                          .to(List.of(receiver.getEmail()))
 			                          .build();
 		
 		MailSendRequestDTO req2 = MailSendRequestDTO.builder()
@@ -619,13 +616,16 @@ class MailServiceTests {
 			.extracting(MailboxListDTO::getTitle)
 			.containsExactlyInAnyOrder("첫 번째 메일", "두 번째 메일");
 		
-		// 수신자 이름 리스트 확인 (resolveReceiverNames)
+		// 수신자 DTO 리스트 확인 (MailReceiverDTO)
 		inboxPage.getContent().forEach(dto -> {
 			assertThat(dto.getReceivers()).hasSize(1);
-			assertThat(dto.getReceivers().get(0)).isEqualTo("테스트유저");
+			MailReceiverDTO recvDto = dto.getReceivers().get(0);
+			assertThat(recvDto.getName()).isEqualTo("테스트유저");
+			assertThat(recvDto.getEmail()).isEqualTo("listrecv@test.com");
 			assertThat(dto.getSenderName()).isEqualTo("테스트유저");
 		});
 	}
+	
 	
 	// ───────────────────── TestConfig & Stubs ─────────────────────
 	
