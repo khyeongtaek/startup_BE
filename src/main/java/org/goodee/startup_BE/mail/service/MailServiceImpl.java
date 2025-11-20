@@ -1,5 +1,6 @@
 package org.goodee.startup_BE.mail.service;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.goodee.startup_BE.common.dto.AttachmentFileResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
@@ -18,6 +19,8 @@ import org.goodee.startup_BE.mail.enums.ReceiverType;
 import org.goodee.startup_BE.mail.repository.MailReceiverRepository;
 import org.goodee.startup_BE.mail.repository.MailRepository;
 import org.goodee.startup_BE.mail.repository.MailboxRepository;
+import org.goodee.startup_BE.notification.dto.NotificationRequestDTO;
+import org.goodee.startup_BE.notification.service.NotificationService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -30,6 +33,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +46,7 @@ public class MailServiceImpl implements MailService{
 	private final CommonCodeRepository commonCodeRepository;
 	private final AttachmentFileService attachmentFileService;
 	private final EmlService emlService;
+	private final NotificationService notificationService;
 	
 	
 	// 메일 수신함 insert 메소드 및 count 반환 - 메일 작성
@@ -159,12 +164,25 @@ public class MailServiceImpl implements MailService{
 			       .map(email -> {
 				       String key = email.trim().toLowerCase();
 				       String name = nameByEmail.get(key);
+				       
+				       // 이메일은 항상 남아있기 때문에 email은 무조건 표시
 				       if (name == null || name.isBlank()) {
-					       return email;          // 매칭되는 직원 없으면 이메일만
+					       return email + " (정보 없음)";
 				       }
 				       return email + " (" + name + ")";
 			       })
 			       .toList();
+	}
+	
+	// 삭제된 사용자 조회시 "정보 없음" 반환
+	private String resolveSenderName(Employee employee) {
+		if(employee == null) return "정보 없음";
+		
+		try {
+			return employee.getName();
+		} catch (EntityNotFoundException e) {
+			return "정보 없음";
+		}
 	}
 	
 	
@@ -175,7 +193,7 @@ public class MailServiceImpl implements MailService{
 		Employee employee = employeeRepository.findByUsername(username)
 			                    .orElseThrow(() -> new ResourceNotFoundException("직원이 존재하지 않습니다"));
 		
-		CommonCode ownerTypeCode = firstOrNotFound(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.MAIL.name()),"뷴류 타입 코드 없음");
+		CommonCode ownerTypeCode = firstOrNotFound(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.MAIL.name()),"분류 타입 코드 없음");
 
 		
 		// 1. 메일 insert
@@ -248,8 +266,50 @@ public class MailServiceImpl implements MailService{
 		String emlPath = emlService.generate(mail, mailSendRequestDTO.getTo(), mailSendRequestDTO.getCc(), mailSendRequestDTO.getBcc(), uploadFiles, employee);
 		mail.updateEmlPath(emlPath);
 		
+		
+		// 7. 알림 서비스
+		// 수신 타입별 이메일 리스트
+		Set<String> toEmails = new LinkedHashSet<>();
+		Set<String> ccEmails = new LinkedHashSet<>();
+		Set<String> bccEmails = new LinkedHashSet<>();
+		
+		addAllSanitized(toEmails, mailSendRequestDTO.getTo());
+		addAllSanitized(ccEmails, mailSendRequestDTO.getCc());
+		addAllSanitized(bccEmails, mailSendRequestDTO.getBcc());
+		
+		// 수신 타입별 employeeId 리스트 생성
+		List<Long> toEmployeeIds = toEmails.stream()
+			                           .map(e -> byEmail.get(e).getEmployeeId())
+			                           .toList();
+		List<Long> ccEmployeeIds = ccEmails.stream()
+			                           .map(e -> byEmail.get(e).getEmployeeId())
+			                           .toList();
+		List<Long> bccEmployeeIds = bccEmails.stream()
+			                            .map(e -> byEmail.get(e).getEmployeeId())
+			                            .toList();
+		
+		// 전체 알림 받을 대상자 리스트
+		List<Long> receiverIds = Stream.of(toEmployeeIds, ccEmployeeIds, bccEmployeeIds)
+				.flatMap(Collection::stream)
+				.distinct()
+				.toList();
+		
+		// 알림 요청 반복 호출
+		for (Long empId : receiverIds) {
+			NotificationRequestDTO dto = NotificationRequestDTO.builder()
+				                             .employeeId(empId)
+				                             .ownerTypeCommonCodeId(ownerTypeCode.getCommonCodeId())
+				                             .url("/mail/detail/" + mail.getMailId())
+				                             .title("새로운 메일이 도착했습니다.")
+				                             .content(mail.getTitle())
+				                             .build();
+			notificationService.create(dto);
+		}
+		
+		
 		return MailSendResponseDTO.toDTO(mail, toCount, ccCount, bccCount, uploadFiles == null ? 0 : uploadFiles.size());
 	}
+	
 	
 	// 메일 상세 조회 및 읽음 처리
 	@Override
@@ -367,15 +427,16 @@ public class MailServiceImpl implements MailService{
 			Mail mail = mb.getMail();
 			
 			List<String> receiverNames = resolveReceiverNames(mail, toCode);
+			Employee sender = mail.getEmployee();
 			
 			return MailboxListDTO.builder()
 				       .boxId(mb.getBoxId())
 				       .mailId(mail.getMailId())
-				       .senderName(mail.getEmployee().getName())
+				       .senderName(resolveSenderName(sender))
 				       .title(mail.getTitle())
 				       .receivedAt(mail.getSendAt())
 				       .isRead(Boolean.TRUE.equals(mb.getIsRead()))
-				       .receivers(receiverNames)   // 🔹 이제 이름 리스트
+				       .receivers(receiverNames)
 				       .build();
 		});
 	}
