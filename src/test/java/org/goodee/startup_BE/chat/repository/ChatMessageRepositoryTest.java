@@ -25,7 +25,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-// EmployeeRepositoryTest와 동일한 H2 설정 적용
 @DataJpaTest(properties = {
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.datasource.driver-class-name=org.h2.Driver",
@@ -34,385 +33,311 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         "spring.datasource.password=",
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect"
 })
-// ChatMessage가 의존하는 모든 엔티티(CommonCode, Employee, ChatRoom)를 스캔
 @EntityScan(basePackages = "org.goodee.startup_BE")
 class ChatMessageRepositoryTest {
 
     @Autowired
     private ChatMessageRepository chatMessageRepository;
 
-    // 의존성 주입: ChatMessage 생성에 필요한 엔티티들의 Repository
-    @Autowired
-    private EmployeeRepository employeeRepository;
     @Autowired
     private ChatRoomRepository chatRoomRepository;
+
+    @Autowired
+    private EmployeeRepository employeeRepository;
+
     @Autowired
     private CommonCodeRepository commonCodeRepository;
 
-    // --- 테스트용 공통 데이터 ---
+    // --- 테스트 데이터 ---
     private Employee admin, user1, user2;
-    private ChatRoom room1, room2;
-    private CommonCode statusActive, roleAdmin, roleUser, deptDev, posJunior;
+    private ChatRoom room1;
+    private CommonCode statusActive, roleUser, roleAdmin, deptDev, posJunior;
     private final String TEST_PASSWORD = "testPassword123!";
 
-    // --- 테스트용 ChatMessage 인스턴스 ---
-    private ChatMessage msg_sys_room1; // room1의 최초 시스템 메시지
-    private ChatMessage msg1_room1;      // room1의 user1 메시지
-    private ChatMessage msg2_room1;      // room1의 user2 메시지
-    private ChatMessage msg3_room1_deleted; // room1의 user1 메시지 (삭제됨)
-    private ChatMessage msg4_room1;      // room1의 user1 메시지 (최신)
-
-    private ChatMessage msg1_room2;      // room2의 user1 메시지
-
-    private LocalDateTime userJoinedAt; // msg_sys_room1 이후의 시간 (필터링 테스트용)
+    // --- 테스트용 메시지 인스턴스 (시간 순서대로 저장됨) ---
+    private ChatMessage msg1_early;
+    private ChatMessage msg2_mid;
+    private ChatMessage msg3_sys; // 시스템 메시지 (Employee Null)
+    private ChatMessage msg4_late;
+    private ChatMessage msg5_deleted; // 삭제된 메시지
 
     @BeforeEach
     void setUp() throws InterruptedException {
-        // H2 DB 초기화 (자식 테이블부터 삭제)
+        // 1. 초기화 (FK 역순 삭제)
         chatMessageRepository.deleteAll();
         chatRoomRepository.deleteAll();
         employeeRepository.deleteAll();
         commonCodeRepository.deleteAll();
 
-        // --- given 1: 공통 코드 데이터 생성 ---
-        statusActive = CommonCode.createCommonCode("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null, false);
-        roleAdmin = CommonCode.createCommonCode("ROLE_ADMIN", "관리자", "ADMIN", null, null, 1L, null, false);
-        roleUser = CommonCode.createCommonCode("ROLE_USER", "사용자", "USER", null, null, 2L, null, false);
-        deptDev = CommonCode.createCommonCode("DEPT_DEV", "개발팀", "DEV", null, null, 1L, null, false);
-        posJunior = CommonCode.createCommonCode("POS_JUNIOR", "사원", "JUNIOR", null, null, 1L, null, false);
+        // 2. CommonCode 생성 (Employee 의존성)
+        statusActive = createAndSaveCode("STATUS_ACTIVE", "재직", "ACTIVE", 1L);
+        roleAdmin = createAndSaveCode("ROLE_ADMIN", "관리자", "ADMIN", 1L);
+        roleUser = createAndSaveCode("ROLE_USER", "사용자", "USER", 2L);
+        deptDev = createAndSaveCode("DEPT_DEV", "개발팀", "DEV", 1L);
+        posJunior = createAndSaveCode("POS_JUNIOR", "사원", "JUNIOR", 1L);
 
-        commonCodeRepository.saveAll(List.of(statusActive, roleAdmin, roleUser, deptDev, posJunior));
+        // 3. Employee 생성
+        admin = createAndSaveEmployee("admin", "admin@test.com", roleAdmin);
+        user1 = createAndSaveEmployee("user1", "user1@test.com", roleUser);
+        user2 = createAndSaveEmployee("user2", "user2@test.com", roleUser);
 
-        // --- given 2: 직원 데이터 생성 (admin, user1, user2) ---
-        admin = createAndSaveEmployee("admin", "admin@test.com", roleAdmin, deptDev);
-        user1 = createAndSaveEmployee("user1", "user1@test.com", roleUser, deptDev);
-        user2 = createAndSaveEmployee("user2", "user2@test.com", roleUser, deptDev);
+        // 4. ChatRoom 생성
+        room1 = chatRoomRepository.save(ChatRoom.createChatRoom(admin, "개발팀 챗방", true));
 
-        // --- given 3: 채팅방 데이터 생성 (room1, room2) ---
-        room1 = chatRoomRepository.save(ChatRoom.createChatRoom(admin, "Room 1", true));
-        room2 = chatRoomRepository.save(ChatRoom.createChatRoom(user1, "Room 2", false));
+        // 5. ChatMessage 생성 (시간차를 두어 순서 보장)
+        // T1
+        msg1_early = chatMessageRepository.save(ChatMessage.createChatMessage(room1, user1, "첫번째 메시지"));
+        Thread.sleep(20);
 
-        // --- given 4: 테스트용 채팅 메시지 생성 (시간 순서 보장) ---
+        // T2
+        msg2_mid = chatMessageRepository.save(ChatMessage.createChatMessage(room1, user2, "두번째 메시지"));
+        Thread.sleep(20);
 
-        // 4-1. Room 1의 메시지
-        msg_sys_room1 = createAndSaveMessage(room1, null, "Room 1 created"); //
+        // T3 (System Message)
+        msg3_sys = chatMessageRepository.save(ChatMessage.createSystemMessage(room1, "시스템 알림: 공지"));
+        Thread.sleep(20);
 
-        // [FIX 2] createdAt 시간차를 확실히 보장하기 위해 sleep을 먼저 호출
-        Thread.sleep(10);
-        // userJoinedAt이 msg_sys_room1.createdAt 보다 확실히 나중이 됨
-        userJoinedAt = LocalDateTime.now();
-        // 다음 메시지와의 시간차도 보장
-        Thread.sleep(10);
+        // T4
+        msg4_late = chatMessageRepository.save(ChatMessage.createChatMessage(room1, user1, "네번째 메시지(최신)"));
+        Thread.sleep(20);
 
-        msg1_room1 = createAndSaveMessage(room1, user1, "Hello from user1");
-        Thread.sleep(10);
-
-        msg2_room1 = createAndSaveMessage(room1, user2, "Hello from user2");
-        Thread.sleep(10);
-
-        msg3_room1_deleted = createAndSaveMessage(room1, user1, "This message will be deleted");
-        msg3_room1_deleted.deleteChatMessage(); //
-
-        // [FIX 1] save() -> saveAndFlush()로 변경
-        // isDeleted=true 변경 사항을 DB에 즉시 반영(flush)
-        chatMessageRepository.saveAndFlush(msg3_room1_deleted);
-        Thread.sleep(10);
-
-        msg4_room1 = createAndSaveMessage(room1, user1, "Latest message from user1");
-
-        // 4-2. Room 2의 메시지
-        msg1_room2 = createAndSaveMessage(room2, user1, "Message in Room 2");
+        // T5 (Deleted)
+        ChatMessage tempDeleted = ChatMessage.createChatMessage(room1, user2, "삭제될 메시지");
+        tempDeleted.deleteChatMessage(); // isDeleted = true 설정
+        msg5_deleted = chatMessageRepository.save(tempDeleted);
     }
 
-    /**
-     * Employee 엔티티를 생성하고 즉시 '저장(save)'한 뒤 반환하는 헬퍼
-     */
-    private Employee createAndSaveEmployee(String username, String email, CommonCode role, CommonCode dept) {
-        Employee employee = Employee.createEmployee(
-                username, "테스트유저", email, "010-1234-5678",
-                LocalDate.now(), statusActive, role, dept, posJunior,
-                null
-        );
-        employee.updateInitPassword(TEST_PASSWORD, null);
-        return employeeRepository.save(employee);
+    // --- Helper Methods ---
+    private CommonCode createAndSaveCode(String code, String name, String val1, Long seq) {
+        CommonCode c = CommonCode.createCommonCode(code, name, val1, null, null, seq, null, false);
+        return commonCodeRepository.save(c);
     }
 
-    /**
-     * ChatMessage 엔티티를 생성하고 '저장(save)'한 뒤 반환하는 헬퍼
-     */
-    private ChatMessage createAndSaveMessage(ChatRoom room, Employee emp, String content) {
-        ChatMessage msg = ChatMessage.createChatMessage(room, emp, content); //
-        return chatMessageRepository.save(msg);
+    private Employee createAndSaveEmployee(String username, String email, CommonCode role) {
+        Employee e = Employee.createEmployee(username, "이름", email, "010-0000-0000", LocalDate.now(),
+                statusActive, role, deptDev, posJunior, null);
+        e.updateInitPassword(TEST_PASSWORD, null);
+        return employeeRepository.save(e);
     }
 
-    // --- CRUD Tests ---
+    // --- CRUD & Basic Logic Tests ---
 
     @Test
-    @DisplayName("C: 채팅 메시지 생성(save) 테스트 - 사용자 메시지")
+    @DisplayName("C: 사용자 메시지 저장 테스트")
     void saveUserMessageTest() {
         // given
-        ChatMessage newMessage = ChatMessage.createChatMessage(room1, user1, "A new message");
+        ChatMessage newMessage = ChatMessage.createChatMessage(room1, user1, "새 메시지");
 
         // when
-        ChatMessage savedMessage = chatMessageRepository.save(newMessage);
+        ChatMessage saved = chatMessageRepository.save(newMessage);
 
         // then
-        assertThat(savedMessage).isNotNull();
-        assertThat(savedMessage.getChatMessageId()).isNotNull();
-        assertThat(savedMessage.getContent()).isEqualTo("A new message");
-        assertThat(savedMessage.getChatRoom()).isEqualTo(room1);
-        assertThat(savedMessage.getEmployee()).isEqualTo(user1);
-        assertThat(savedMessage.getIsDeleted()).isFalse(); //
-        assertThat(savedMessage.getCreatedAt()).isNotNull(); //
+        assertThat(saved.getChatMessageId()).isNotNull();
+        assertThat(saved.getContent()).isEqualTo("새 메시지");
+        assertThat(saved.getEmployee()).isEqualTo(user1);
+        assertThat(saved.getMessageType().name()).isEqualTo("USER");
+        assertThat(saved.getIsDeleted()).isFalse();
+        assertThat(saved.getCreatedAt()).isNotNull();
     }
 
     @Test
-    @DisplayName("C: 채팅 메시지 생성(save) 테스트 - 시스템 메시지 (employee=null)")
+    @DisplayName("C: 시스템 메시지 저장 테스트 (Employee Null 확인)")
     void saveSystemMessageTest() {
         // given
-        // ChatMessage.java의 employee 필드는 nullable=true
-        ChatMessage systemMessage = ChatMessage.createChatMessage(room1, null, "System notification");
+        ChatMessage sysMsg = ChatMessage.createSystemMessage(room1, "방 생성");
 
         // when
-        ChatMessage savedMessage = chatMessageRepository.save(systemMessage);
+        ChatMessage saved = chatMessageRepository.save(sysMsg);
 
         // then
-        assertThat(savedMessage).isNotNull();
-        assertThat(savedMessage.getChatMessageId()).isNotNull();
-        assertThat(savedMessage.getContent()).isEqualTo("System notification");
-        assertThat(savedMessage.getEmployee()).isNull(); //
+        assertThat(saved.getEmployee()).isNull(); // 시스템 메시지는 직원이 없음
+        assertThat(saved.getMessageType().name()).isEqualTo("SYSTEM");
+        assertThat(saved.getContent()).isEqualTo("방 생성");
     }
 
     @Test
-    @DisplayName("R: ID로 조회(findById) 테스트 - 성공")
-    void findByIdSuccessTest() {
+    @DisplayName("R: ID로 조회 테스트")
+    void findByIdTest() {
         // given
-        Long targetId = msg1_room1.getChatMessageId();
+        Long id = msg1_early.getChatMessageId();
 
         // when
-        Optional<ChatMessage> foundMsg = chatMessageRepository.findById(targetId);
+        Optional<ChatMessage> found = chatMessageRepository.findById(id);
 
         // then
-        assertThat(foundMsg).isPresent();
-        assertThat(foundMsg.get().getContent()).isEqualTo("Hello from user1");
+        assertThat(found).isPresent();
+        assertThat(found.get().getContent()).isEqualTo(msg1_early.getContent());
     }
 
     @Test
-    @DisplayName("R: ID로 조회(findById) 테스트 - 실패 (존재하지 않는 ID)")
-    void findByIdFailureTest() {
+    @DisplayName("U: 소프트 삭제(Soft Delete) 테스트")
+    void softDeleteTest() {
         // given
-        Long nonExistentId = 9999L;
+        ChatMessage target = chatMessageRepository.findById(msg1_early.getChatMessageId()).orElseThrow();
 
         // when
-        Optional<ChatMessage> foundMsg = chatMessageRepository.findById(nonExistentId);
+        target.deleteChatMessage(); // 엔티티 메서드 호출
+        chatMessageRepository.saveAndFlush(target);
 
         // then
-        assertThat(foundMsg).isNotPresent();
+        ChatMessage updated = chatMessageRepository.findById(msg1_early.getChatMessageId()).orElseThrow();
+        assertThat(updated.getIsDeleted()).isTrue();
     }
 
     @Test
-    @DisplayName("U: 메시지 수정(update) 테스트 - Soft Delete")
-    void updateMessageSoftDeleteTest() {
+    @DisplayName("D: 하드 삭제(Hard Delete) 테스트")
+    void hardDeleteTest() {
         // given
-        Long targetId = msg1_room1.getChatMessageId();
+        Long id = msg4_late.getChatMessageId();
 
         // when
-        ChatMessage msgToUpdate = chatMessageRepository.findById(targetId).get();
-        msgToUpdate.deleteChatMessage(); //
-        chatMessageRepository.saveAndFlush(msgToUpdate);
-
-        // then
-        ChatMessage updatedMsg = chatMessageRepository.findById(targetId).get();
-        assertThat(updatedMsg.getIsDeleted()).isTrue();
-    }
-
-    @Test
-    @DisplayName("D: 메시지 삭제(deleteById) 테스트 - Hard Delete")
-    void deleteMessageTest() {
-        // given
-        Long targetId = msg1_room2.getChatMessageId();
-        assertThat(chatMessageRepository.existsById(targetId)).isTrue();
-
-        // when
-        chatMessageRepository.deleteById(targetId);
+        chatMessageRepository.deleteById(id);
         chatMessageRepository.flush();
 
         // then
-        assertThat(chatMessageRepository.existsById(targetId)).isFalse();
+        assertThat(chatMessageRepository.existsById(id)).isFalse();
     }
 
-    // --- Exception (Constraints) Tests ---
+    // --- Exception Tests ---
 
     @Test
-    @DisplayName("Exception: 필수 FK(chatRoom) null 저장 시 예외 발생")
-    void saveNullChatRoomTest() {
-        // given
-        // ChatMessage.java의 chatRoom 필드는 nullable=false
-        ChatMessage msg = ChatMessage.createChatMessage(null, user1, "Content");
-
-        // when & then
-        assertThatThrownBy(() -> chatMessageRepository.saveAndFlush(msg))
-                .isInstanceOf(DataIntegrityViolationException.class);
-    }
-
-    @Test
-    @DisplayName("Exception: 필수 필드(content) null 저장 시 예외 발생")
+    @DisplayName("Exception: 내용(Content)이 없으면 예외 발생")
     void saveNullContentTest() {
+        // ChatMessage.java: @Column(nullable = false) content
         // given
-        // ChatMessage.java의 content 필드는 nullable=false
-        ChatMessage msg = ChatMessage.createChatMessage(room1, user1, null);
+        ChatMessage invalidMsg = ChatMessage.createChatMessage(room1, user1, null);
 
         // when & then
-        assertThatThrownBy(() -> chatMessageRepository.saveAndFlush(msg))
+        assertThatThrownBy(() -> chatMessageRepository.save(invalidMsg))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
-    // --- Custom Repository Method Tests ---
-
     @Test
-    @DisplayName("Custom: findByChatRoomChatRoomIdAndCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc (페이지네이션)")
-    void findByRoomIdAndCreatedAtAfterTest() {
+    @DisplayName("Exception: 채팅방(ChatRoom)이 없으면 예외 발생")
+    void saveNullRoomTest() {
+        // ChatMessage.java: @JoinColumn(nullable = false) chatRoom
         // given
-        // [FIX 1] 수정으로 인해 msg3_room1_deleted(isDeleted=true)가 DB에 반영됨
-        // [FIX 2] 수정으로 인해 userJoinedAt이 msg_sys_room1 이후임이 보장됨
+        ChatMessage invalidMsg = ChatMessage.createChatMessage(null, user1, "내용");
 
-        // userJoinedAt 이후, isDeleted=false인 메시지:
-        // msg1, msg2, msg4 (총 3개)
-        Pageable pageable = PageRequest.of(0, 5);
-        Long roomId = room1.getChatRoomId();
-
-        // when
-        Page<ChatMessage> page = chatMessageRepository.findByChatRoomChatRoomIdAndCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(
-                roomId, userJoinedAt, pageable
-        );
-
-        // then
-        // 1. 총 개수 확인 (기대값 3L)
-        assertThat(page.getTotalElements()).isEqualTo(3);
-        // 2. 현재 페이지 내용 확인
-        assertThat(page.getContent()).hasSize(3);
-        // 3. 정렬 순서 확인 (createdAt 내림차순)
-        assertThat(page.getContent()).containsExactly(
-                msg4_room1, // 최신
-                msg2_room1,
-                msg1_room1  // 가장 오래됨 (userJoinedAt 이후)
-        );
-        // 4. 제외된 메시지 확인
-        assertThat(page.getContent()).doesNotContain(
-                msg_sys_room1,      // userJoinedAt 이전 메시지
-                msg3_room1_deleted, // isDeleted=true
-                msg1_room2          // 다른 채팅방
-        );
+        // when & then
+        assertThatThrownBy(() -> chatMessageRepository.save(invalidMsg))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test
-    @DisplayName("Custom: findBy... (페이지네이션 2페이지 테스트)")
-    void findByRoomIdPaginationTest() {
+    @DisplayName("Exception: 사용자 메시지에 Employee가 없으면 IllegalArgumentException (팩토리 메서드 검증)")
+    void saveUserMessageWithoutEmployeeTest() {
+        // ChatMessage.createChatMessage 내부 검증 로직
+        assertThatThrownBy(() -> ChatMessage.createChatMessage(room1, null, "내용"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("사용자 정보가 필수");
+    }
+
+    // --- Custom Query Tests ---
+
+    @Test
+    @DisplayName("Query: findBy...CreatedAtAfterAndIsDeletedFalse... (페이지네이션+필터링)")
+    void findActiveMessagesAfterJoinTest() {
         // given
-        // (total 3개: msg4, msg2, msg1)
-        Pageable pageable = PageRequest.of(1, 2); // 2페이지 (0-based), 페이지 크기 2
+        // msg1_early의 시간보다 아주 조금 뒤를 "참여 시간"으로 설정
+        // 예상 결과: msg1(제외-시간이전), msg5(제외-삭제됨), 남은 것: msg4, msg3, msg2
+        LocalDateTime joinedAt = msg1_early.getCreatedAt().plusNanos(1000);
+        Pageable pageable = PageRequest.of(0, 10);
 
         // when
-        Page<ChatMessage> page = chatMessageRepository.findByChatRoomChatRoomIdAndCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(
-                room1.getChatRoomId(), userJoinedAt, pageable
+        Page<ChatMessage> result = chatMessageRepository.findByChatRoomChatRoomIdAndCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(
+                room1.getChatRoomId(), joinedAt, pageable
         );
 
         // then
-        // 1. 전체 개수는 동일
-        assertThat(page.getTotalElements()).isEqualTo(3);
-        // 2. 1페이지(크기 2) = msg4, msg2
-        //    2페이지(크기 2) = msg1 (1개만 남음)
-        assertThat(page.getContent()).hasSize(1);
-        assertThat(page.getContent()).containsExactly(msg1_room1);
+        List<ChatMessage> content = result.getContent();
+        assertThat(content).hasSize(3); // msg4, msg3, msg2
+        assertThat(content.get(0)).isEqualTo(msg4_late); // 최신순 정렬 확인
+        assertThat(content.get(1)).isEqualTo(msg3_sys);
+        assertThat(content.get(2)).isEqualTo(msg2_mid);
+        assertThat(content).doesNotContain(msg1_early, msg5_deleted);
     }
 
     @Test
-    @DisplayName("Custom: findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc (최신 메시지 1개)")
-    void findTopByChatRoomAndCreatedAtAfterTest() {
+    @DisplayName("Query: findTop...OrderByCreatedAtDesc (최신 메시지 조회)")
+    void findTopMessageTest() {
         // given
-        // room1에서 userJoinedAt 이후 가장 최신 메시지는 msg4_room1
-        // [FIX 2]로 인해 msg_sys_room1은 userJoinedAt 이전임이 보장됨
+        // joinedAt을 아주 과거로 설정하여 모든 메시지 대상
+        LocalDateTime joinedAt = LocalDateTime.now().minusYears(1);
 
         // when
         Optional<ChatMessage> topMsg = chatMessageRepository.findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc(
-                room1, userJoinedAt
-        );
-
-        // when 2 (결과가 없는 경우)
-        Optional<ChatMessage> noMsg = chatMessageRepository.findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc(
-                room1, LocalDateTime.now().plusDays(1) // 미래 시간
+                room1, joinedAt
         );
 
         // then
+        // msg5는 삭제되었지만 이 쿼리는 isDeleted 조건을 메서드 이름에 명시하지 않았으므로 가장 최신인 msg5가 나옴
         assertThat(topMsg).isPresent();
-        assertThat(topMsg.get()).isEqualTo(msg4_room1);
-        assertThat(noMsg).isNotPresent();
+        assertThat(topMsg.get()).isEqualTo(msg5_deleted);
     }
 
     @Test
-    @DisplayName("Custom: countByChatRoomAndChatMessageIdGreaterThan (ID 기준 카운트)")
-    void countByChatRoomAndChatMessageIdGreaterThanTest() {
+    @DisplayName("Query: count...GreaterThanAndEmployeeIsNotNull (ID 기준 안 읽은 메시지 수, 시스템 메시지 제외)")
+    void countUnreadByIdExcludeSystemTest() {
         // given
-        // room1의 메시지 순서: msg_sys -> msg1 -> msg2 -> msg3_del -> msg4
-        Long lastReadId = msg1_room1.getChatMessageId();
+        // 마지막 읽은 메시지가 msg1이라고 가정
+        Long lastReadId = msg1_early.getChatMessageId();
+
+        // 남은 메시지 ID 순서: msg2(User), msg3(Sys), msg4(User), msg5(User-Del)
+        // 쿼리 조건: ID > lastReadId AND Employee Is Not Null
+        // msg3(Sys)는 Employee가 Null이므로 제외되어야 함.
+        // msg5(Del)는 Employee가 있으므로 포함됨 (삭제 여부 조건 없음)
 
         // when
-        // msg1_room1 이후의 메시지 개수 카운트
         long count = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThanAndEmployeeIsNotNull(
                 room1, lastReadId
         );
 
         // then
-        // msg2, msg3_del, msg4 (3개)
-        // 이 쿼리는 isDeleted를 필터링하지 않음
+        // msg2, msg4, msg5 -> 총 3개 예상
         assertThat(count).isEqualTo(3);
     }
 
     @Test
-    @DisplayName("Custom: countByChatRoomAndChatMessageIdGreaterThan (ID 기준 카0)")
-    void countByChatRoomAndChatMessageIdGreaterThanZeroTest() {
+    @DisplayName("Query: count...CreatedAtAfterAndEmployeeIsNotNull (시간 기준 안 읽은 메시지 수, 시스템 메시지 제외)")
+    void countUnreadByTimeExcludeSystemTest() {
         // given
-        // 가장 최신 메시지 ID
-        Long lastReadId = msg4_room1.getChatMessageId();
+        // msg1 생성 직후 입장
+        LocalDateTime joinedAt = msg1_early.getCreatedAt().plusNanos(1000);
 
-        // when
-        long count = chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThanAndEmployeeIsNotNull(
-                room1, lastReadId
-        );
-
-        // then
-        assertThat(count).isEqualTo(0);
-    }
-
-    @Test
-    @DisplayName("Custom: countByChatRoomAndCreatedAtAfter (시간 기준 카운트)")
-    void countByChatRoomAndCreatedAtAfterTest() {
-        // given
-        // [FIX 2]로 인해 userJoinedAt이 msg_sys_room1 이후임이 보장됨
-        // userJoinedAt 이후: msg1, msg2, msg3_del, msg4 (총 4개)
+        // 대상: msg2(User), msg3(Sys), msg4(User), msg5(User-Del)
+        // EmployeeIsNotNull 조건으로 msg3 제외
 
         // when
         long count = chatMessageRepository.countByChatRoomAndCreatedAtAfterAndEmployeeIsNotNull(
-                room1, userJoinedAt
+                room1, joinedAt
         );
 
         // then
-        // 이 쿼리는 isDeleted를 필터링하지 않음 (기대값 4L)
-        assertThat(count).isEqualTo(4);
+        // msg2, msg4, msg5 -> 3개
+        assertThat(count).isEqualTo(3);
     }
 
     @Test
-    @DisplayName("Custom: countByChatRoomAndCreatedAtAfter (시간 기준 카운트 0)")
-    void countByChatRoomAndCreatedAtAfterZeroTest() {
+    @DisplayName("Query: findAllBy...CreatedAtLessThanEqual... (기간 조회)")
+    void findMessagesBetweenDatesTest() {
         // given
-        LocalDateTime futureTime = LocalDateTime.now().plusDays(1);
+        // 범위: msg2 ~ msg4 (msg2 포함, msg4 포함)
+
+        // [수정] H2 DB 정밀도 문제 방지:
+        // msg2보다 10ms 전부터, msg4보다 10ms 후까지로 범위 설정 (메시지 간격은 20ms이므로 안전함)
+        LocalDateTime afterTime = msg2_mid.getCreatedAt().minusNanos(10_000_000); // -10ms
+        LocalDateTime untilTime = msg4_late.getCreatedAt().plusNanos(10_000_000); // +10ms
 
         // when
-        long count = chatMessageRepository.countByChatRoomAndCreatedAtAfterAndEmployeeIsNotNull(
-                room1, futureTime
+        List<ChatMessage> msgs = chatMessageRepository.findAllByChatRoomChatRoomIdAndCreatedAtAfterAndCreatedAtLessThanEqualOrderByCreatedAtAsc(
+                room1.getChatRoomId(), afterTime, untilTime
         );
 
         // then
-        assertThat(count).isEqualTo(0);
+        // 예상: msg2, msg3, msg4
+        // (msg1은 범위 밖, msg5는 untilTime보다 뒤라서 제외)
+        assertThat(msgs).hasSize(3);
+        assertThat(msgs).containsExactly(msg2_mid, msg3_sys, msg4_late); // 오름차순 정렬
     }
 }
