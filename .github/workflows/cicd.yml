@@ -35,7 +35,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "./*"
           target: "/home/ubuntu/website/backend"
-          rm: false
+          rm: true
 
       # 4. EC2에서 Docker Compose 실행
       - name: Deploy with Docker Compose on EC2
