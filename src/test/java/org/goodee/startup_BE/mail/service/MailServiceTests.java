@@ -415,7 +415,8 @@ class MailServiceTests {
 		mailService.moveMails(moveToTrash, receiver.getUsername());
 		
 		Mailbox trashBox = mailboxRepository.findById(inboxBox.getBoxId()).orElseThrow();
-		assertThat(trashBox.getTypeId().getValue1()).isEqualTo("TRASH");
+		// TRASH 이동 후: typeId는 기존 메일함(INBOX) 유지, deletedStatus 로 휴지통 여부 판단
+		assertThat(trashBox.getTypeId().getValue1()).isEqualTo("INBOX");
 		assertThat(trashBox.getDeletedStatus()).isEqualTo((byte) 1);
 		
 		// 휴지통에서 삭제
@@ -522,8 +523,8 @@ class MailServiceTests {
 		
 		// then
 		Mailbox updated = mailboxRepository.findById(inboxBox.getBoxId()).orElseThrow();
-		assertThat(updated.getTypeId().getValue1()).isEqualTo("TRASH");
-		assertThat(updated.getDeletedStatus()).isEqualTo((byte) 1);
+		assertThat(updated.getTypeId().getValue1()).isEqualTo("INBOX");   // 타입 유지
+		assertThat(updated.getDeletedStatus()).isEqualTo((byte) 1);       // 휴지통 플래그
 		assertThat(updated.getIsRead()).isFalse();
 	}
 	

@@ -548,8 +548,9 @@ public class MailServiceImpl implements MailService{
 			throw new AccessDeniedException("권한이 없거나 존재하지 않는 항목이 포함되어 있습니다.");
 		}
 		
-		boolean checkInTrash = mailboxes.stream().allMatch(mail -> "TRASH".equals(mail.getTypeId().getValue1()));
-		if(!checkInTrash) {
+		boolean checkInTrash = mailboxes.stream()
+			                       .allMatch(mb -> mb.getDeletedStatus() != null && mb.getDeletedStatus() == 1);
+		if (!checkInTrash) {
 			throw new IllegalStateException("메일이 휴지통에 존재하지 않습니다.");
 		}
 		
@@ -563,11 +564,21 @@ public class MailServiceImpl implements MailService{
 	public Page<MailboxListDTO> getMailboxList(String username, String boxType, int page, int size) {
 		Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "mail.sendAt"));
 		String type = boxType.toUpperCase();
-		byte deleted = (byte) ("TRASH".equals(type) ? 1 : 0);
 		
-		Page<Mailbox> mailboxList = mailboxRepository
-			                            .findByEmployeeUsernameAndTypeIdValue1AndDeletedStatus(
-				                            username, boxType.toUpperCase(), deleted, pageable);
+		Page<Mailbox> mailboxList;
+		
+		if ("TRASH".equals(type)) {
+			// 휴지통: 타입 상관없이 deletedStatus = 1 인 것만 조회
+			mailboxList = mailboxRepository.findByEmployeeUsernameAndDeletedStatus(
+				username, (byte) 1, pageable
+			);
+		} else {
+			// 나머지: 해당 타입 + deletedStatus = 0
+			mailboxList = mailboxRepository
+				              .findByEmployeeUsernameAndTypeIdValue1AndDeletedStatus(
+					              username, type, (byte) 0, pageable
+				              );
+		}
 		
 		CommonCode toCode = commonCodeRepository
 			                    .findByCodeStartsWithAndKeywordExactMatchInValues(ReceiverType.PREFIX, ReceiverType.TO.name())
