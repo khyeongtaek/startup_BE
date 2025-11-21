@@ -20,6 +20,7 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       ALLOWED_ORIGIN: ${ALLOWED_ORIGIN}
       FILE_STORAGE: /uploads
+      HOLIDAY_API_KEY: ${HOLIDAY_API_KEY}
 
     volumes:
       - ${FILE_STORAGE}:/uploads
