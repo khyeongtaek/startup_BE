@@ -61,10 +61,13 @@ public class MailController {
 	)
 	@GetMapping("/{mailId}")
 	public ResponseEntity<APIResponseDTO<MailDetailResponseDTO>> getMailDetail(
-		@PathVariable Long mailId, @RequestParam(required = false, defaultValue = "false") boolean isRead, Authentication auth
+		@PathVariable Long mailId,
+		@RequestParam(required = false) Long boxId,
+		@RequestParam(required = false, defaultValue = "false") boolean isRead,
+		Authentication auth
 	) {
 		String username = auth.getName();
-		MailDetailResponseDTO responseDTO = mailService.getMailDetail(mailId, username, isRead);
+		MailDetailResponseDTO responseDTO = mailService.getMailDetail(mailId, boxId, username, isRead);
 		
 		APIResponseDTO<MailDetailResponseDTO> response = APIResponseDTO.<MailDetailResponseDTO>builder()
 			                                                 .message("메일 상세 조회")
