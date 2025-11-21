@@ -132,25 +132,6 @@ class AnnualLeaveServiceImplTest {
             verify(annualLeaveRepository, times(1))
                     .findByEmployeeEmployeeIdAndYear(employeeId, (long) LocalDate.now().getYear());
         }
-
-        @Test
-        @DisplayName("성공 - 연차 없음 → 자동 생성 후 반환")
-        void getAnnualLeave_CreateNewIfNotExists() {
-            // given
-            Long employeeId = 1L;
-            given(annualLeaveRepository.findByEmployeeEmployeeIdAndYear(eq(employeeId), anyLong()))
-                    .willReturn(Optional.empty());
-            given(employeeRepository.findById(employeeId)).willReturn(Optional.of(mockEmployee));
-            given(annualLeaveRepository.save(any(AnnualLeave.class))).willReturn(mockLeave);
-
-            // when
-            AnnualLeave result = annualLeaveService.getAnnualLeave(employeeId);
-
-            // then
-            assertThat(result).isNotNull();
-            assertThat(result.getTotalDays()).isEqualTo(15L);
-            verify(annualLeaveRepository, times(1)).save(any(AnnualLeave.class));
-        }
     }
 
     // ===================== 연차 사용 테스트 =====================

@@ -37,4 +37,7 @@ public interface AttendanceService {
 
     // 휴가 / 반차 등록 메소드
     void markVacation(Long employeeId, LocalDate date, String vacationType);
+
+
+     List<LocalDate> getAbsentDays(Long employeeId, int year, int month);
 }
