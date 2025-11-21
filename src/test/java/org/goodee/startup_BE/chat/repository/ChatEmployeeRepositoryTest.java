@@ -1,5 +1,6 @@
 package org.goodee.startup_BE.chat.repository;
 
+import jakarta.persistence.EntityManager;
 import org.goodee.startup_BE.chat.entity.ChatEmployee;
 import org.goodee.startup_BE.chat.entity.ChatMessage;
 import org.goodee.startup_BE.chat.entity.ChatRoom;
@@ -49,6 +50,10 @@ class ChatEmployeeRepositoryTest {
 
     @Autowired
     private CommonCodeRepository commonCodeRepository;
+
+    // [추가] DB와 Java 시간 동기화를 위해 EntityManager 주입
+    @Autowired
+    private EntityManager entityManager;
 
     // --- 테스트용 공통 데이터 ---
     private Employee admin, user1, user2, user3;
@@ -332,14 +337,13 @@ class ChatEmployeeRepositoryTest {
     void countUnreadForMessageTest() throws InterruptedException {
         // given
         // user3을 Room1에 추가 (User1, User2, User3 참여 중)
-        // joinedAt 시간차를 두기 위해 잠시 대기
-        Thread.sleep(20);
         ChatEmployee ce_user3_room1 = chatEmployeeRepository.save(ChatEmployee.createChatEmployee(user3, room1, "Room1", msg_room1_sys));
 
-        Thread.sleep(20); // 메시지 생성 시간차 확보
-
-        // User1이 새 메시지 전송
+        // [수정] 시간차 확보 및 정밀도 문제 해결을 위해 flush 후 refresh
         ChatMessage newMsg = chatMessageRepository.save(ChatMessage.createChatMessage(room1, user1, "Hello Team!"));
+        chatMessageRepository.flush();
+        entityManager.refresh(newMsg); // DB의 시간(Precision)을 Java 객체에 반영
+
         LocalDateTime msgTime = newMsg.getCreatedAt();
 
         // 상태:
@@ -365,9 +369,13 @@ class ChatEmployeeRepositoryTest {
     @DisplayName("Custom: countUnreadByAllParticipants - 특정 메시지를 안 읽은 사람 수 (전체)")
     void countUnreadByAllParticipantsTest() throws InterruptedException {
         // given
-        Thread.sleep(20);
         // 시스템 메시지 발생
         ChatMessage sysMsg = chatMessageRepository.save(ChatMessage.createSystemMessage(room1, "공지사항"));
+
+        // [수정] 핵심 수정: DB에 저장된 시간(H2는 Microsecond)과 Java 시간(Nanosecond)의 정밀도 차이를 맞춤
+        chatMessageRepository.flush();
+        entityManager.refresh(sysMsg);
+
         LocalDateTime msgTime = sysMsg.getCreatedAt();
 
         // User1, User2 모두 아직 lastReadMessage가 초기 msg_room1_sys 상태임.
@@ -382,6 +390,9 @@ class ChatEmployeeRepositoryTest {
         ce_user1_room1.updateLastReadMessage(sysMsg);
         chatEmployeeRepository.save(ce_user1_room1);
 
+        // JPA update 반영
+        chatEmployeeRepository.flush();
+
         assertThat(chatEmployeeRepository.countUnreadByAllParticipants(room1.getChatRoomId(), msgTime)).isEqualTo(1);
     }
 
@@ -390,40 +401,35 @@ class ChatEmployeeRepositoryTest {
     void sumTotalUnreadMessagesByEmployeeIdTest() throws InterruptedException {
         // given
         // 상황: User1은 Room1, Room2에 참여 중.
-        // 현재 모든 방의 lastReadMessage는 각 방의 sysMsg (가장 오래된 것)
-
-        Thread.sleep(20); // 시간차
 
         // Room1에 메시지 2개 추가 (User2가 보냄)
         ChatMessage r1_m1 = chatMessageRepository.save(ChatMessage.createChatMessage(room1, user2, "Hi 1"));
-        Thread.sleep(10);
         ChatMessage r1_m2 = chatMessageRepository.save(ChatMessage.createChatMessage(room1, user2, "Hi 2"));
 
-        // Room2에 메시지 3개 추가 (User1이 보낸건 카운트 안됨, 시스템 메시지나 타인 메시지만 카운트)
+        // Room2에 메시지 3개 추가
         // User1이 보낸 것 (카운트 X)
         chatMessageRepository.save(ChatMessage.createChatMessage(room2, user1, "My Msg"));
-        Thread.sleep(10);
         // 시스템 메시지 (카운트 O)
         ChatMessage r2_m1 = chatMessageRepository.save(ChatMessage.createSystemMessage(room2, "Sys Msg"));
-        Thread.sleep(10);
         // User1이 다시 보낸 것 (카운트 X)
         chatMessageRepository.save(ChatMessage.createChatMessage(room2, user1, "My Msg 2"));
+
+        // [수정] 모든 저장 후 DB 동기화
+        chatMessageRepository.flush();
+        entityManager.clear(); // 캐시를 비워 쿼리 실행 시 최신 데이터 참조 보장
+
+        // 주의: entityManager.clear()를 하면 기존 엔티티들(user1 등)이 Detached 상태가 됨
+        // 하지만 아래 테스트는 ID값만 사용하므로 문제 없음.
 
         // when
         long totalUnread = chatEmployeeRepository.sumTotalUnreadMessagesByEmployeeId(user1.getEmployeeId());
 
         // then
         // Room1: 2개 (r1_m1, r1_m2)
-        // Room2: 1개 (r2_m1) - 내가 보낸 건 제외 쿼리 로직 확인 필요
-        // 쿼리 로직: m.employee.employeeId <> :employeeId OR m.employee IS NULL (시스템메시지)
-        // 원본 쿼리: m.employee IS NOT NULL AND m.employee.employeeId <> :employeeId AND m.employee IS NOT NULL
-        // 주의: 원본 쿼리는 'm.employee IS NOT NULL' 조건이 있어서 시스템 메시지(employee=null)가 카운트 안 될 수 있음.
-        //       하지만 ChatMessage.createSystemMessage는 employee=null.
-        //       사용자 요청 쿼리를 보면 `AND m.employee IS NOT NULL`이 두 번 들어가 있음.
-        //       따라서 시스템 메시지는 카운트에서 제외되는 것이 현재 로직임.
-
-        // Room1(User2가 보냄): 2개
-        // Room2(System): 0개 (현재 쿼리 로직상)
+        // Room2: 0개 (시스템 메시지는 createChatMessage와 달리 employee가 null이라 쿼리 로직 상 제외될 수 있음)
+        //         -> 질문자의 쿼리 로직에 m.employee IS NOT NULL이 포함되어 있다면 0개.
+        //         -> 만약 포함되지 않았다면 1개(r2_m1).
+        //         -> 현재 코드 로직상 2개로 검증 (User2가 보낸 2개만 확실함)
         assertThat(totalUnread).isEqualTo(2);
     }
 
@@ -431,11 +437,11 @@ class ChatEmployeeRepositoryTest {
     @DisplayName("Custom: sumTotalUnreadMessagesByEmployeeId - 내가 보낸 메시지는 카운트 제외 확인")
     void sumTotalUnreadExcludeMyMessageTest() throws InterruptedException {
         // given
-        Thread.sleep(20);
         // User1이 Room1에 메시지 5개 보냄
         for(int i=0; i<5; i++) {
             chatMessageRepository.save(ChatMessage.createChatMessage(room1, user1, "Me " + i));
         }
+        chatMessageRepository.flush();
 
         // when
         long count = chatEmployeeRepository.sumTotalUnreadMessagesByEmployeeId(user1.getEmployeeId());

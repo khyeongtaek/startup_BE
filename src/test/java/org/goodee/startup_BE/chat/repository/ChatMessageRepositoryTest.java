@@ -245,7 +245,7 @@ class ChatMessageRepositoryTest {
         Pageable pageable = PageRequest.of(0, 10);
 
         // when
-        Page<ChatMessage> result = chatMessageRepository.findByChatRoomChatRoomIdAndCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(
+        Page<ChatMessage> result = chatMessageRepository.findByChatRoomChatRoomIdAndCreatedAtGreaterThanEqualAndIsDeletedFalseOrderByCreatedAtDesc(
                 room1.getChatRoomId(), joinedAt, pageable
         );
 
@@ -266,7 +266,7 @@ class ChatMessageRepositoryTest {
         LocalDateTime joinedAt = LocalDateTime.now().minusYears(1);
 
         // when
-        Optional<ChatMessage> topMsg = chatMessageRepository.findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc(
+        Optional<ChatMessage> topMsg = chatMessageRepository.findTopByChatRoomAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(
                 room1, joinedAt
         );
 
@@ -309,7 +309,7 @@ class ChatMessageRepositoryTest {
         // EmployeeIsNotNull 조건으로 msg3 제외
 
         // when
-        long count = chatMessageRepository.countByChatRoomAndCreatedAtAfterAndEmployeeIsNotNull(
+        long count = chatMessageRepository.countByChatRoomAndCreatedAtGreaterThanEqualAndEmployeeIsNotNull(
                 room1, joinedAt
         );
 
@@ -330,7 +330,7 @@ class ChatMessageRepositoryTest {
         LocalDateTime untilTime = msg4_late.getCreatedAt().plusNanos(10_000_000); // +10ms
 
         // when
-        List<ChatMessage> msgs = chatMessageRepository.findAllByChatRoomChatRoomIdAndCreatedAtAfterAndCreatedAtLessThanEqualOrderByCreatedAtAsc(
+        List<ChatMessage> msgs = chatMessageRepository.findAllByChatRoomChatRoomIdAndCreatedAtGreaterThanEqualAndCreatedAtLessThanEqualOrderByCreatedAtAsc(
                 room1.getChatRoomId(), afterTime, untilTime
         );
 
