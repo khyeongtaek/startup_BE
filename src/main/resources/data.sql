@@ -254,7 +254,9 @@ VALUES
     ('OT4', '전자결재', 'APPROVAL', '', '', 0, 1, 1, NOW(), NOW(), false),
     ('OT5', '채팅 초대', 'TEAMCHATNOTI', '', '', 0, 1, 1, NOW(), NOW(), false),
     ('OT6', '일정 초대', 'SCHEDULEINVITE', '', '', 0, 1, 1, NOW(), NOW(), false),
-    ('OT7', '채팅 메시지', 'CHAT', '', '', 0, 1, 1, NOW(), NOW(), false);
+    ('OT7', '채팅 메시지', 'CHAT', '', '', 0, 1, 1, NOW(), NOW(), false),
+    ('OT8', '시스템 메시지', 'CHAT_SYSTEM', '', '', 0, 1, 1, NOW(), NOW(), false),
+    ('OT9', '사용자 메시지', 'CHAT_USER', '', '', 0, 1, 1, NOW(), NOW(), false);
 
 
 /*
