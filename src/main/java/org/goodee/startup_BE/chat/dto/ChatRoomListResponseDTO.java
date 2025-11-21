@@ -28,7 +28,10 @@ public class ChatRoomListResponseDTO {
     private LocalDateTime lastMessageCreatedAt;
     // 팀채팅방 여부
     private Boolean isTeam;
+    // 사용자 수
     private Long memberCount;
+    // 직급 정보
+    private String positionName;
 
 
     /**
@@ -38,6 +41,7 @@ public class ChatRoomListResponseDTO {
             ChatRoom room,
             String otherUserName,
             String otherUserProfile,
+            String positionName,
             long unreadCount,
             Optional<ChatMessage> lastMessageOpt,
             long memberCount
@@ -55,6 +59,7 @@ public class ChatRoomListResponseDTO {
                 .chatRoomId(room.getChatRoomId())
                 .name(otherUserName) // 상대방 이름
                 .profile(otherUserProfile)
+                .positionName(positionName)
                 .unreadCount(unreadCount)
                 .lastMessage(lastMessageContent)
                 .lastMessageCreatedAt(lastTime)
@@ -84,6 +89,7 @@ public class ChatRoomListResponseDTO {
                 .chatRoomId(room.getChatRoomId())
                 .name(room.getName()) // 채팅방 이름
                 .profile(null) // 팀방은 프로필/상태 없음
+                .positionName(null)
                 .unreadCount(unreadCount)
                 .lastMessage(lastMessageContent)
                 .lastMessageCreatedAt(lastTime)
