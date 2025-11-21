@@ -4,10 +4,9 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.goodee.startup_BE.chat.enums.MessageType;
+import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
-import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
@@ -30,9 +29,9 @@ public class ChatMessage {
     private ChatRoom chatRoom;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
-    @Comment("메시지 타입 (USER, SYSTEM)")
-    private MessageType messageType;
+    @Column(nullable = false, length = 20)
+    @Comment("메시지 타입 (CHAT_USER, CHAT_SYSTEM)")
+    private OwnerType messageType;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = true)
@@ -56,7 +55,7 @@ public class ChatMessage {
             ChatRoom chatRoom,
             Employee employee,
             String content,
-            MessageType MessageType
+            OwnerType MessageType
     ) {
         ChatMessage chatMessage = new ChatMessage();
 
@@ -76,14 +75,14 @@ public class ChatMessage {
         if (employee == null) {
             throw new IllegalArgumentException("사용자 메시지에는 사용자 정보가 필수 입니다");
         }
-        return createChatMessage(chatRoom, employee, content, MessageType.USER);
+        return createChatMessage(chatRoom, employee, content, OwnerType.CHAT_USER);
     }
 
     public static ChatMessage createSystemMessage(
             ChatRoom chatRoom,
             String content
     ) {
-        return createChatMessage(chatRoom, null, content, MessageType.SYSTEM);
+        return createChatMessage(chatRoom, null, content, OwnerType.CHAT_SYSTEM);
     }
 
     @PrePersist
