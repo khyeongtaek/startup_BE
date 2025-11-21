@@ -12,7 +12,7 @@ public interface MailService {
 	MailSendResponseDTO sendMail(MailSendRequestDTO mailSendRequestDTO, String username, List<MultipartFile> multipartFile);
 	
 	// 메일 상세 조회 및 읽음 처리
-	MailDetailResponseDTO getMailDetail(Long mailId, String username, boolean isRead);
+	MailDetailResponseDTO getMailDetail(Long mailId, Long boxId, String username, boolean isRead);
 	
 	// 메일 이동 (개인보관함, 휴지통)
 	void moveMails(MailMoveRequestDTO requestDTO, String username);
