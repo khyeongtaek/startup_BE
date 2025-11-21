@@ -108,6 +108,8 @@ public class ChatServiceImpl implements ChatService {
                 for (ChatEmployee member : members) {
                     if (Boolean.TRUE.equals(member.getIsLeft())) {
                         member.rejoinChatRoom();
+                        // 재입장 시 참여 시간을 현재로 갱신하여 과거 시스템 메시지(방 생성 등) 노출 방지
+                        member.rejoinChatRoom();
                         chatEmployeeRepository.save(member);
                     }
                     lastMessageForNotify = member.getLastReadMessage();
@@ -271,6 +273,8 @@ public class ChatServiceImpl implements ChatService {
             } else if (Boolean.TRUE.equals(existingMember.getIsLeft())) {
                 // 재 참여
                 existingMember.rejoinChatRoom();
+                // 재참여 시 joinedAt을 갱신하여 이전 기록 노출 방지
+                existingMember.rejoinChatRoom();
                 rejoiningMembers.add(existingMember);
             }
             // 이미 방에 있는 사원이라 자동으로 걸러짐
@@ -305,10 +309,15 @@ public class ChatServiceImpl implements ChatService {
 
 
         // 6) 커밋 후 알림
-        simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + finalRoomId,
-                ChatMessageResponseDTO.toDTO(systemMsg));
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + finalRoomId,
+                        ChatMessageResponseDTO.toDTO(systemMsg));
 
-        notifyParticipantsOfNewMessage(room, systemMsg, null);
+                notifyParticipantsOfNewMessage(room, systemMsg, null);
+            }
+        });
 
         try {
             Long codeId = commonCodeRepository
@@ -405,6 +414,8 @@ public class ChatServiceImpl implements ChatService {
                 // 상대방이 나간 상태라면
                 if (!member.getEmployee().getEmployeeId().equals(sender.getEmployeeId()) && Boolean.TRUE.equals(member.getIsLeft())) {
                     member.rejoinChatRoom();
+                    // 재입장 시 joinedAt을 현재로 갱신하여, 과거 '채팅방 생성' 시스템 메시지 등이 안 보이도록 처리
+                    member.rejoinChatRoom();
                     chatEmployeeRepository.save(member);
                 }
             }
@@ -456,7 +467,7 @@ public class ChatServiceImpl implements ChatService {
                 .orElseThrow(() -> new AccessDeniedException("채팅방 멤버가 아니거나 이미 나간 사용자입니다."));
 
         Page<ChatMessage> page = chatMessageRepository
-                .findByChatRoomChatRoomIdAndCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(
+                .findByChatRoomChatRoomIdAndCreatedAtGreaterThanEqualAndIsDeletedFalseOrderByCreatedAtDesc(
                         roomId,
                         membership.getJoinedAt(),
                         pageable
@@ -467,7 +478,7 @@ public class ChatServiceImpl implements ChatService {
                 .map(ChatMessage::getChatMessageId)
                 .toList();
 
-        if(messageIds.isEmpty()) {
+        if (messageIds.isEmpty()) {
             return page.map(message -> ChatMessageResponseDTO.toDTO(message));
         }
 
@@ -488,7 +499,7 @@ public class ChatServiceImpl implements ChatService {
         return page.map(message -> {
             ChatMessageResponseDTO dto = ChatMessageResponseDTO.toDTO(message);
 
-            if(message.getEmployee() != null) {
+            if (message.getEmployee() != null) {
                 long currentUnreadCount = chatEmployeeRepository.countUnreadByAllParticipants(
                         roomId,
                         message.getCreatedAt()
@@ -519,7 +530,7 @@ public class ChatServiceImpl implements ChatService {
 
         if (lastMessageId == null) {
             finalMessageToRead = chatMessageRepository
-                    .findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc(
+                    .findTopByChatRoomAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(
                             membership.getChatRoom(),
                             membership.getJoinedAt()
                     )
@@ -550,7 +561,7 @@ public class ChatServiceImpl implements ChatService {
 
         // 방금 읽은 메시지 목록 조회
         List<ChatMessage> messagesJustRead = chatMessageRepository
-                .findAllByChatRoomChatRoomIdAndCreatedAtAfterAndCreatedAtLessThanEqualOrderByCreatedAtAsc(
+                .findAllByChatRoomChatRoomIdAndCreatedAtGreaterThanEqualAndCreatedAtLessThanEqualOrderByCreatedAtAsc(
                         roomId,
                         readAfterTime,
                         finalMessageToRead.getCreatedAt()
@@ -577,7 +588,7 @@ public class ChatServiceImpl implements ChatService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                if(!unreadUpdates.isEmpty()) {
+                if (!unreadUpdates.isEmpty()) {
                     simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + roomId + "/unread-updates",
                             Map.of("unreadUpdates", unreadUpdates));
                 }
@@ -605,7 +616,7 @@ public class ChatServiceImpl implements ChatService {
             ChatRoom room = membership.getChatRoom();
 
             Optional<ChatMessage> optLastMessage = chatMessageRepository
-                    .findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc(room, membership.getJoinedAt());
+                    .findTopByChatRoomAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(room, membership.getJoinedAt());
 
             long unreadCount = 0;
             if (membership.getLastReadMessage() != null &&
@@ -615,7 +626,7 @@ public class ChatServiceImpl implements ChatService {
                         membership.getLastReadMessage().getChatMessageId()
                 );
             } else {
-                unreadCount = chatMessageRepository.countByChatRoomAndCreatedAtAfterAndEmployeeIsNotNull(room, membership.getJoinedAt());
+                unreadCount = chatMessageRepository.countByChatRoomAndCreatedAtGreaterThanEqualAndEmployeeIsNotNull(room, membership.getJoinedAt());
             }
             long currentMemberCount = chatEmployeeRepository.countByChatRoomChatRoomIdAndIsLeftFalse(room.getChatRoomId());
 
@@ -639,7 +650,7 @@ public class ChatServiceImpl implements ChatService {
                     otherUserName = otherUser.getName();
                     otherUserProfileImg = otherUser.getProfileImg();
 
-                    if(otherUser.getPosition() != null) {
+                    if (otherUser.getPosition() != null) {
                         otherUserPosition = otherUser.getPosition().getValue1();
                     }
                 }
@@ -698,7 +709,7 @@ public class ChatServiceImpl implements ChatService {
                         participant.getLastReadMessage().getChatMessageId()
                 );
             } else {
-                unreadCount = chatMessageRepository.countByChatRoomAndCreatedAtAfterAndEmployeeIsNotNull(room, participant.getJoinedAt());
+                unreadCount = chatMessageRepository.countByChatRoomAndCreatedAtGreaterThanEqualAndEmployeeIsNotNull(room, participant.getJoinedAt());
             }
 
             ChatRoomListResponseDTO listDto;
@@ -726,7 +737,7 @@ public class ChatServiceImpl implements ChatService {
                 } else {
                     otherUserName = otherUser.getName(); // 화면 표시용 이름
                     otherUserProfileImg = otherUser.getProfileImg();
-                    if(otherUser.getPosition() != null) {
+                    if (otherUser.getPosition() != null) {
                         otherUserPosition = otherUser.getPosition().getValue1();
                     }
                 }
@@ -784,6 +795,8 @@ public class ChatServiceImpl implements ChatService {
         // 1:1 채팅방이고, A가 '나간' 상태에서 알림을 클릭한 경우, 방에 입장하는 즉시 '활성'으로 변경
         if (Boolean.FALSE.equals(membership.getChatRoom().getIsTeam()) && Boolean.TRUE.equals(membership.getIsLeft())) {
             membership.rejoinChatRoom();
+            // 방에 다시 들어왔을 때도 joinedAt 갱신 (선택사항이나 일관성을 위해 추가 추천)
+            membership.rejoinChatRoom();
             chatEmployeeRepository.save(membership);
         }
 
@@ -791,7 +804,7 @@ public class ChatServiceImpl implements ChatService {
 
         // 마지막 메시지 조회
         Optional<ChatMessage> optLastMessage = chatMessageRepository
-                .findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc(room, membership.getJoinedAt());
+                .findTopByChatRoomAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(room, membership.getJoinedAt());
 
         // 안 읽은 개수
         long unreadCount = 0;
@@ -802,7 +815,7 @@ public class ChatServiceImpl implements ChatService {
                     membership.getLastReadMessage().getChatMessageId()
             );
         } else {
-            unreadCount = chatMessageRepository.countByChatRoomAndCreatedAtAfterAndEmployeeIsNotNull(room, membership.getJoinedAt());
+            unreadCount = chatMessageRepository.countByChatRoomAndCreatedAtGreaterThanEqualAndEmployeeIsNotNull(room, membership.getJoinedAt());
         }
 
         long currentMemberCount = chatEmployeeRepository.countByChatRoomChatRoomIdAndIsLeftFalse(room.getChatRoomId());
@@ -830,7 +843,7 @@ public class ChatServiceImpl implements ChatService {
                 } else {
                     otherUserName = otherUser.getName(); // 화면 표시용 이름
                     otherUserProfileImg = otherUser.getProfileImg();
-                    if(otherUser.getPosition() != null) {
+                    if (otherUser.getPosition() != null) {
                         otherUserPosition = otherUser.getPosition().getValue1();
                     }
                 }
@@ -874,6 +887,8 @@ public class ChatServiceImpl implements ChatService {
             for (ChatEmployee member : allMembers) {
                 // 상대방이 나간 상태라면
                 if (!member.getEmployee().getEmployeeId().equals(sender.getEmployeeId()) && Boolean.TRUE.equals(member.getIsLeft())) {
+                    member.rejoinChatRoom();
+                    // 재입장 시 joinedAt을 현재로 갱신하여 이전 시스템 메시지 노출 방지
                     member.rejoinChatRoom();
                     chatEmployeeRepository.save(member);
                 }
