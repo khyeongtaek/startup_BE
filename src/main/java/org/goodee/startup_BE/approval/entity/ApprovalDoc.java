@@ -56,7 +56,7 @@ public class ApprovalDoc {
     private LocalDateTime endDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "creator_id", nullable = false)
+    @JoinColumn(name = "creator_id", nullable = true)
     @Comment("기안자 ID")
     @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee creator;
