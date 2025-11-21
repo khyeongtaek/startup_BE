@@ -19,6 +19,8 @@ public class WorkLogResponseDTO {
 	
 	@Schema(description = "작성자 이름", example = "홍길동")
 	private String employeeName;    // 직원 이름
+	private String employeeProfileImg;
+	private String employeeDepartment;
 	
 	@Schema(description = "업무구분 이름", example = "프로젝트")
 	private String workTypeName;    // 업무구분 이름 (한글)
@@ -46,11 +48,15 @@ public class WorkLogResponseDTO {
 		if(workLog == null) return null;
 		
 		Employee writer = workLog.getEmployee();
-		String writerName = (writer == null) ? "삭제된 사용자" : writer.getName();;
+		String writerName = (writer == null) ? "정보 없음" : writer.getName();;
+		String writerProfileImg = (writer == null) ? null : writer.getProfileImg();
+		String writerDepartment = (writer == null) ? null : writer.getDepartment().getValue1();
 		
 		return WorkLogResponseDTO.builder()
 			       .workLogId(workLog.getWorkLogId())
 			       .employeeName(writerName)
+			       .employeeProfileImg(writerProfileImg)
+			       .employeeDepartment(writerDepartment)
 			       .workTypeName(workLog.getWorkType().getValue2())
 			       .workOptionName(workLog.getWorkOption().getValue2())
 			       .workTypeId(workLog.getWorkType().getCommonCodeId())

@@ -95,6 +95,11 @@ public class MailDetailResponseDTO {
 		String senderPosition = (sender == null) ? null : sender.getPosition().getValue1();
 		String senderDepartment = (sender == null) ? null : sender.getDepartment().getValue1();
 		
+		String mailboxType =
+			mailbox.getDeletedStatus() != null && mailbox.getDeletedStatus() == 1
+				? "TRASH"
+				: mailbox.getTypeId().getValue1();
+		
 		return MailDetailResponseDTO.builder()
 			       .mailId(mail.getMailId())
 			       .title(mail.getTitle())
@@ -111,7 +116,7 @@ public class MailDetailResponseDTO {
 			       .cc(safeCc)
 			       .bcc(safeBcc)
 			       .boxId(mailbox.getBoxId())
-			       .mailboxType(mailbox.getTypeId().getValue1())
+			       .mailboxType(mailboxType)
 			       .isRead(mailbox.getIsRead())
 			       .deletedStatus(mailbox.getDeletedStatus())
 			       .attachments(safeFiles)
