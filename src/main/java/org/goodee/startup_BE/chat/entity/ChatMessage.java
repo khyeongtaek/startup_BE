@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.goodee.startup_BE.chat.enums.MessageType;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
 import org.hibernate.annotations.CreationTimestamp;
@@ -13,7 +14,7 @@ import org.hibernate.annotations.OnDeleteAction;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name="tbl_chat_message")
+@Table(name = "tbl_chat_message")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChatMessage {
@@ -28,7 +29,11 @@ public class ChatMessage {
     @Comment("채팅방 ID")
     private ChatRoom chatRoom;
 
-    // null 이면 시스템 메세지
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    @Comment("메시지 타입 (USER, SYSTEM)")
+    private MessageType messageType;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = true)
     @Comment("직원 ID")
@@ -50,14 +55,35 @@ public class ChatMessage {
     public static ChatMessage createChatMessage(
             ChatRoom chatRoom,
             Employee employee,
-            String content) {
+            String content,
+            MessageType MessageType
+    ) {
         ChatMessage chatMessage = new ChatMessage();
 
         chatMessage.chatRoom = chatRoom;
         chatMessage.employee = employee;
         chatMessage.content = content;
+        chatMessage.messageType = MessageType;
 
         return chatMessage;
+    }
+
+    public static ChatMessage createChatMessage(
+            ChatRoom chatRoom,
+            Employee employee,
+            String content
+    ) {
+        if (employee == null) {
+            throw new IllegalArgumentException("사용자 메시지에는 사용자 정보가 필수 입니다");
+        }
+        return createChatMessage(chatRoom, employee, content, MessageType.USER);
+    }
+
+    public static ChatMessage createSystemMessage(
+            ChatRoom chatRoom,
+            String content
+    ) {
+        return createChatMessage(chatRoom, null, content, MessageType.SYSTEM);
     }
 
     @PrePersist

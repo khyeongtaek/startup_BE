@@ -29,7 +29,7 @@ public class Attendance {
 
     // Employee Table  M : 1
     @ManyToOne(fetch=FetchType.LAZY)
-    @JoinColumn(name="create_employee", referencedColumnName = "employee_id", nullable= false)
+    @JoinColumn(name="create_employee", referencedColumnName = "employee_id", nullable= true)
     @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee employee;
 

@@ -137,5 +137,4 @@ class ChatRoomRepositoryTest {
         // then
         assertThat(updatedRoom.getIsTeam()).isTrue();
     }
-
 }

@@ -3,8 +3,6 @@ name: CI/CD Pipeline with Docker Compose
 on:
   push:
     branches: [ "develop" ]
-  pull_request:
-    branches: [ "develop" ]
 
 jobs:
   deploy:
@@ -26,6 +24,7 @@ jobs:
           echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
           echo "ALLOWED_ORIGIN=${{ secrets.ALLOWED_ORIGIN }}" >> .env
           echo "FILE_STORAGE=${{ env.FILE_STORAGE }}" >> .env
+          echo "HOLIDAY_API_KEY=${{ secrets.HOLIDAY_API_KEY }}" >> .env
 
       # 3. EC2로 파일 전송
       - name: Copy file to EC2
@@ -36,7 +35,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "./*"
           target: "/home/ubuntu/website/backend"
-          rm: false
+          rm: true
 
       # 4. EC2에서 Docker Compose 실행
       - name: Deploy with Docker Compose on EC2

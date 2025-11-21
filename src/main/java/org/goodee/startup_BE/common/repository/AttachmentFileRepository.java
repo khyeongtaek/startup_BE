@@ -13,4 +13,7 @@ public interface AttachmentFileRepository extends JpaRepository<AttachmentFile, 
 	
 	// 단일 조회 / 다운로드
 	Optional<AttachmentFile> findByFileIdAndIsDeletedFalse(Long fileId);
+
+    // 여러 ownerId에 해당하는 모든 첨부파일을 한번에 조회
+    List<AttachmentFile> findAllByOwnerTypeAndOwnerIdInAndIsDeletedFalse(CommonCode ownerType, List<Long> ownerIds);
 }
