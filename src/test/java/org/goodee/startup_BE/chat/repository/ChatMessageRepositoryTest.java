@@ -3,6 +3,7 @@ package org.goodee.startup_BE.chat.repository;
 import org.goodee.startup_BE.chat.entity.ChatMessage;
 import org.goodee.startup_BE.chat.entity.ChatRoom;
 import org.goodee.startup_BE.common.entity.CommonCode;
+import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
@@ -135,7 +136,7 @@ class ChatMessageRepositoryTest {
         assertThat(saved.getChatMessageId()).isNotNull();
         assertThat(saved.getContent()).isEqualTo("새 메시지");
         assertThat(saved.getEmployee()).isEqualTo(user1);
-        assertThat(saved.getMessageType().name()).isEqualTo("USER");
+        assertThat(saved.getMessageType().name()).isEqualTo(OwnerType.CHAT_USER.name());
         assertThat(saved.getIsDeleted()).isFalse();
         assertThat(saved.getCreatedAt()).isNotNull();
     }
@@ -151,7 +152,7 @@ class ChatMessageRepositoryTest {
 
         // then
         assertThat(saved.getEmployee()).isNull(); // 시스템 메시지는 직원이 없음
-        assertThat(saved.getMessageType().name()).isEqualTo("SYSTEM");
+        assertThat(saved.getMessageType().name()).isEqualTo(OwnerType.CHAT_SYSTEM.name());
         assertThat(saved.getContent()).isEqualTo("방 생성");
     }
 

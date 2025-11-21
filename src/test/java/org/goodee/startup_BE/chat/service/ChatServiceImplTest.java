@@ -4,7 +4,6 @@ import org.goodee.startup_BE.chat.dto.*;
 import org.goodee.startup_BE.chat.entity.ChatEmployee;
 import org.goodee.startup_BE.chat.entity.ChatMessage;
 import org.goodee.startup_BE.chat.entity.ChatRoom;
-import org.goodee.startup_BE.chat.enums.MessageType;
 import org.goodee.startup_BE.chat.repository.ChatEmployeeRepository;
 import org.goodee.startup_BE.chat.repository.ChatMessageRepository;
 import org.goodee.startup_BE.chat.repository.ChatRoomRepository;
@@ -122,7 +121,7 @@ class ChatServiceImplTest {
         lenient().when(chatMessage.getEmployee()).thenReturn(creator);
         lenient().when(chatMessage.getContent()).thenReturn("Test Message");
         lenient().when(chatMessage.getCreatedAt()).thenReturn(LocalDateTime.now());
-        lenient().when(chatMessage.getMessageType()).thenReturn(MessageType.USER);
+        lenient().when(chatMessage.getMessageType()).thenReturn(OwnerType.CHAT_USER);
 
         // ChatEmployee Mock
         chatEmployeeCreator = mock(ChatEmployee.class);
