@@ -238,4 +238,37 @@ public class AttendanceController {
                         .build()
         );
     }
+
+    //  결근 조회
+    @Operation(
+            summary = "결근 날짜 조회",
+            description = "사원 ID와 연/월을 기준으로 해당 월의 결근 날짜 목록을 조회합니다. " +
+                    "주말, 공휴일, 휴가(반차 포함)는 자동 제외됩니다."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "결근 날짜 조회 성공"),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자", content = @Content)
+    })
+    @GetMapping("/{employeeId}/absent")
+    public ResponseEntity<APIResponseDTO<Map<String, Object>>> getAbsentDays(
+            @Parameter(description = "사원 ID", required = true, example = "1")
+            @PathVariable Long employeeId,
+
+            @Parameter(description = "조회 연도", required = true, example = "2025")
+            @RequestParam int year,
+
+            @Parameter(description = "조회 월 (1~12)", required = true, example = "11")
+            @RequestParam int month
+    ) {
+        List<LocalDate> absentDays = attendanceService.getAbsentDays(employeeId, year, month);
+
+        Map<String, Object> data = Map.of("absentDays", absentDays);
+
+        return ResponseEntity.ok(
+                APIResponseDTO.<Map<String, Object>>builder()
+                        .message("결근 날짜 조회 성공")
+                        .data(data)
+                        .build()
+        );
+    }
 }

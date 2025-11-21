@@ -64,6 +64,7 @@ public class Mailbox {
 	public void moveMail(CommonCode type) {
 		this.typeId = type;
 		this.deletedStatus = "TRASH".equals(type.getValue1()) ? (byte) 1 : 0;
+		this.isRead = false;
 	}
 
 	// 휴지통에서 삭제 (소프트 삭제)
