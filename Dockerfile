@@ -14,6 +14,10 @@ RUN gradle bootJar --no-daemon -x test
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /website/backend
 
+# Alpine 리눅스에 타임존 데이터(tzdata) 설치 및 서울 시간 설정
+RUN apk add --no-cache tzdata
+ENV TZ=Asia/Seoul
+
 # 빌드 스테이지에서 생성한 JAR 파일을 런타임 스테이지로 복사
 # Gradle 프로젝트의 빌드 디렉터리는 build임
 COPY --from=bootbuild /website/backend/build/libs/*.jar website.jar
@@ -22,4 +26,4 @@ COPY --from=bootbuild /website/backend/build/libs/*.jar website.jar
 EXPOSE 8080
 
 # JAR 파일 실행
-ENTRYPOINT ["java", "-jar", "website.jar"]
+ENTRYPOINT ["java", "-Duser.timezone=Asia/Seoul", "-jar", "website.jar"]
