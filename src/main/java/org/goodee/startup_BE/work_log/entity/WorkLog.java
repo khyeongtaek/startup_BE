@@ -5,6 +5,8 @@ import lombok.Getter;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
@@ -24,6 +26,7 @@ public class WorkLog {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id")
     @Comment("작성자(직원) ID")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee employee;
 
     @ManyToOne(fetch = FetchType.LAZY)

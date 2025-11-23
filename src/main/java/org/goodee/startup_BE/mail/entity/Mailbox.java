@@ -62,8 +62,18 @@ public class Mailbox {
 
 	// 메일함 이동
 	public void moveMail(CommonCode type) {
+		String value = type.getValue1();
+		
+		// 휴지통 이동: typeId 는 그대로 두고, deletedStatus 만 1로 설정
+		if ("TRASH".equals(value)) {
+			this.deletedStatus = 1;  // 휴지통
+			this.isRead = false;
+			return;
+		}
+		
+		// MYBOX / INBOX / SENT 등 일반 이동
 		this.typeId = type;
-		this.deletedStatus = "TRASH".equals(type.getValue1()) ? (byte) 1 : 0;
+		this.deletedStatus = 0;  // 일반 메일함
 		this.isRead = false;
 	}
 
