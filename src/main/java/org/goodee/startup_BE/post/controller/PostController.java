@@ -74,7 +74,7 @@ public class PostController {
     @PostMapping(value = "/{commonCodeCode}", consumes = {"multipart/form-data"})
     public ResponseEntity<APIResponseDTO<PostResponseDTO>> createPost(
             @PathVariable String commonCodeCode,
-            @ModelAttribute PostRequestDTO postRequestDTO,
+            @ModelAttribute PostRequestDTO postRequestDTO,  // title, content, isNotification, alert
             @RequestPart(value = "multipartFile", required = false) List<MultipartFile> multipartFile,
             @Parameter(hidden = true) Authentication authentication
     ) {

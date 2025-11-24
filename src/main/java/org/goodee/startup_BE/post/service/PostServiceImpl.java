@@ -28,12 +28,12 @@ public class PostServiceImpl implements PostService {
     private final PostRepository postRepository;
     private final CommonCodeRepository commonCodeRepository;
     private final EmployeeRepository employeeRepository;
-    private final AttachmentFileService attachmentFileService;    // ★ 첨부파일 서비스 주입
+    private final AttachmentFileService attachmentFileService;
 
-    // ★ 게시판 모듈에 해당하는 OwnerType(OT7)의 commonCodeId 가져오기
+    // 게시판 모듈에 해당하는 OwnerType(OT7)의 commonCodeId 가져오기
     private Long getPostOwnerTypeId() {
-        CommonCode ownerType = commonCodeRepository.findByCode("OT7")
-                .orElseThrow(() -> new IllegalArgumentException("게시판 OwnerType 코드(OT7)를 찾을 수 없습니다."));
+        CommonCode ownerType = commonCodeRepository.findByCode("OT10")
+                .orElseThrow(() -> new IllegalArgumentException("게시판 OwnerType 코드(OT10)를 찾을 수 없습니다."));
         // CommonCode 엔티티의 PK 필드명이 commonCodeId라고 가정
         return ownerType.getCommonCodeId();
     }
@@ -85,7 +85,7 @@ public class PostServiceImpl implements PostService {
         // 먼저 게시글 저장
         Post savedPost = postRepository.save(post);
 
-        // ★ 첨부파일이 있다면 업로드 처리
+        // 첨부파일이 있다면 업로드 처리
         List<AttachmentFileResponseDTO> attachmentFiles = List.of();
         if (dto.getMultipartFile() != null && !dto.getMultipartFile().isEmpty()) {
             Long ownerTypeId = getPostOwnerTypeId();  // OT7의 common_code_id
@@ -96,7 +96,7 @@ public class PostServiceImpl implements PostService {
             );
         }
 
-        // ★ 첨부파일 정보까지 포함해서 응답
+        // 첨부파일 정보까지 포함해서 응답
         return PostResponseDTO.toDTO(savedPost, attachmentFiles);
     }
 
@@ -104,7 +104,7 @@ public class PostServiceImpl implements PostService {
     @Override
     public PostResponseDTO updatePost(PostRequestDTO dto, String username) {
 
-        Employee currentEmployee = getCurrentEmployee(username);
+        // Employee currentEmployee = getCurrentEmployee(username);
 
         Post post = postRepository.findById(dto.getPostId())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
@@ -117,14 +117,14 @@ public class PostServiceImpl implements PostService {
 
         Long ownerTypeId = getPostOwnerTypeId();
 
-        // ⭐ 1) 기존 파일 삭제
+        // 기존 파일 삭제
         if (dto.getDeleteFileIds() != null) {
             for (Long fileId : dto.getDeleteFileIds()) {
                 attachmentFileService.deleteFile(fileId);
             }
         }
 
-        // ⭐ 2) 새 파일 업로드
+        // 2) 새 파일 업로드
         if (dto.getMultipartFile() != null && !dto.getMultipartFile().isEmpty()) {
             attachmentFileService.uploadFiles(
                     dto.getMultipartFile(),
@@ -168,12 +168,12 @@ public class PostServiceImpl implements PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
 
-        // ★ 이 게시글에 연결된 첨부파일 목록 조회
+        // 이 게시글에 연결된 첨부파일 목록 조회
         Long ownerTypeId = getPostOwnerTypeId(); // OT7
         List<AttachmentFileResponseDTO> attachmentFiles =
                 attachmentFileService.listFiles(ownerTypeId, postId);
 
-        // ★ 게시글 + 첨부파일 함께 내려줌
+        // 게시글 + 첨부파일 함께 내려줌
         return PostResponseDTO.toDTO(post, attachmentFiles);
     }
 }
