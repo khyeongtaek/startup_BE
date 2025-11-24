@@ -16,7 +16,6 @@ import java.util.List;
 @AllArgsConstructor
 public class PostResponseDTO {
 
-  // 게시글 응답용 DTO
     private Long postId;
     private Long employeeId;
     private String employeeName;
@@ -24,18 +23,16 @@ public class PostResponseDTO {
     private String content;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private Boolean isNotification; // 공지글 여부(true = 공지글)
+    private Boolean isNotification;
     private Boolean alert;
     private List<AttachmentFileResponseDTO> attachmentFiles;
 
-    // Entity -> DTO 변환
+    // 기본 toDTO (첨부파일 없이)
     public static PostResponseDTO toDTO(Post post) {
-        if (post == null) {
-            return null;
-        }
+        if (post == null) return null;
+
         return new PostResponseDTO(
                 post.getPostId(),
-                // postComment의 작성자(employee)가 있다면, 그 사람의 ID를 가져오고, 없으면 null을 반환
                 post.getEmployee() != null ? post.getEmployee().getEmployeeId() : null,
                 post.getEmployeeName(),
                 post.getTitle(),
@@ -44,8 +41,25 @@ public class PostResponseDTO {
                 post.getUpdatedAt(),
                 post.getIsNotification(),
                 post.getAlert(),
-                null
+                null // 파일 없음
         );
     }
 
+    // 첨부파일 포함 toDTO
+    public static PostResponseDTO toDTO(Post post, List<AttachmentFileResponseDTO> files) {
+        if (post == null) return null;
+
+        return new PostResponseDTO(
+                post.getPostId(),
+                post.getEmployee() != null ? post.getEmployee().getEmployeeId() : null,
+                post.getEmployeeName(),
+                post.getTitle(),
+                post.getContent(),
+                post.getCreatedAt(),
+                post.getUpdatedAt(),
+                post.getIsNotification(),
+                post.getAlert(),
+                files  // 여기서 파일 세팅
+        );
+    }
 }

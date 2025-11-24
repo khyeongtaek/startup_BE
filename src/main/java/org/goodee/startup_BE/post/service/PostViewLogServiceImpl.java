@@ -32,6 +32,11 @@ public class PostViewLogServiceImpl implements PostViewLogService {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new IllegalArgumentException("직원을 찾을 수 없습니다."));
 
+        // 작성자가 본인의 글 보면 조회수 증가 X
+        if (post.getEmployee().getEmployeeId().equals(employeeId)) {
+            return null;
+        }
+
         // 이미 조회한 기록이 있다면 추가 저장 X
         boolean alreadyViewed = postViewLogRepository.existsByPost_PostIdAndEmployee_EmployeeId(
                 post.getPostId(), employee.getEmployeeId()

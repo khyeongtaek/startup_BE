@@ -14,21 +14,23 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     // 검색
     @Query("""
-    SELECT p FROM Post p
-    JOIN p.employee e
-    WHERE p.isDeleted = false
-    AND (:categoryId IS NULL OR p.commonCode.commonCodeId = :categoryId)
-    AND (
-        (:title IS NULL AND :content IS NULL AND :employeeName IS NULL)
-        OR (:title IS NOT NULL AND p.title LIKE CONCAT('%', :title, '%'))
-        OR (:content IS NOT NULL AND p.content LIKE CONCAT('%', :content, '%'))
-        OR (:employeeName IS NOT NULL AND e.name LIKE CONCAT('%', :employeeName, '%'))
-    )
-    """)
-    Page<Post> searchPost(@Param("categoryId") Long categoryId,
-                          @Param("title") String title,
-                          @Param("content") String content,
-                          @Param("employeeName") String employeeName,
-                          Pageable pageable);
 
-}
+            SELECT p
+          FROM Post p
+          LEFT JOIN p.employee e
+         WHERE p.isDeleted = false
+           AND p.commonCode.code = :categoryCode
+           AND (
+                 (:keyword IS NULL OR :keyword = '' )
+                 OR p.title LIKE %:keyword%
+                 OR p.content LIKE %:keyword%
+               )
+         ORDER BY p.createdAt DESC
+        """)
+    Page<Post> searchPost(
+            @Param("categoryCode") String categoryCode,
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
+    }
+

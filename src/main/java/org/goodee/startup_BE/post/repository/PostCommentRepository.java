@@ -12,9 +12,7 @@ import java.util.List;
 public interface PostCommentRepository extends JpaRepository<PostComment, Long> {
 
     // 게시글의 댓글 목록
-    List<PostComment> findByPost_PostIdAndIsDeletedFalseOrderByCreatedAtAsc(Long postId);
-
-    Page<PostComment> findByPost_PostIdAndIsDeletedFalseOrderByCreatedAtAsc(Long postId, Pageable pageable);
+    Page<PostComment> findByPost_PostIdAndIsDeletedFalseOrderByCreatedAtDesc(Long postId, Pageable pageable);
 
 
 }

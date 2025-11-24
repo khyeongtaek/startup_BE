@@ -253,7 +253,9 @@ VALUES
     ('OT3', '사원', 'EMPLOYEE', '', '', 0, 1, 1, NOW(), NOW(), false),
     ('OT4', '전자결재', 'APPROVAL', '', '', 0, 1, 1, NOW(), NOW(), false),
     ('OT5', '채팅 초대', 'TEAMCHATNOTI', '', '', 0, 1, 1, NOW(), NOW(), false),
-    ('OT6', '일정 초대', 'SCHEDULEINVITE', '', '', 0, 1, 1, NOW(), NOW(), false);
+    ('OT6', '일정 초대', 'SCHEDULEINVITE', '', '', 0, 1, 1, NOW(), NOW(), false),
+    ('OT7', '게시판', 'POST', '', '', 0, 1, 1, NOW(), NOW(), false);
+
 /*
 * =============================================
 * Schedule Color (일정 색상)
@@ -949,6 +951,27 @@ VALUES
       "type": "route",
       "url": "/mail/detail/:mailId",
       "componentPath": "features/mail/pages/MailDetailPage"
+    }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('RO11', '게시글 작성', '{
+      "id": "post-write",
+      "title": "게시글 작성",
+      "type": "route",
+      "url": "/post/write",
+      "componentPath": "features/post/pages/PostWritePage"
+    }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('RO12', '게시글 목록', '{
+      "id": "post-list",
+      "title": "게시글 목록",
+      "type": "route",
+      "url": "/post/list/:category",
+      "componentPath": "features/post/pages/PostListPage"
+    }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('RO13', '게시글 상세', '{
+      "id": "post-detail",
+      "title": "게시글 상세",
+      "type": "route",
+      "url": "/post/detail/:postId",
+      "componentPath": "features/post/pages/PostDetailPage"
     }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false);
 
 
