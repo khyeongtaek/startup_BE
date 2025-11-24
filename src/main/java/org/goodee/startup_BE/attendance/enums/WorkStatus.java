@@ -7,7 +7,9 @@ public enum WorkStatus {
     ABSENT,
     VACATION,
     OUT_ON_BUSINESS,
-    CLOCK_OUT;
+    CLOCK_OUT,
+    MORNING_HALF,
+    AFTERNOON_HALF;
 
     public static final String PREFIX = "WS";
 }

@@ -9,16 +9,17 @@ import org.goodee.startup_BE.mail.entity.Mail;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest(properties = {
 	"spring.jpa.hibernate.ddl-auto=create-drop",
@@ -31,121 +32,246 @@ import static org.assertj.core.api.Assertions.*;
 @EntityScan(basePackages = "org.goodee.startup_BE")
 class MailRepositoryTests {
 	
-	@Autowired MailRepository mailRepository;
-	@Autowired EmployeeRepository employeeRepository;
-	@Autowired CommonCodeRepository commonCodeRepository;
-	@Autowired EntityManager em;
+	@Autowired
+	private MailRepository mailRepository;
 	
-	private CommonCode statusActive, roleAdmin, roleUser, deptDev, deptHr, posJunior, posSenior;
-	private Employee admin, dev1;
+	@Autowired
+	private EntityManager entityManager;
 	
-	private CommonCode cc(String code, String desc, String v1, String v2, String v3, long sort) {
-		return org.goodee.startup_BE.common.entity.CommonCode.createCommonCode(code, desc, v1, v2, v3, sort, null, false);
-	}
+	@Autowired
+	private EmployeeRepository employeeRepository;
 	
-	private void seedCommonCodes() {
-		statusActive = cc("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L);
-		roleAdmin    = cc("ROLE_ADMIN", "관리자", "ADMIN", null, null, 1L);
-		roleUser     = cc("ROLE_USER", "사용자", "USER", null, null, 2L);
-		deptDev      = cc("DEPT_DEV", "개발팀", "DEV", null, null, 1L);
-		deptHr       = cc("DEPT_HR", "인사팀", "HR", null, null, 2L);
-		posJunior    = cc("POS_JUNIOR", "사원", "JUNIOR", null, null, 1L);
-		posSenior    = cc("POS_SENIOR", "대리", "SENIOR", null, null, 2L);
-		commonCodeRepository.saveAll(List.of(statusActive, roleAdmin, roleUser, deptDev, deptHr, posJunior, posSenior));
-	}
+	@Autowired
+	private CommonCodeRepository commonCodeRepository;
 	
-	private Employee newEmp(String username, String name, String email, CommonCode role, CommonCode dept, CommonCode pos, Employee creator) {
-		Employee e = Employee.createEmployee(
-			username, name, email, "010-0000-0000",
-			LocalDate.now(), statusActive,  role, dept, pos, creator
-		);
-		e.updateInitPassword("Pw1234!", creator);
-		return e;
-	}
+	private CommonCode statusActive;
+	private CommonCode roleUser;
+	private CommonCode deptDev;
+	private CommonCode posJunior;
+	
+	private Employee creator;
+	
+	private final String TEST_PASSWORD = "testPassword123!";
 	
 	@BeforeEach
 	void setUp() {
+		// 삭제 순서: Mail -> Employee -> CommonCode
 		mailRepository.deleteAll();
 		employeeRepository.deleteAll();
 		commonCodeRepository.deleteAll();
 		
-		seedCommonCodes();
-		
-		admin = newEmp("admin", "관리자", "admin@test.com", roleAdmin, deptHr, posSenior, null);
-		dev1  = newEmp("dev1", "개발자1", "dev1@test.com", roleUser, deptDev, posJunior, admin);
-		employeeRepository.saveAll(List.of(admin, dev1));
-	}
-	
-	@Test
-	@DisplayName("C/R: Mail 저장 및 조회")
-	void save_and_find() {
-		Mail mail = Mail.createBasicMail(admin, "제목", "<p>내용</p>", LocalDateTime.now());
-		Mail saved = mailRepository.save(mail);
-		
-		assertThat(saved.getMailId()).isNotNull();
-		assertThat(saved.getCreatedAt()).isNotNull();
-		assertThat(saved.getUpdatedAt()).isNotNull();
-		
-		Mail found = mailRepository.findById(saved.getMailId()).orElseThrow();
-		assertThat(found.getTitle()).isEqualTo("제목");
-		assertThat(found.getEmployee().getUsername()).isEqualTo("admin");
-	}
-	
-	@Test
-	@DisplayName("U: Mail 제목/본문 업데이트")
-	void update_mail() throws Exception {
-		Mail mail = mailRepository.saveAndFlush(
-			Mail.createBasicMail(admin, "Old", "OldC", LocalDateTime.now())
+		// 공통 코드 생성
+		statusActive = CommonCode.createCommonCode(
+			"STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null, false
 		);
-		LocalDateTime updated0 = mail.getUpdatedAt();
+		roleUser = CommonCode.createCommonCode(
+			"ROLE_USER", "사용자", "ROLE_USER", null, null, 1L, null, false
+		);
+		deptDev = CommonCode.createCommonCode(
+			"DEPT_DEV", "개발팀", "DEV", null, null, 1L, null, false
+		);
+		posJunior = CommonCode.createCommonCode(
+			"POS_JUNIOR", "사원", "JUNIOR", null, null, 1L, null, false
+		);
 		
-		// 정밀도 이슈 회피
-		Thread.sleep(1000);
+		commonCodeRepository.save(statusActive);
+		commonCodeRepository.save(roleUser);
+		commonCodeRepository.save(deptDev);
+		commonCodeRepository.save(posJunior);
 		
-		mail.updateTitle("New");
-		mail.updateContent("NewC");
+		// creator 직원 생성
+		creator = Employee.createEmployee(
+			"admin",
+			"관리자",
+			"admin@test.com",
+			"010-0000-0000",
+			LocalDate.now(),
+			statusActive,
+			roleUser,
+			deptDev,
+			posJunior,
+			null
+		);
+		creator.updateInitPassword(TEST_PASSWORD, null);
+		creator = employeeRepository.save(creator);
+	}
+	
+	private Employee createPersistableEmployee(String username, String email) {
+		Employee employee = Employee.createEmployee(
+			username,
+			"테스트유저",
+			email,
+			"010-1234-5678",
+			LocalDate.now(),
+			statusActive,
+			roleUser,
+			deptDev,
+			posJunior,
+			creator
+		);
+		employee.updateInitPassword(TEST_PASSWORD, creator);
+		return employee;
+	}
+	
+	private Mail createPersistableMail(Employee sender, String title, String content) {
+		return Mail.createBasicMail(sender, title, content, LocalDateTime.now());
+	}
+	
+	@Test
+	@DisplayName("C: Mail 생성(save) 테스트")
+	void saveMailTest() {
+		// given
+		Employee sender = employeeRepository.save(
+			createPersistableEmployee("mailUser", "mailuser@test.com")
+		);
+		Mail mail = createPersistableMail(sender, "테스트 메일 제목", "<p>테스트 내용</p>");
 		
-		mailRepository.flush(); // @PreUpdate 트리거
-		em.clear();             // 2차 캐시/영속성 컨텍스트 비우기
+		// when
+		Mail savedMail = mailRepository.save(mail);
 		
+		// then
+		assertThat(savedMail).isNotNull();
+		assertThat(savedMail.getMailId()).isNotNull();
+		assertThat(savedMail.getTitle()).isEqualTo("테스트 메일 제목");
+		assertThat(savedMail.getContent()).isEqualTo("<p>테스트 내용</p>");
+		assertThat(savedMail.getEmployee()).isEqualTo(sender);
+		assertThat(savedMail.getCreatedAt()).isNotNull();
+		assertThat(savedMail.getUpdatedAt()).isNotNull();
+		assertThat(savedMail.getSendAt()).isNotNull();
+	}
+	
+	@Test
+	@DisplayName("R: Mail ID로 조회(findById) 테스트 - 성공")
+	void findByIdSuccessTest() {
+		// given
+		Employee sender = employeeRepository.save(
+			createPersistableEmployee("findUser", "finduser@test.com")
+		);
+		Mail mail = mailRepository.save(
+			createPersistableMail(sender, "조회 메일", "조회용 내용")
+		);
+		
+		// when
+		Optional<Mail> found = mailRepository.findById(mail.getMailId());
+		
+		// then
+		assertThat(found).isPresent();
+		assertThat(found.get().getMailId()).isEqualTo(mail.getMailId());
+		assertThat(found.get().getTitle()).isEqualTo("조회 메일");
+	}
+	
+	@Test
+	@DisplayName("R: Mail ID로 조회(findById) 테스트 - 실패 (존재하지 않는 ID)")
+	void findByIdFailureTest() {
+		// given
+		Long nonExistId = 9999L;
+		
+		// when
+		Optional<Mail> found = mailRepository.findById(nonExistId);
+		
+		// then
+		assertThat(found).isNotPresent();
+	}
+	
+	@Test
+	@DisplayName("U: Mail 수정(update) 테스트")
+	void updateMailTest() throws InterruptedException {
+		// given
+		Employee sender = employeeRepository.save(
+			createPersistableEmployee("updateUser", "updateuser@test.com")
+		);
+		Mail mail = mailRepository.save(
+			createPersistableMail(sender, "원본 제목", "원본 내용")
+		);
+		LocalDateTime createdAt = mail.getCreatedAt();
+		
+		// @PreUpdate 확인을 위해 잠시 대기
+		Thread.sleep(10);
+		
+		// when
+		Mail toUpdate = mailRepository.findById(mail.getMailId()).orElseThrow();
+		toUpdate.updateTitle("수정된 제목");
+		toUpdate.updateContent("수정된 내용");
+		
+		mailRepository.flush();
 		Mail updated = mailRepository.findById(mail.getMailId()).orElseThrow();
-		assertThat(updated.getTitle()).isEqualTo("New");
-		assertThat(updated.getContent()).isEqualTo("NewC");
-		assertThat(updated.getUpdatedAt()).isAfter(updated0);
-	}
-	
-	@Test
-	@DisplayName("D: Mail 삭제")
-	void delete_mail() {
-		Mail mail = mailRepository.save(Mail.createBasicMail(admin, "제목", null, LocalDateTime.now()));
-		Long id = mail.getMailId();
-		assertThat(mailRepository.existsById(id)).isTrue();
 		
-		mailRepository.deleteById(id);
-		assertThat(mailRepository.existsById(id)).isFalse();
+		// then
+		assertThat(updated.getTitle()).isEqualTo("수정된 제목");
+		assertThat(updated.getContent()).isEqualTo("수정된 내용");
+		assertThat(updated.getUpdatedAt()).isAfter(createdAt);
+		assertThat(updated.getCreatedAt()).isEqualTo(createdAt);
 	}
 	
 	@Test
-	@DisplayName("회신 메일(부모/스레드) 저장")
-	void save_reply_mail() {
-		Mail parent = mailRepository.saveAndFlush(
-			Mail.createBasicMail(admin, "원본", "C", LocalDateTime.now())
+	@DisplayName("D: Mail 삭제(deleteById) 테스트")
+	void deleteMailTest() {
+		// given
+		Employee sender = employeeRepository.save(
+			createPersistableEmployee("deleteUser", "deleteuser@test.com")
+		);
+		Mail mail = mailRepository.save(
+			createPersistableMail(sender, "삭제용 메일", "삭제 내용")
+		);
+		Long mailId = mail.getMailId();
+		assertThat(mailRepository.existsById(mailId)).isTrue();
+		
+		// when
+		mailRepository.deleteById(mailId);
+		mailRepository.flush();
+		
+		// then
+		assertThat(mailRepository.existsById(mailId)).isFalse();
+	}
+	
+	
+	@Test
+	@DisplayName("관계: 회신 메일 작성 시 parentMail, threadId, replies 매핑 확인")
+	void replyMailRelationTest() {
+		// given
+		Employee sender = employeeRepository.save(
+			createPersistableEmployee("threadUser", "threaduser@test.com")
+		);
+		
+		Mail parent = mailRepository.save(
+			createPersistableMail(sender, "부모 메일", "부모 내용")
 		);
 		
 		Mail reply = Mail.createReplyMail(
-			dev1, "RE: 원본", "RC", LocalDateTime.now(), parent, 100L
+			sender,
+			"Re: 부모 메일",
+			"회신 내용",
+			LocalDateTime.now(),
+			parent,
+			parent.getMailId()
 		);
-		mailRepository.saveAndFlush(reply);
+		mailRepository.save(reply);
+		mailRepository.flush();
+		entityManager.clear(); // ★ 영속성 컨텍스트 비우기
 		
-		em.clear(); // DB에서 다시 로드되게
+		// when
+		Mail foundParent = mailRepository.findById(parent.getMailId()).orElseThrow();
 		
-		Mail parentFound = mailRepository.findById(parent.getMailId()).orElseThrow();
-		assertThat(parentFound.getReplies())
-			.extracting(Mail::getTitle)
-			.contains("RE: 원본");
+		// then
+		assertThat(foundParent.getReplies()).hasSize(1);
+		Mail child = foundParent.getReplies().get(0);
+		assertThat(child.getParentMail()).isEqualTo(foundParent);
+		assertThat(child.getThreadId()).isEqualTo(parent.getMailId());
+		assertThat(child.getTitle()).isEqualTo("Re: 부모 메일");
+	}
+	
+	@Test
+	@DisplayName("Exception: 필수 필드(title) null 저장 시 예외 발생")
+	void saveNullTitleTest() {
+		// given
+		Employee sender = employeeRepository.save(
+			createPersistableEmployee("nullTitleUser", "nulltitle@test.com")
+		);
 		
-		Mail savedReply = mailRepository.findById(reply.getMailId()).orElseThrow();
-		assertThat(savedReply.getParentMail().getMailId()).isEqualTo(parent.getMailId());
-		assertThat(savedReply.getThreadId()).isEqualTo(100L);
+		Mail invalidMail = Mail.createBasicMail(sender, null, "내용", LocalDateTime.now());
+		
+		// when & then
+		assertThatThrownBy(() -> mailRepository.saveAndFlush(invalidMail))
+			.isInstanceOf(DataIntegrityViolationException.class);
 	}
 }

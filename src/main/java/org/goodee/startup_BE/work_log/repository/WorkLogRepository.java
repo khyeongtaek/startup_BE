@@ -11,36 +11,55 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface WorkLogRepository extends JpaRepository<WorkLog, Long> {
+	
 	@Query(value = """
-    SELECT new org.goodee.startup_BE.work_log.dto.WorkLogResponseDTO(
+
+		SELECT new org.goodee.startup_BE.work_log.dto.WorkLogResponseDTO(
         w.workLogId,
-        w.employee.name,
+        CASE WHEN e IS NULL THEN '정보 없음' ELSE e.name END,
+        e.profileImg,
+        e.department.value1,
         w.workType.value2,
         w.workOption.value2,
         w.workDate,
         w.title,
         w.content,
+        w.workType.commonCodeId,
+        w.workOption.commonCodeId,
         CASE WHEN r.readId IS NOT NULL THEN true ELSE false END
     )
     FROM WorkLog w
+    LEFT JOIN w.employee e
     LEFT JOIN WorkLogRead r
       ON r.workLog = w
      AND r.employee.employeeId = :empId
-    WHERE (:deptId IS NULL OR w.employee.department.commonCodeId = :deptId)
-      AND (:onlyMine = false OR w.employee.employeeId = :empId)
+    WHERE (
+           :deptId IS NULL
+           OR (e IS NOT NULL AND e.department.commonCodeId = :deptId)
+          )
+      AND (
+           :onlyMine = false
+           OR (e IS NOT NULL AND e.employeeId = :empId)
+          )
+    ORDER BY w.workDate DESC, w.workLogId DESC
     """,
 		countQuery = """
-      SELECT COUNT(w)
-      FROM WorkLog w
-      WHERE (:deptId IS NULL OR w.employee.department.commonCodeId = :deptId)
-        AND (:onlyMine = false OR w.employee.employeeId = :empId)
+    SELECT COUNT(w)
+    FROM WorkLog w
+    LEFT JOIN w.employee e
+    WHERE (
+           :deptId IS NULL
+           OR (e IS NOT NULL AND e.department.commonCodeId = :deptId)
+          )
+      AND (
+           :onlyMine = false
+           OR (e IS NOT NULL AND e.employeeId = :empId)
+          )
     """)
 	Page<WorkLogResponseDTO> findWithRead(
 		@Param("empId") Long empId,
-		@Param("deptId") Long deptId,         // 전체/내: null, 부서: 부서 CommonCode PK
-		@Param("onlyMine") boolean onlyMine,  // 내 것: true, 나머지: false
+		@Param("deptId") Long deptId,
+		@Param("onlyMine") boolean onlyMine,
 		Pageable pageable
 	);
-	
-	
 }

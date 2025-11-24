@@ -13,10 +13,10 @@ public interface AnnualLeaveService {
     AnnualLeave createIfNotExists(Long employeeId);
 
     // 연차 사용
-    AnnualLeave useAnnualLeave(Long employeeId, Long days);
+    AnnualLeave useAnnualLeave(Long employeeId, Double days);
 
     // 연차 환원
-    AnnualLeave refundAnnualLeave(Long employeeId, Long days);
+    AnnualLeave refundAnnualLeave(Long employeeId, Double days);
 
     // 전체 연차 조회 (관리자용)
     List<AnnualLeave> getAllAnnualLeaves();

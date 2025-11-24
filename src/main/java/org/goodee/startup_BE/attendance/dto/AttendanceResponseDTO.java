@@ -30,7 +30,7 @@ public class AttendanceResponseDTO {
     private LocalDate attendanceDate;
 
     @Schema(description = "직원 연차 개수", example = "15")
-    private Long annualLeaveCount;
+    private Double annualLeaveCount;
 
     @Schema(description = "총 근무 일수", example = "30일")
     private Long workDate;
@@ -53,13 +53,13 @@ public class AttendanceResponseDTO {
 
 
     @Schema(description = "직원 총 연차", example = "15")
-    private Long totalAnnualLeave;
+    private Double totalAnnualLeave;
 
     @Schema(description = "사용한 연차", example = "3")
-    private Long usedAnnualLeave;
+    private Double usedAnnualLeave;
 
     @Schema(description = "남은 연차", example = "12")
-    private Long remainingAnnualLeave;
+    private Double remainingAnnualLeave;
 
     public static AttendanceResponseDTO toDTO(Attendance attendance, AnnualLeave annualLeave){
         return AttendanceResponseDTO.builder()

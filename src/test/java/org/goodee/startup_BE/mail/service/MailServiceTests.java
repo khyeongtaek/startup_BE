@@ -2,7 +2,6 @@ package org.goodee.startup_BE.mail.service;
 
 import org.goodee.startup_BE.common.dto.AttachmentFileResponseDTO;
 import org.goodee.startup_BE.common.entity.CommonCode;
-import org.goodee.startup_BE.common.enums.OwnerType;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
 import org.goodee.startup_BE.common.service.AttachmentFileService;
 import org.goodee.startup_BE.employee.entity.Employee;
@@ -12,37 +11,30 @@ import org.goodee.startup_BE.mail.dto.*;
 import org.goodee.startup_BE.mail.entity.Mail;
 import org.goodee.startup_BE.mail.entity.MailReceiver;
 import org.goodee.startup_BE.mail.entity.Mailbox;
-import org.goodee.startup_BE.mail.enums.MailboxType;
-import org.goodee.startup_BE.mail.enums.ReceiverType;
 import org.goodee.startup_BE.mail.repository.MailReceiverRepository;
 import org.goodee.startup_BE.mail.repository.MailRepository;
 import org.goodee.startup_BE.mail.repository.MailboxRepository;
+import org.goodee.startup_BE.notification.dto.NotificationRequestDTO;
+import org.goodee.startup_BE.notification.dto.NotificationResponseDTO;
+import org.goodee.startup_BE.notification.service.NotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.core.io.Resource;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Collections;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
 
-/**
- * MailServiceImpl 서비스 단위 테스트
- * - @DataJpaTest + 실제 Repository + Service 빈(@Import)
- * - MockBean 미사용, AttachmentFileService / EmlService 는 TestConfiguration 에서 대체 구현 제공
- */
 @DataJpaTest(properties = {
 	"spring.jpa.hibernate.ddl-auto=create-drop",
 	"spring.datasource.driver-class-name=org.h2.Driver",
@@ -52,713 +44,671 @@ import static org.assertj.core.api.Assertions.*;
 	"spring.jpa.database-platform=org.hibernate.dialect.H2Dialect"
 })
 @EntityScan(basePackages = "org.goodee.startup_BE")
-@Import({MailServiceImpl.class, MailServiceTests.TestConfig.class})
 class MailServiceTests {
 	
-	@Autowired private MailService mailService;
+	@Autowired
+	private MailRepository mailRepository;
 	
-	@Autowired private MailRepository mailRepository;
-	@Autowired private MailboxRepository mailboxRepository;
-	@Autowired private MailReceiverRepository mailReceiverRepository;
-	@Autowired private EmployeeRepository employeeRepository;
-	@Autowired private CommonCodeRepository commonCodeRepository;
+	@Autowired
+	private MailReceiverRepository mailReceiverRepository;
 	
-	@Autowired private AttachmentFileService attachmentFileService;
-	@Autowired private EmlService emlService;
+	@Autowired
+	private MailboxRepository mailboxRepository;
 	
-	private Employee admin;
-	private Employee dev1;
-	private Employee dev2;
+	@Autowired
+	private EmployeeRepository employeeRepository;
 	
-	private CommonCode statusActive, roleAdmin, roleUser, deptDev, deptHr, posJunior, posSenior;
-	private CommonCode ownerMail;
-	private CommonCode rtTo, rtCc, rtBcc;
-	private CommonCode mtInbox, mtSent, mtMybox, mtTrash;
+	@Autowired
+	private CommonCodeRepository commonCodeRepository;
 	
-	private static final String TEST_PW = "Pw1234!";
+	private MailService mailService;
 	
-	@TestConfiguration
-	static class TestConfig {
-		
-		@Bean
-		AttachmentFileService attachmentFileService() {
-			return new InMemoryAttachmentFileService();
-		}
-		
-		@Bean
-		EmlService emlService() {
-			// 테스트에서는 고정된 경로 반환(날짜 고정)
-			return (mail, to, cc, bcc, attachments, sender) ->
-				       "mail-eml/2025/11/03/" + (mail.getMailId() == null ? 0L : mail.getMailId()) + ".eml";
-		}
-		
-		/**
-		 * 메모리에만 저장하는 테스트용 AttachmentFileService 구현
-		 */
-		static class InMemoryAttachmentFileService implements AttachmentFileService {
-			private final Map<String, List<AttachmentFileResponseDTO>> store = new ConcurrentHashMap<>();
-			
-			private String key(Long ownerTypeId, Long ownerId) {
-				return ownerTypeId + ":" + ownerId;
-			}
-			
-			@Override
-			public List<AttachmentFileResponseDTO> uploadFiles(List<MultipartFile> multipartFiles,
-			                                                   Long ownerTypeId,
-			                                                   Long ownerId) {
-				if (multipartFiles == null || multipartFiles.isEmpty()) {
-					throw new IllegalArgumentException("업로드할 파일이 없습니다.");
-				}
-				
-				List<AttachmentFileResponseDTO> curr =
-					store.computeIfAbsent(key(ownerTypeId, ownerId), k -> new ArrayList<>());
-				
-				long baseId = curr.stream()
-					              .map(AttachmentFileResponseDTO::getFileId)
-					              .filter(Objects::nonNull)
-					              .mapToLong(Long::longValue)
-					              .max()
-					              .orElse(100L);
-				
-				List<AttachmentFileResponseDTO> created = new ArrayList<>();
-				for (int i = 0; i < multipartFiles.size(); i++) {
-					long id = baseId + i + 1;
-					AttachmentFileResponseDTO dto = AttachmentFileResponseDTO.builder()
-						                                .fileId(id)
-						                                .originalName("upload_" + id)
-						                                .storagePath("files/upload_" + id)
-						                                .mimeType("application/octet-stream")
-						                                .build();
-					curr.add(dto);
-					created.add(dto);
-				}
-				return created;
-			}
-			
-			@Override
-			public List<AttachmentFileResponseDTO> listFiles(Long ownerTypeId, Long ownerId) {
-				return new ArrayList<>(store.getOrDefault(key(ownerTypeId, ownerId), Collections.emptyList()));
-			}
-			
-			@Override
-			public ResponseEntity<Resource> downloadFile(Long fileId) {
-				throw new UnsupportedOperationException("downloadFile는 이 테스트에서 사용하지 않습니다.");
-			}
-			
-			@Override
-			public void deleteFile(Long fileId) {
-				for (List<AttachmentFileResponseDTO> list : store.values()) {
-					list.removeIf(f -> Objects.equals(f.getFileId(), fileId));
-				}
-			}
-		}
-	}
+	private StubNotificationService stubNotificationService;
 	
-	// ===== 유틸 메서드 =====
+	// 공통 코드
+	private CommonCode statusActive;
+	private CommonCode roleUser;
+	private CommonCode deptDev;
+	private CommonCode posJunior;
 	
-	private CommonCode cc(String code, String desc, String v1, String v2, String v3, long sort) {
-		// createCommonCode 시그니처에 따라 필요시 파라미터 조정
-		return CommonCode.createCommonCode(code, desc, v1, v2, v3, sort, null, false);
-	}
+	private CommonCode ownerTypeMail;
+	private CommonCode receiverToCode;
+	private CommonCode receiverCcCode;
+	private CommonCode receiverBccCode;
+	private CommonCode mailboxInboxCode;
+	private CommonCode mailboxSentCode;
+	private CommonCode mailboxMyboxCode;
+	private CommonCode mailboxTrashCode;
 	
-	private Employee newEmp(String username, String name, String email,
-	                        CommonCode role, CommonCode dept, CommonCode pos,
-	                        Employee creator) {
-		Employee e = Employee.createEmployee(
-			username,
-			name,
-			email,
-			"010-0000-0000",
-			LocalDate.now(),
-			statusActive,
-			role,
-			dept,
-			pos,
-			creator
-		);
-		e.updateInitPassword(TEST_PW, creator);
-		return e;
-	}
+	private Employee creator;
 	
-	private void seedCommonCodes() {
-		statusActive = cc("STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L);
-		roleAdmin    = cc("ROLE_ADMIN", "관리자", "ADMIN", null, null, 1L);
-		roleUser     = cc("ROLE_USER", "사용자", "USER", null, null, 2L);
-		deptDev      = cc("DEPT_DEV", "개발팀", "DEV", null, null, 1L);
-		deptHr       = cc("DEPT_HR", "인사팀", "HR", null, null, 2L);
-		posJunior    = cc("POS_JUNIOR", "사원", "JUNIOR", null, null, 1L);
-		posSenior    = cc("POS_SENIOR", "대리", "SENIOR", null, null, 2L);
-		
-		ownerMail = cc(OwnerType.PREFIX + "_MAIL", "OWNER_TYPE", OwnerType.MAIL.name(), null, null, 1L);
-		
-		rtTo  = cc(ReceiverType.PREFIX + "_TO",  "RECEIVER_TYPE", ReceiverType.TO.name(),  null, null, 1L);
-		rtCc  = cc(ReceiverType.PREFIX + "_CC",  "RECEIVER_TYPE", ReceiverType.CC.name(),  null, null, 2L);
-		rtBcc = cc(ReceiverType.PREFIX + "_BCC", "RECEIVER_TYPE", ReceiverType.BCC.name(), null, null, 3L);
-		
-		mtInbox = cc(MailboxType.PREFIX + "_INBOX", "MAILBOX_TYPE", MailboxType.INBOX.name(), null, null, 1L);
-		mtSent  = cc(MailboxType.PREFIX + "_SENT",  "MAILBOX_TYPE", MailboxType.SENT.name(),  null, null, 2L);
-		mtMybox = cc(MailboxType.PREFIX + "_MYBOX","MAILBOX_TYPE", MailboxType.MYBOX.name(), null, null, 3L);
-		mtTrash = cc(MailboxType.PREFIX + "_TRASH","MAILBOX_TYPE", MailboxType.TRASH.name(), null, null, 4L);
-		
-		commonCodeRepository.saveAll(Arrays.asList(
-			statusActive, roleAdmin, roleUser, deptDev, deptHr, posJunior, posSenior,
-			ownerMail, rtTo, rtCc, rtBcc, mtInbox, mtSent, mtMybox, mtTrash
-		));
-	}
+	private static final String TEST_PASSWORD = "testPassword123!";
 	
 	@BeforeEach
 	void setUp() {
-		mailboxRepository.deleteAll();
 		mailReceiverRepository.deleteAll();
+		mailboxRepository.deleteAll();
 		mailRepository.deleteAll();
 		employeeRepository.deleteAll();
 		commonCodeRepository.deleteAll();
 		
-		seedCommonCodes();
+		// 공통 코드 세팅 (isDisabled = false)
+		statusActive = CommonCode.createCommonCode(
+			"STATUS_ACTIVE", "재직", "ACTIVE", null, null, 1L, null, false);
+		roleUser = CommonCode.createCommonCode(
+			"ROLE_USER", "일반 사용자", "ROLE_USER", null, null, 1L, null, false);
+		deptDev = CommonCode.createCommonCode(
+			"DEPT_DEV", "개발팀", "DEV", null, null, 1L, null, false);
+		posJunior = CommonCode.createCommonCode(
+			"POS_JUNIOR", "사원", "JUNIOR", null, null, 1L, null, false);
 		
-		admin = newEmp("admin", "관리자", "admin@test.com", roleAdmin, deptHr, posSenior, null);
-		employeeRepository.save(admin);
+		// OwnerType / ReceiverType / MailboxType
+		ownerTypeMail = CommonCode.createCommonCode(
+			"OT_MAIL", "메일 첨부", "MAIL", null, null, 1L, null, false);
 		
-		dev1 = newEmp("dev1", "개발자1", "dev1@test.com", roleUser, deptDev, posJunior, admin);
-		dev2 = newEmp("dev2", "개발자2", "dev2@test.com", roleUser, deptDev, posJunior, admin);
-		employeeRepository.saveAll(List.of(dev1, dev2));
+		receiverToCode = CommonCode.createCommonCode(
+			"RT_TO", "수신자", "TO", null, null, 1L, null, false);
+		receiverCcCode = CommonCode.createCommonCode(
+			"RT_CC", "참조", "CC", null, null, 2L, null, false);
+		receiverBccCode = CommonCode.createCommonCode(
+			"RT_BCC", "숨은참조", "BCC", null, null, 3L, null, false);
+		
+		mailboxInboxCode = CommonCode.createCommonCode(
+			"MT_INBOX", "받은메일함", "INBOX", null, null, 1L, null, false);
+		mailboxSentCode = CommonCode.createCommonCode(
+			"MT_SENT", "보낸메일함", "SENT", null, null, 2L, null, false);
+		mailboxMyboxCode = CommonCode.createCommonCode(
+			"MT_MYBOX", "개인보관함", "MYBOX", null, null, 3L, null, false);
+		mailboxTrashCode = CommonCode.createCommonCode(
+			"MT_TRASH", "휴지통", "TRASH", null, null, 4L, null, false);
+		
+		commonCodeRepository.saveAll(List.of(
+			statusActive, roleUser, deptDev, posJunior,
+			ownerTypeMail,
+			receiverToCode, receiverCcCode, receiverBccCode,
+			mailboxInboxCode, mailboxSentCode, mailboxMyboxCode, mailboxTrashCode
+		));
+		
+		// creator 직원
+		creator = Employee.createEmployee(
+			"admin",
+			"관리자",
+			"admin@test.com",
+			"010-0000-0000",
+			LocalDate.now(),
+			statusActive,
+			roleUser,
+			deptDev,
+			posJunior,
+			null
+		);
+		creator.updateInitPassword(TEST_PASSWORD, null);
+		creator = employeeRepository.save(creator);
+		
+		stubNotificationService = new StubNotificationService();
+		
+		mailService = new MailServiceImpl(
+			mailRepository,
+			mailReceiverRepository,
+			mailboxRepository,
+			employeeRepository,
+			commonCodeRepository,
+			new StubAttachmentFileService(),
+			new StubEmlService(),
+			stubNotificationService
+		);
 	}
 	
-	// ===== sendMail 테스트 =====
+	private Employee createAndSaveEmployee(String username, String email) {
+		Employee employee = Employee.createEmployee(
+			username,
+			"테스트유저",
+			email,
+			"010-1234-5678",
+			LocalDate.now(),
+			statusActive,
+			roleUser,
+			deptDev,
+			posJunior,
+			creator
+		);
+		employee.updateInitPassword(TEST_PASSWORD, creator);
+		return employeeRepository.save(employee);
+	}
+	
+	private MailSendResponseDTO sendSimpleMail(Employee sender, Employee receiver) {
+		MailSendRequestDTO request = MailSendRequestDTO.builder()
+			                             .title("테스트 메일")
+			                             .content("<p>내용</p>")
+			                             .to(List.of(receiver.getEmail()))
+			                             .cc(Collections.emptyList())
+			                             .bcc(Collections.emptyList())
+			                             .build();
+		return mailService.sendMail(request, sender.getUsername(), null);
+	}
+	
+	private Mailbox findSingleMailbox(String username, String typeValue1) {
+		byte deleted = (byte) ("TRASH".equals(typeValue1) ? 1 : 0);
+		Pageable pageable = PageRequest.of(0, 10);
+		Page<Mailbox> page = mailboxRepository
+			                     .findByEmployeeUsernameAndTypeIdValue1AndDeletedStatus(username, typeValue1, deleted, pageable);
+		assertThat(page.getTotalElements())
+			.as("username=" + username + ", type=" + typeValue1 + " 메일함이 최소 1개 있어야 합니다.")
+			.isGreaterThan(0);
+		return page.getContent().get(0);
+	}
+	
+	// C ----------------------------------------------------------------------
 	
 	@Test
-	@DisplayName("sendMail: 정상 발송 - 수신자 정제/중복제거 + 보낸/받은 편지함 생성 + EML 경로 설정")
-	void sendMail_success() {
+	@DisplayName("C: sendMail - 정상 발송 시 메일/수신자/메일함/알림이 생성된다.")
+	void sendMail_success_createsMailAndRelations() {
 		// given
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("회의 자료")
-			                         .content("<p>내용</p>")
-			                         .to(Arrays.asList("dev1@test.com", " DEV1@TEST.COM ", "dev2@test.com"))
-			                         .cc(Collections.emptyList())
-			                         .bcc(Collections.emptyList())
-			                         .build();
+		Employee sender = createAndSaveEmployee("sender1", "sender1@test.com");
+		Employee receiver1 = createAndSaveEmployee("receiver1", "receiver1@test.com");
+		Employee receiver2 = createAndSaveEmployee("receiver2", "receiver2@test.com");
+		
+		MailSendRequestDTO request = MailSendRequestDTO.builder()
+			                             .title("테스트 메일")
+			                             .content("<p>내용</p>")
+			                             .to(List.of(receiver1.getEmail()))
+			                             .cc(List.of(receiver2.getEmail()))
+			                             .bcc(Collections.emptyList())
+			                             .build();
 		
 		// when
-		MailSendResponseDTO res = mailService.sendMail(dto, "admin", null);
+		MailSendResponseDTO response = mailService.sendMail(request, sender.getUsername(), null);
 		
 		// then
-		assertThat(res.getMailId()).isNotNull();
-		assertThat(res.getTitle()).isEqualTo("회의 자료");
-		assertThat(res.getToCount()).isEqualTo(2);  // dev1 중복 제거
-		assertThat(res.getCcCount()).isZero();
-		assertThat(res.getBccCount()).isZero();
-		assertThat(res.getAttachmentCount()).isZero();
-		assertThat(res.getEmlPath())
-			.isEqualTo("mail-eml/2025/11/03/" + res.getMailId() + ".eml");
+		assertThat(response).isNotNull();
+		assertThat(response.getMailId()).isNotNull();
+		assertThat(response.getTitle()).isEqualTo("테스트 메일");
+		assertThat(response.getToCount()).isEqualTo(1);
+		assertThat(response.getCcCount()).isEqualTo(1);
+		assertThat(response.getBccCount()).isZero();
+		assertThat(response.getAttachmentCount()).isZero();
+		assertThat(response.getEmlPath()).isNotNull();
 		
-		List<Mailbox> boxes = mailboxRepository.findAll();
-		assertThat(boxes).hasSize(3); // 보낸함 1 + 받은함 2
+		Mail savedMail = mailRepository.findById(response.getMailId()).orElseThrow();
+		assertThat(savedMail.getEmployee().getUsername()).isEqualTo(sender.getUsername());
+		assertThat(savedMail.getTitle()).isEqualTo(request.getTitle());
+		assertThat(savedMail.getContent()).isEqualTo(request.getContent());
 		
-		Optional<Mailbox> senderBox =
-			mailboxRepository.findFirstByEmployeeEmployeeIdAndMailMailId(admin.getEmployeeId(), res.getMailId());
-		assertThat(senderBox).isPresent();
-		assertThat(senderBox.get().getTypeId().getValue1()).isEqualTo(MailboxType.SENT.name());
+		List<MailReceiver> receivers = mailReceiverRepository.findAll();
+		assertThat(receivers).hasSize(2);
+		assertThat(receivers)
+			.extracting(MailReceiver::getEmail)
+			.containsExactlyInAnyOrder(receiver1.getEmail(), receiver2.getEmail());
 		
-		Mail mail = mailRepository.findById(res.getMailId()).orElseThrow();
+		List<Mailbox> mailboxes = mailboxRepository.findAll();
+		assertThat(mailboxes).hasSize(3);
 		
-		CommonCode toCode = commonCodeRepository
-			                    .findByCodeStartsWithAndKeywordExactMatchInValues(ReceiverType.PREFIX, ReceiverType.TO.name())
-			                    .get(0);
+		long sentCount = mailboxes.stream()
+			                 .filter(mb -> "SENT".equals(mb.getTypeId().getValue1()))
+			                 .count();
+		long inboxCount = mailboxes.stream()
+			                  .filter(mb -> "INBOX".equals(mb.getTypeId().getValue1()))
+			                  .count();
 		
-		List<MailReceiver> toList = mailReceiverRepository.findAllByMailAndType(mail, toCode);
-		assertThat(toList).hasSize(2);
+		assertThat(sentCount).isEqualTo(1);
+		assertThat(inboxCount).isEqualTo(2);
+		
+		// 알림 생성 횟수 (수신자 2명)
+		assertThat(stubNotificationService.getCreatedCount()).isEqualTo(2);
 	}
 	
 	@Test
-	@DisplayName("sendMail: 첨부파일 업로드 시 attachmentCount 반영")
-	void sendMail_withAttachments_success() {
+	@DisplayName("C: sendMail - 존재하지 않는 발신자 username이면 ResourceNotFoundException")
+	void sendMail_fail_senderNotFound() {
 		// given
-		MultipartFile file1 = Mockito.mock(MultipartFile.class);
-		MultipartFile file2 = Mockito.mock(MultipartFile.class);
-		List<MultipartFile> files = List.of(file1, file2);
+		MailSendRequestDTO request = MailSendRequestDTO.builder()
+			                             .title("제목")
+			                             .content("내용")
+			                             .to(List.of("receiver@test.com"))
+			                             .build();
 		
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("첨부 메일")
-			                         .content("내용")
-			                         .to(List.of("dev1@test.com"))
-			                         .build();
+		// when & then
+		assertThatThrownBy(() -> mailService.sendMail(request, "unknownUser", null))
+			.isInstanceOf(ResourceNotFoundException.class)
+			.hasMessageContaining("직원이 존재하지 않습니다");
+	}
+	
+	@Test
+	@DisplayName("C: sendMail - 수신자(to/cc/bcc)가 모두 없으면 IllegalArgumentException")
+	void sendMail_fail_noReceivers() {
+		// given
+		Employee sender = createAndSaveEmployee("sender2", "sender2@test.com");
+		
+		MailSendRequestDTO request = MailSendRequestDTO.builder()
+			                             .title("제목")
+			                             .content("내용")
+			                             .to(Collections.emptyList())
+			                             .cc(Collections.emptyList())
+			                             .bcc(Collections.emptyList())
+			                             .build();
+		
+		// when & then
+		assertThatThrownBy(() -> mailService.sendMail(request, sender.getUsername(), null))
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("수신자(to/cc/bcc) 중 최소 1명은 필요합니다.");
+	}
+	
+	@Test
+	@DisplayName("C: sendMail - 사내 미등록 이메일이 포함되면 ResourceNotFoundException")
+	void sendMail_fail_unknownReceiverEmail() {
+		// given
+		Employee sender = createAndSaveEmployee("sender3", "sender3@test.com");
+		
+		String unknownEmail = "unknown@test.com";
+		
+		MailSendRequestDTO request = MailSendRequestDTO.builder()
+			                             .title("제목")
+			                             .content("내용")
+			                             .to(List.of(unknownEmail))
+			                             .build();
+		
+		// when & then
+		assertThatThrownBy(() -> mailService.sendMail(request, sender.getUsername(), null))
+			.isInstanceOf(ResourceNotFoundException.class)
+			.hasMessageContaining("사내 미등록 이멜");
+	}
+	
+	// R ----------------------------------------------------------------------
+	
+	@Test
+	@DisplayName("R: getMailDetail - 수신자가 상세 조회 시 읽음 처리 및 DTO 매핑")
+	void getMailDetail_asReceiver_marksReadAndReturnsDto() {
+		// given
+		Employee sender = createAndSaveEmployee("sender4", "sender4@test.com");
+		Employee receiver = createAndSaveEmployee("receiver4", "receiver4@test.com");
+		
+		MailSendResponseDTO sendResponse = sendSimpleMail(sender, receiver);
+		Mailbox inboxBox = findSingleMailbox(receiver.getUsername(), "INBOX");
+		assertThat(inboxBox.getIsRead()).isFalse();
 		
 		// when
-		MailSendResponseDTO res = mailService.sendMail(dto, "admin", files);
+		MailDetailResponseDTO detail = mailService.getMailDetail(
+			sendResponse.getMailId(),
+			inboxBox.getBoxId(),
+			receiver.getUsername(),
+			true
+		);
 		
 		// then
-		assertThat(res.getAttachmentCount()).isEqualTo(2);
-	}
-	
-	@Test
-	@DisplayName("sendMail: 수신자(to/cc/bcc) 총합이 0이면 IllegalArgumentException")
-	void sendMail_noRecipients_throws() {
-		// given
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("수신자 없음")
-			                         .content("내용")
-			                         .to(Collections.emptyList())
-			                         .cc(Collections.emptyList())
-			                         .bcc(Collections.emptyList())
-			                         .build();
-		
-		// when & then
-		assertThatThrownBy(() -> mailService.sendMail(dto, "admin", null))
-			.isInstanceOf(IllegalArgumentException.class);
-	}
-	
-	@Test
-	@DisplayName("sendMail: 사내에 존재하지 않는 이메일이 포함되면 ResourceNotFoundException")
-	void sendMail_missingEmployeeEmail_throws() {
-		// given
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("미등록 수신자 포함")
-			                         .content("내용")
-			                         .to(Arrays.asList("dev1@test.com", "unknown@test.com"))
-			                         .build();
-		
-		// when & then
-		assertThatThrownBy(() -> mailService.sendMail(dto, "admin", null))
-			.isInstanceOf(ResourceNotFoundException.class);
-	}
-	
-	@Test
-	@DisplayName("sendMail: 존재하지 않는 발신자 username이면 ResourceNotFoundException")
-	void sendMail_unknownSender_throws() {
-		// given
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("제목")
-			                         .content("내용")
-			                         .to(List.of("dev1@test.com"))
-			                         .build();
-		
-		// when & then
-		assertThatThrownBy(() -> mailService.sendMail(dto, "no-user", null))
-			.isInstanceOf(ResourceNotFoundException.class);
-	}
-	
-	// ===== getMailDetail 테스트 =====
-	
-	@Test
-	@DisplayName("getMailDetail: 발신자가 조회하면 읽음 처리되고 BCC도 조회됨 (이메일 + 이름)")
-	void getMailDetail_asSender_marksRead_andShowsBcc() {
-		// given
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("제목A")
-			                         .content("본문A")
-			                         .to(List.of("dev1@test.com"))
-			                         .cc(List.of("dev2@test.com"))
-			                         .bcc(List.of("dev2@test.com"))
-			                         .build();
-		
-		MailSendResponseDTO sent = mailService.sendMail(dto, "admin", null);
-		
-		// when
-		MailDetailResponseDTO detail = mailService.getMailDetail(sent.getMailId(), "admin", true);
-		
-		// then
-		assertThat(detail.getMailId()).isEqualTo(sent.getMailId());
-		assertThat(detail.getTitle()).isEqualTo("제목A");
-		assertThat(detail.getSenderEmail()).isEqualTo("admin@test.com");
-		assertThat(detail.getMailboxType()).isEqualTo(MailboxType.SENT.name());
+		assertThat(detail.getMailId()).isEqualTo(sendResponse.getMailId());
+		assertThat(detail.getMailboxType()).isEqualTo("INBOX");
+		assertThat(detail.getBoxId()).isEqualTo(inboxBox.getBoxId());
 		assertThat(detail.getIsRead()).isTrue();
+		assertThat(detail.getSenderEmail()).isEqualTo(sender.getEmail());
+		assertThat(detail.getTo())
+			.extracting(MailReceiverDTO::getEmail)
+			.containsExactly(receiver.getEmail());
 		
-		// BCC: "이메일 (이름)" 형식
-		assertThat(detail.getBcc()).contains("dev2@test.com (개발자2)");
-		
-		Mailbox senderBox =
-			mailboxRepository.findFirstByEmployeeEmployeeIdAndMailMailId(admin.getEmployeeId(), sent.getMailId())
-				.orElseThrow();
-		assertThat(senderBox.getIsRead()).isTrue();
+		Mailbox updated = mailboxRepository.findById(inboxBox.getBoxId()).orElseThrow();
+		assertThat(updated.getIsRead()).isTrue();
 	}
 	
 	@Test
-	@DisplayName("getMailDetail: 수신자는 BCC를 볼 수 없다")
-	void getMailDetail_asReceiver_hidesBcc() {
+	@DisplayName("R: getMailDetail - 발신자는 BCC 목록을 조회 가능, 수신자는 불가")
+	void getMailDetail_bccVisibilityDependsOnSender() {
 		// given
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("제목B")
-			                         .content("본문B")
-			                         .to(List.of("dev1@test.com"))
-			                         .cc(Collections.emptyList())
-			                         .bcc(List.of("dev2@test.com"))
-			                         .build();
+		Employee sender = createAndSaveEmployee("sender5", "sender5@test.com");
+		Employee to = createAndSaveEmployee("to5", "to5@test.com");
+		Employee bcc = createAndSaveEmployee("bcc5", "bcc5@test.com");
 		
-		MailSendResponseDTO sent = mailService.sendMail(dto, "admin", null);
+		MailSendRequestDTO request = MailSendRequestDTO.builder()
+			                             .title("제목")
+			                             .content("내용")
+			                             .to(List.of(to.getEmail()))
+			                             .cc(Collections.emptyList())
+			                             .bcc(List.of(bcc.getEmail()))
+			                             .build();
 		
-		// when
-		MailDetailResponseDTO detail = mailService.getMailDetail(sent.getMailId(), "dev1", true);
+		MailSendResponseDTO response = mailService.sendMail(request, sender.getUsername(), null);
 		
-		// then
-		assertThat(detail.getMailboxType()).isEqualTo(MailboxType.INBOX.name());
-		assertThat(detail.getIsRead()).isTrue();
-		assertThat(detail.getBcc()).isEmpty();
-	}
-	
-	@Test
-	@DisplayName("getMailDetail: 존재하지 않는 사용자 이름으로 조회 시 ResourceNotFoundException")
-	void getMailDetail_unknownUser_throws() {
-		// given
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("제목")
-			                         .to(List.of("dev1@test.com"))
-			                         .build();
+		Mailbox sentBox = findSingleMailbox(sender.getUsername(), "SENT");
+		Mailbox inboxOfTo = findSingleMailbox(to.getUsername(), "INBOX");
 		
-		MailSendResponseDTO sent = mailService.sendMail(dto, "admin", null);
-		
-		// when & then
-		assertThatThrownBy(() -> mailService.getMailDetail(sent.getMailId(), "no-user", true))
-			.isInstanceOf(ResourceNotFoundException.class);
-	}
-	
-	@Test
-	@DisplayName("getMailDetail: 해당 메일함이 없는 사용자 조회 시 ResourceNotFoundException")
-	void getMailDetail_noMailboxForUser_throws() {
-		// given
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("제목")
-			                         .to(List.of("dev1@test.com"))
-			                         .build();
-		
-		MailSendResponseDTO sent = mailService.sendMail(dto, "admin", null);
-		
-		// when & then
-		assertThatThrownBy(() -> mailService.getMailDetail(sent.getMailId(), "dev2", true))
-			.isInstanceOf(ResourceNotFoundException.class);
-	}
-	
-	@Test
-	@DisplayName("getMailDetail: deletedStatus=2(영구삭제) 메일 조회 시 ResourceNotFoundException")
-	void getMailDetail_deletedMail_throws() {
-		// given
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("제목")
-			                         .to(List.of("dev1@test.com"))
-			                         .build();
-		
-		MailSendResponseDTO sent = mailService.sendMail(dto, "admin", null);
-		
-		Long boxId = mailboxRepository
-			             .findFirstByEmployeeEmployeeIdAndMailMailId(admin.getEmployeeId(), sent.getMailId())
-			             .map(Mailbox::getBoxId)
-			             .orElseThrow();
-		
-		// 휴지통으로 이동 후
-		mailService.moveMails(
-			MailMoveRequestDTO.builder()
-				.mailIds(List.of(boxId))
-				.targetType("TRASH")
-				.build(),
-			"admin"
-		);
-		
-		// 영구 삭제
-		mailService.deleteMails(
-			MailMoveRequestDTO.builder()
-				.mailIds(List.of(boxId))
-				.targetType("TRASH")
-				.build(),
-			"admin"
-		);
-		
-		// when & then
-		assertThatThrownBy(() -> mailService.getMailDetail(sent.getMailId(), "admin", true))
-			.isInstanceOf(ResourceNotFoundException.class);
-	}
-	
-	// ===== moveMails 테스트 =====
-	
-	@Test
-	@DisplayName("moveMails: MYBOX로 이동 → type=MYBOX, deletedStatus=0")
-	void moveMails_toMybox_success() {
-		// given
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("제목")
-			                         .to(List.of("dev1@test.com"))
-			                         .build();
-		MailSendResponseDTO sent = mailService.sendMail(dto, "admin", null);
-		
-		Long boxId = mailboxRepository
-			             .findFirstByEmployeeEmployeeIdAndMailMailId(admin.getEmployeeId(), sent.getMailId())
-			             .map(Mailbox::getBoxId)
-			             .orElseThrow();
-		
-		MailMoveRequestDTO move = MailMoveRequestDTO.builder()
-			                          .mailIds(List.of(boxId))
-			                          .targetType("MYBOX")
-			                          .build();
-		
-		// when
-		mailService.moveMails(move, "admin");
-		
-		// then
-		Mailbox moved = mailboxRepository.findById(boxId).orElseThrow();
-		assertThat(moved.getTypeId().getValue1()).isEqualTo(MailboxType.MYBOX.name());
-		assertThat(moved.getDeletedStatus()).isEqualTo((byte) 0);
-	}
-	
-	@Test
-	@DisplayName("moveMails: TRASH로 이동 → type=TRASH, deletedStatus=1")
-	void moveMails_toTrash_success() {
-		// given
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("제목")
-			                         .to(List.of("dev1@test.com"))
-			                         .build();
-		MailSendResponseDTO sent = mailService.sendMail(dto, "admin", null);
-		
-		Long boxId = mailboxRepository
-			             .findFirstByEmployeeEmployeeIdAndMailMailId(admin.getEmployeeId(), sent.getMailId())
-			             .map(Mailbox::getBoxId)
-			             .orElseThrow();
-		
-		MailMoveRequestDTO move = MailMoveRequestDTO.builder()
-			                          .mailIds(List.of(boxId))
-			                          .targetType("TRASH")
-			                          .build();
-		
-		// when
-		mailService.moveMails(move, "admin");
-		
-		// then
-		Mailbox moved = mailboxRepository.findById(boxId).orElseThrow();
-		assertThat(moved.getTypeId().getValue1()).isEqualTo(MailboxType.TRASH.name());
-		assertThat(moved.getDeletedStatus()).isEqualTo((byte) 1);
-	}
-	
-	@Test
-	@DisplayName("moveMails: 잘못된 타입 → IllegalArgumentException")
-	void moveMails_invalidType_throws() {
-		// given
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("제목")
-			                         .to(List.of("dev1@test.com"))
-			                         .build();
-		MailSendResponseDTO sent = mailService.sendMail(dto, "admin", null);
-		
-		Long boxId = mailboxRepository
-			             .findFirstByEmployeeEmployeeIdAndMailMailId(admin.getEmployeeId(), sent.getMailId())
-			             .map(Mailbox::getBoxId)
-			             .orElseThrow();
-		
-		MailMoveRequestDTO move = MailMoveRequestDTO.builder()
-			                          .mailIds(List.of(boxId))
-			                          .targetType("UNKNOWN")
-			                          .build();
-		
-		// when & then
-		assertThatThrownBy(() -> mailService.moveMails(move, "admin"))
-			.isInstanceOf(IllegalArgumentException.class);
-	}
-	
-	@Test
-	@DisplayName("moveMails: 남의 메일함 이동 시도 → AccessDeniedException")
-	void moveMails_wrongOwner_throws() {
-		// given
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("제목")
-			                         .to(List.of("dev1@test.com"))
-			                         .build();
-		mailService.sendMail(dto, "admin", null);
-		
-		Long dev1InboxId = mailboxRepository.findAll().stream()
-			                   .filter(mb -> Objects.equals(mb.getEmployee().getEmployeeId(), dev1.getEmployeeId()))
-			                   .map(Mailbox::getBoxId)
-			                   .findFirst()
-			                   .orElseThrow();
-		
-		MailMoveRequestDTO move = MailMoveRequestDTO.builder()
-			                          .mailIds(List.of(dev1InboxId))
-			                          .targetType("MYBOX")
-			                          .build();
-		
-		// when & then
-		assertThatThrownBy(() -> mailService.moveMails(move, "dev2"))
-			.isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
-	}
-	
-	// ===== deleteMails 테스트 =====
-	
-	@Test
-	@DisplayName("deleteMails: TRASH에 있는 항목만 삭제(deletedStatus=2)")
-	void deleteMails_fromTrash_success() {
-		// given
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("제목")
-			                         .to(List.of("dev1@test.com"))
-			                         .build();
-		MailSendResponseDTO sent = mailService.sendMail(dto, "admin", null);
-		
-		Long boxId = mailboxRepository
-			             .findFirstByEmployeeEmployeeIdAndMailMailId(admin.getEmployeeId(), sent.getMailId())
-			             .map(Mailbox::getBoxId)
-			             .orElseThrow();
-		
-		// 휴지통 이동
-		mailService.moveMails(
-			MailMoveRequestDTO.builder()
-				.mailIds(List.of(boxId))
-				.targetType("TRASH")
-				.build(),
-			"admin"
-		);
-		
-		// when
-		mailService.deleteMails(
-			MailMoveRequestDTO.builder()
-				.mailIds(List.of(boxId))
-				.targetType("TRASH")
-				.build(),
-			"admin"
+		// when - 발신자
+		MailDetailResponseDTO senderView = mailService.getMailDetail(
+			response.getMailId(),
+			sentBox.getBoxId(),
+			sender.getUsername(),
+			false
 		);
 		
 		// then
-		Mailbox mb = mailboxRepository.findById(boxId).orElseThrow();
-		assertThat(mb.getDeletedStatus()).isEqualTo((byte) 2);
-		assertThat(mb.getTypeId().getValue1()).isEqualTo(MailboxType.TRASH.name());
+		assertThat(senderView.getBcc()).isNotNull();
+		assertThat(senderView.getBcc())
+			.extracting(MailReceiverDTO::getEmail)
+			.containsExactly(bcc.getEmail());
+		
+		// when - 수신자
+		MailDetailResponseDTO receiverView = mailService.getMailDetail(
+			response.getMailId(),
+			inboxOfTo.getBoxId(),
+			to.getUsername(),
+			false
+		);
+		
+		// then
+		// DTO에서 null 대신 빈 리스트로 반환하니까 이렇게 체크
+		assertThat(receiverView.getBcc()).isEmpty();
 	}
 	
+	
 	@Test
-	@DisplayName("deleteMails: TRASH가 아니면 삭제 불가 → IllegalStateException")
-	void deleteMails_notInTrash_throws() {
+	@DisplayName("R: getMailDetail - 삭제된 메일은 조회 시 ResourceNotFoundException")
+	void getMailDetail_fail_whenDeletedStatus2() {
 		// given
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("제목")
-			                         .to(List.of("dev1@test.com"))
-			                         .build();
-		MailSendResponseDTO sent = mailService.sendMail(dto, "admin", null);
+		Employee sender = createAndSaveEmployee("sender6", "sender6@test.com");
+		Employee receiver = createAndSaveEmployee("receiver6", "receiver6@test.com");
 		
-		Long boxId = mailboxRepository
-			             .findFirstByEmployeeEmployeeIdAndMailMailId(admin.getEmployeeId(), sent.getMailId())
-			             .map(Mailbox::getBoxId)
-			             .orElseThrow();
+		MailSendResponseDTO response = sendSimpleMail(sender, receiver);
+		Mailbox inboxBox = findSingleMailbox(receiver.getUsername(), "INBOX");
 		
-		MailMoveRequestDTO req = MailMoveRequestDTO.builder()
-			                         .mailIds(List.of(boxId))
-			                         .targetType("TRASH")
-			                         .build();
+		// 휴지통으로 이동
+		MailMoveRequestDTO moveToTrash = MailMoveRequestDTO.builder()
+			                                 .mailIds(List.of(inboxBox.getBoxId()))
+			                                 .targetType("TRASH")
+			                                 .build();
+		mailService.moveMails(moveToTrash, receiver.getUsername());
+		
+		Mailbox trashBox = mailboxRepository.findById(inboxBox.getBoxId()).orElseThrow();
+		// TRASH 이동 후: typeId는 기존 메일함(INBOX) 유지, deletedStatus 로 휴지통 여부 판단
+		assertThat(trashBox.getTypeId().getValue1()).isEqualTo("INBOX");
+		assertThat(trashBox.getDeletedStatus()).isEqualTo((byte) 1);
+		
+		// 휴지통에서 삭제
+		MailMoveRequestDTO deleteReq = MailMoveRequestDTO.builder()
+			                               .mailIds(List.of(inboxBox.getBoxId()))
+			                               .targetType("TRASH")
+			                               .build();
+		mailService.deleteMails(deleteReq, receiver.getUsername());
+		
+		Mailbox deletedBox = mailboxRepository.findById(inboxBox.getBoxId()).orElseThrow();
+		assertThat(deletedBox.getDeletedStatus()).isEqualTo((byte) 2);
 		
 		// when & then
-		assertThatThrownBy(() -> mailService.deleteMails(req, "admin"))
-			.isInstanceOf(IllegalStateException.class);
+		assertThatThrownBy(() ->
+			                   mailService.getMailDetail(response.getMailId(), inboxBox.getBoxId(), receiver.getUsername(), false)
+		)
+			.isInstanceOf(ResourceNotFoundException.class)
+			.hasMessageContaining("삭제된 메일입니다.");
 	}
 	
 	@Test
-	@DisplayName("deleteMails: 남의 메일함 삭제 시도 → AccessDeniedException")
-	void deleteMails_wrongOwner_throws() {
+	@DisplayName("R: getMailboxList - INBOX/TRASH에 따라 삭제 상태에 맞는 목록만 조회")
+	void getMailboxList_filtersByTypeAndDeletedStatus() {
 		// given
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("제목")
-			                         .to(List.of("dev1@test.com"))
-			                         .build();
-		mailService.sendMail(dto, "admin", null);
+		Employee sender = createAndSaveEmployee("sender12", "sender12@test.com");
+		Employee receiver = createAndSaveEmployee("receiver12", "receiver12@test.com");
 		
-		Long dev1InboxId = mailboxRepository.findAll().stream()
-			                   .filter(mb -> Objects.equals(mb.getEmployee().getEmployeeId(), dev1.getEmployeeId()))
-			                   .map(Mailbox::getBoxId)
-			                   .findFirst()
-			                   .orElseThrow();
+		MailSendRequestDTO r1 = MailSendRequestDTO.builder()
+			                        .title("메일1")
+			                        .content("내용1")
+			                        .to(List.of(receiver.getEmail()))
+			                        .build();
+		MailSendRequestDTO r2 = MailSendRequestDTO.builder()
+			                        .title("메일2")
+			                        .content("내용2")
+			                        .to(List.of(receiver.getEmail()))
+			                        .build();
 		
-		MailMoveRequestDTO req = MailMoveRequestDTO.builder()
-			                         .mailIds(List.of(dev1InboxId))
-			                         .targetType("TRASH")
-			                         .build();
+		mailService.sendMail(r1, sender.getUsername(), null);
+		mailService.sendMail(r2, sender.getUsername(), null);
+		
+		Page<MailboxListDTO> inboxPage = mailService.getMailboxList(receiver.getUsername(), "INBOX", 0, 10);
+		assertThat(inboxPage.getTotalElements()).isEqualTo(2);
+		
+		// 하나를 휴지통으로 이동
+		Long boxIdToTrash = inboxPage.getContent().get(0).getBoxId();
+		MailMoveRequestDTO moveToTrash = MailMoveRequestDTO.builder()
+			                                 .mailIds(List.of(boxIdToTrash))
+			                                 .targetType("TRASH")
+			                                 .build();
+		mailService.moveMails(moveToTrash, receiver.getUsername());
+		
+		Page<MailboxListDTO> inboxAfter = mailService.getMailboxList(receiver.getUsername(), "INBOX", 0, 10);
+		assertThat(inboxAfter.getTotalElements()).isEqualTo(1);
+		
+		Page<MailboxListDTO> trashList = mailService.getMailboxList(receiver.getUsername(), "TRASH", 0, 10);
+		assertThat(trashList.getTotalElements()).isEqualTo(1);
+	}
+	
+	// U ----------------------------------------------------------------------
+	
+	@Test
+	@DisplayName("U: moveMails - MYBOX로 이동 시 타입과 deletedStatus 변경")
+	void moveMails_moveToMybox_success() {
+		// given
+		Employee sender = createAndSaveEmployee("sender7", "sender7@test.com");
+		Employee receiver = createAndSaveEmployee("receiver7", "receiver7@test.com");
+		
+		sendSimpleMail(sender, receiver);
+		Mailbox inboxBox = findSingleMailbox(receiver.getUsername(), "INBOX");
+		
+		MailMoveRequestDTO request = MailMoveRequestDTO.builder()
+			                             .mailIds(List.of(inboxBox.getBoxId()))
+			                             .targetType("MYBOX")
+			                             .build();
+		
+		// when
+		mailService.moveMails(request, receiver.getUsername());
+		
+		// then
+		Mailbox updated = mailboxRepository.findById(inboxBox.getBoxId()).orElseThrow();
+		assertThat(updated.getTypeId().getValue1()).isEqualTo("MYBOX");
+		assertThat(updated.getDeletedStatus()).isEqualTo((byte) 0);
+		assertThat(updated.getIsRead()).isFalse();
+	}
+	
+	@Test
+	@DisplayName("U: moveMails - TRASH로 이동 시 deletedStatus=1")
+	void moveMails_moveToTrash_success() {
+		// given
+		Employee sender = createAndSaveEmployee("senderX", "senderx@test.com");
+		Employee receiver = createAndSaveEmployee("receiverX", "receiverx@test.com");
+		
+		sendSimpleMail(sender, receiver);
+		Mailbox inboxBox = findSingleMailbox(receiver.getUsername(), "INBOX");
+		
+		MailMoveRequestDTO request = MailMoveRequestDTO.builder()
+			                             .mailIds(List.of(inboxBox.getBoxId()))
+			                             .targetType("TRASH")
+			                             .build();
+		
+		// when
+		mailService.moveMails(request, receiver.getUsername());
+		
+		// then
+		Mailbox updated = mailboxRepository.findById(inboxBox.getBoxId()).orElseThrow();
+		assertThat(updated.getTypeId().getValue1()).isEqualTo("INBOX");   // 타입 유지
+		assertThat(updated.getDeletedStatus()).isEqualTo((byte) 1);       // 휴지통 플래그
+		assertThat(updated.getIsRead()).isFalse();
+	}
+	
+	@Test
+	@DisplayName("U: moveMails - 다른 사용자의 메일함 이동 시 AccessDeniedException")
+	void moveMails_fail_otherUserMailbox() {
+		// given
+		Employee sender = createAndSaveEmployee("sender8", "sender8@test.com");
+		Employee receiver = createAndSaveEmployee("receiver8", "receiver8@test.com");
+		Employee otherUser = createAndSaveEmployee("otherUser", "otherUser@test.com");
+		
+		sendSimpleMail(sender, receiver);
+		Mailbox inboxBox = findSingleMailbox(receiver.getUsername(), "INBOX");
+		
+		MailMoveRequestDTO request = MailMoveRequestDTO.builder()
+			                             .mailIds(List.of(inboxBox.getBoxId()))
+			                             .targetType("MYBOX")
+			                             .build();
 		
 		// when & then
-		assertThatThrownBy(() -> mailService.deleteMails(req, "dev2"))
-			.isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
-	}
-	
-	// ===== getMailboxList 테스트 =====
-	
-	@Test
-	@DisplayName("getMailboxList: INBOX / SENT / MYBOX 필터링 동작 확인 (수신자는 이름 리스트)")
-	void getMailboxList_basicFolders() {
-		// given
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("제목")
-			                         .to(List.of("dev1@test.com"))
-			                         .build();
-		MailSendResponseDTO sent = mailService.sendMail(dto, "admin", null);
-		
-		// INBOX (dev1)
-		Page<MailboxListDTO> inbox = mailService.getMailboxList("dev1", "INBOX", 0, 10);
-		assertThat(inbox.getTotalElements()).isEqualTo(1);
-		MailboxListDTO inboxItem = inbox.getContent().get(0);
-		assertThat(inboxItem.getSenderName()).isEqualTo("관리자");
-		assertThat(inboxItem.getTitle()).isEqualTo("제목");
-		// 수신자 이름으로 매핑됨
-		assertThat(inboxItem.getReceivers()).contains("개발자1");
-		
-		// SENT (admin)
-		Page<MailboxListDTO> sentPage = mailService.getMailboxList("admin", "SENT", 0, 10);
-		assertThat(sentPage.getTotalElements()).isEqualTo(1);
-		MailboxListDTO sentItem = sentPage.getContent().get(0);
-		assertThat(sentItem.getSenderName()).isEqualTo("관리자");
-		assertThat(sentItem.getReceivers()).contains("개발자1");
-		
-		Long adminBoxId = mailboxRepository
-			                  .findFirstByEmployeeEmployeeIdAndMailMailId(admin.getEmployeeId(), sent.getMailId())
-			                  .map(Mailbox::getBoxId)
-			                  .orElseThrow();
-		
-		// MYBOX 로 이동
-		mailService.moveMails(
-			MailMoveRequestDTO.builder()
-				.mailIds(List.of(adminBoxId))
-				.targetType("MYBOX")
-				.build(),
-			"admin"
-		);
-		
-		Page<MailboxListDTO> myboxPage = mailService.getMailboxList("admin", "MYBOX", 0, 10);
-		assertThat(myboxPage.getTotalElements()).isEqualTo(1);
-		assertThat(myboxPage.getContent().get(0).getBoxId()).isEqualTo(adminBoxId);
+		assertThatThrownBy(() -> mailService.moveMails(request, otherUser.getUsername()))
+			.isInstanceOf(AccessDeniedException.class)
+			.hasMessageContaining("권한이 없거나 존재하지 않는 항목이 포함되어 있습니다.");
 	}
 	
 	@Test
-	@DisplayName("getMailboxList: TRASH 조회시 deletedStatus=1만 조회, 영구삭제 후에는 제외")
-	void getMailboxList_trash_before_and_after_delete() {
+	@DisplayName("U: moveMails - 잘못된 targetType이면 IllegalArgumentException")
+	void moveMails_fail_invalidTargetType() {
 		// given
-		MailSendRequestDTO dto = MailSendRequestDTO.builder()
-			                         .title("제목")
-			                         .to(List.of("dev1@test.com"))
-			                         .build();
-		MailSendResponseDTO sent = mailService.sendMail(dto, "admin", null);
+		Employee sender = createAndSaveEmployee("sender9", "sender9@test.com");
+		Employee receiver = createAndSaveEmployee("receiver9", "receiver9@test.com");
 		
-		Long adminBoxId = mailboxRepository
-			                  .findFirstByEmployeeEmployeeIdAndMailMailId(admin.getEmployeeId(), sent.getMailId())
-			                  .map(Mailbox::getBoxId)
-			                  .orElseThrow();
+		sendSimpleMail(sender, receiver);
+		Mailbox inboxBox = findSingleMailbox(receiver.getUsername(), "INBOX");
 		
-		// 휴지통 이동
-		mailService.moveMails(
-			MailMoveRequestDTO.builder()
-				.mailIds(List.of(adminBoxId))
-				.targetType("TRASH")
-				.build(),
-			"admin"
-		);
+		MailMoveRequestDTO request = MailMoveRequestDTO.builder()
+			                             .mailIds(List.of(inboxBox.getBoxId()))
+			                             .targetType("UNKNOWN")
+			                             .build();
 		
-		// 삭제 전 TRASH 조회
-		Page<MailboxListDTO> trashBefore = mailService.getMailboxList("admin", "TRASH", 0, 10);
-		assertThat(trashBefore.getContent())
-			.extracting(MailboxListDTO::getBoxId)
-			.contains(adminBoxId);
+		// when & then
+		assertThatThrownBy(() -> mailService.moveMails(request, receiver.getUsername()))
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("해당 타입은 존재하지 않습니다.");
+	}
+	
+	// D ----------------------------------------------------------------------
+	
+	@Test
+	@DisplayName("D: deleteMails - 휴지통 메일 삭제 시 deletedStatus=2")
+	void deleteMails_success_softDeleteFromTrash() {
+		// given
+		Employee sender = createAndSaveEmployee("sender10", "sender10@test.com");
+		Employee receiver = createAndSaveEmployee("receiver10", "receiver10@test.com");
 		
-		// 영구 삭제
-		mailService.deleteMails(
-			MailMoveRequestDTO.builder()
-				.mailIds(List.of(adminBoxId))
-				.targetType("TRASH")
-				.build(),
-			"admin"
-		);
+		sendSimpleMail(sender, receiver);
+		Mailbox inboxBox = findSingleMailbox(receiver.getUsername(), "INBOX");
 		
-		// 삭제 후 TRASH 조회 (deletedStatus=1만 조회 대상이므로 제외)
-		Page<MailboxListDTO> trashAfter = mailService.getMailboxList("admin", "TRASH", 0, 10);
-		assertThat(trashAfter.getContent())
-			.extracting(MailboxListDTO::getBoxId)
-			.doesNotContain(adminBoxId);
+		MailMoveRequestDTO moveToTrash = MailMoveRequestDTO.builder()
+			                                 .mailIds(List.of(inboxBox.getBoxId()))
+			                                 .targetType("TRASH")
+			                                 .build();
+		mailService.moveMails(moveToTrash, receiver.getUsername());
+		
+		// when
+		MailMoveRequestDTO deleteReq = MailMoveRequestDTO.builder()
+			                               .mailIds(List.of(inboxBox.getBoxId()))
+			                               .targetType("TRASH")
+			                               .build();
+		mailService.deleteMails(deleteReq, receiver.getUsername());
+		
+		// then
+		Mailbox deleted = mailboxRepository.findById(inboxBox.getBoxId()).orElseThrow();
+		assertThat(deleted.getDeletedStatus()).isEqualTo((byte) 2);
+	}
+	
+	@Test
+	@DisplayName("D: deleteMails - 휴지통이 아닌 메일 삭제 시 IllegalStateException")
+	void deleteMails_fail_whenNotInTrash() {
+		// given
+		Employee sender = createAndSaveEmployee("sender11", "sender11@test.com");
+		Employee receiver = createAndSaveEmployee("receiver11", "receiver11@test.com");
+		
+		sendSimpleMail(sender, receiver);
+		Mailbox inboxBox = findSingleMailbox(receiver.getUsername(), "INBOX");
+		
+		MailMoveRequestDTO deleteReq = MailMoveRequestDTO.builder()
+			                               .mailIds(List.of(inboxBox.getBoxId()))
+			                               .targetType("TRASH")
+			                               .build();
+		
+		// when & then
+		assertThatThrownBy(() -> mailService.deleteMails(deleteReq, receiver.getUsername()))
+			.isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("메일이 휴지통에 존재하지 않습니다.");
+	}
+	
+	// ------------------------------------------------------------------------
+	// Stub 구현체들 (MockBean 사용 안함)
+	// ------------------------------------------------------------------------
+	
+	static class StubAttachmentFileService implements AttachmentFileService {
+		
+		@Override
+		public List<AttachmentFileResponseDTO> uploadFiles(List<MultipartFile> multipartFile, Long ownerTypeId, Long ownerId) {
+			return Collections.emptyList();
+		}
+		
+		@Override
+		public List<AttachmentFileResponseDTO> listFiles(Long ownerTypeId, Long ownerId) {
+			return Collections.emptyList();
+		}
+		
+		@Override
+		public ResponseEntity<Resource> downloadFile(Long fileId) {
+			return null;
+		}
+		
+		@Override
+		public void deleteFile(Long fileId) {
+			// no-op
+		}
+	}
+	
+	static class StubEmlService implements EmlService {
+		@Override
+		public String generate(Mail mail,
+		                       List<String> to,
+		                       List<String> cc,
+		                       List<String> bcc,
+		                       List<AttachmentFileResponseDTO> attachmentFiles,
+		                       Employee sender) {
+			Long id = mail.getMailId() == null ? 0L : mail.getMailId();
+			return "mail-eml/test/" + id + ".eml";
+		}
+	}
+	
+	static class StubNotificationService implements NotificationService {
+		
+		private int createdCount = 0;
+		
+		int getCreatedCount() {
+			return createdCount;
+		}
+		
+		@Override
+		public NotificationResponseDTO create(NotificationRequestDTO requestDTO) {
+			createdCount++;
+			return null;
+		}
+		
+		@Override
+		public Page<NotificationResponseDTO> list(String username, Pageable pageable) {
+			return Page.empty(pageable);
+		}
+		
+		@Override
+		public String getUrl(Long notificationId, String username) {
+			return null;
+		}
+		
+		@Override
+		public void softDelete(Long notificationId, String username) {
+			// no-op
+		}
+		
+		@Override
+		public long getUnreadNotiCount(String username) {
+			return 0L;
+		}
+		
+		@Override
+		public void readAll(String username) {
+			// no-op
+		}
+		
+		@Override
+		public void softDeleteAll(String username) {
+			// no-op
+		}
+		
+		@Override
+		public void sendNotificationCounts(String username) {
+			// no-op
+		}
 	}
 }

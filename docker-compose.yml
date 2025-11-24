@@ -19,6 +19,11 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       ALLOWED_ORIGIN: ${ALLOWED_ORIGIN}
+      FILE_STORAGE: /uploads
+      HOLIDAY_API_KEY: ${HOLIDAY_API_KEY}
+
+    volumes:
+      - ${FILE_STORAGE}:/uploads
 
 # 외부 네트워크 사용 (도커 네트워크 my-network는 도커 컴포즈 실행 전에 미리 만들어 두어야 함)
 networks:

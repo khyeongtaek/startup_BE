@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -22,7 +23,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
      * @param pageable 페이지 정보
      * @return 메시지 페이지
      */
-    Page<ChatMessage> findByChatRoomChatRoomIdAndCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(
+    Page<ChatMessage> findByChatRoomChatRoomIdAndCreatedAtGreaterThanEqualAndIsDeletedFalseOrderByCreatedAtDesc(
             Long chatRoomId, LocalDateTime joinedAt, Pageable pageable);
 
     /**
@@ -33,7 +34,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
      * @param joinedAt  사용자가 채팅방에 참여한 시각
      * @return 최신 메시지 (Optional)
      */
-    Optional<ChatMessage> findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc(
+    Optional<ChatMessage> findTopByChatRoomAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(
             ChatRoom chatRoom,
             LocalDateTime joinedAt
     );
@@ -46,7 +47,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
      * @param lastReadMessageId   마지막으로 읽은 메시지의 ID
      * @return 안 읽은 메시지 개수
      */
-    long countByChatRoomAndChatMessageIdGreaterThan(
+    long countByChatRoomAndChatMessageIdGreaterThanAndEmployeeIsNotNull(
             ChatRoom chatRoom,
             Long lastReadMessageId
     );
@@ -59,8 +60,18 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
      * @param joinedAt  사용자가 채팅방에 참여한 시각
      * @return 메시지 개수
      */
-    long countByChatRoomAndCreatedAtAfter(
+    long countByChatRoomAndCreatedAtGreaterThanEqualAndEmployeeIsNotNull(
             ChatRoom chatRoom,
             LocalDateTime joinedAt
+    );
+
+    /**
+     * 특정 기간 사이의 모든 메시지를 조회합니다. (시간 오름차순)
+     * updateLastReadMessageId에서 사용자가 '방금 읽은' 메시지 목록을 가져올 때 사용합니다.
+     */
+    List<ChatMessage> findAllByChatRoomChatRoomIdAndCreatedAtGreaterThanEqualAndCreatedAtLessThanEqualOrderByCreatedAtAsc(
+            Long roomId,
+            LocalDateTime afterTime,
+            LocalDateTime untilTime
     );
 }

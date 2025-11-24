@@ -20,10 +20,10 @@ INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
     ('AD0', '문서 상태', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
-    ('AD1', '임시저장', 'DRAFT', NULL, NULL, 1, 1, 1, NOW(), NOW(), false),
-    ('AD2', '진행중', 'IN_PROGRESS', NULL, NULL, 2, 1, 1, NOW(), NOW(), false),
-    ('AD3', '최종 승인', 'APPROVED', NULL, NULL, 3, 1, 1, NOW(), NOW(), false),
-    ('AD4', '최종 반려', 'REJECTED', NULL, NULL, 4, 1, 1, NOW(), NOW(), false);
+    ('AD1', '임시저장', 'DRAFT', '임시 저장', NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('AD2', '진행중', 'IN_PROGRESS', '진행중', NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('AD3', '최종 승인', 'APPROVED', '최종 승인', NULL, 3, 1, 1, NOW(), NOW(), false),
+    ('AD4', '최종 반려', 'REJECTED', '반려', NULL, 4, 1, 1, NOW(), NOW(), false);
 
 
 /*
@@ -38,10 +38,10 @@ INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
     ('AL0', '결재선 상태', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
-    ('AL1', '미결', 'PENDING', NULL, NULL, 1, 1, 1, NOW(), NOW(), false),
-    ('AL2', '대기', 'AWAITING', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
-    ('AL3', '승인', 'APPROVED', NULL, NULL, 2, 1, 1, NOW(), NOW(), false),
-    ('AL4', '반려', 'REJECTED', NULL, NULL, 3, 1, 1, NOW(), NOW(), false);
+    ('AL1', '미결', 'PENDING', '미결', NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('AL2', '대기', 'AWAITING', '대기', NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('AL3', '승인', 'APPROVED', '승인', NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('AL4', '반려', 'REJECTED', '반려', NULL, 3, 1, 1, NOW(), NOW(), false);
 
 
 /*
@@ -254,7 +254,10 @@ VALUES
     ('OT4', '전자결재', 'APPROVAL', '', '', 0, 1, 1, NOW(), NOW(), false),
     ('OT5', '채팅 초대', 'TEAMCHATNOTI', '', '', 0, 1, 1, NOW(), NOW(), false),
     ('OT6', '일정 초대', 'SCHEDULEINVITE', '', '', 0, 1, 1, NOW(), NOW(), false),
-    ('OT7', '게시판', 'POST', '', '', 0, 1, 1, NOW(), NOW(), false);
+    ('OT7', '채팅 메시지', 'CHAT', '', '', 0, 1, 1, NOW(), NOW(), false),
+    ('OT8', '시스템 메시지', 'CHAT_SYSTEM', '', '', 0, 1, 1, NOW(), NOW(), false),
+    ('OT9', '사용자 메시지', 'CHAT_USER', '', '', 0, 1, 1, NOW(), NOW(), false),
+    ('OT10', '게시판', 'POST', '', '', 0, 1, 1, NOW(), NOW(), false);
 
 /*
 * =============================================
@@ -296,8 +299,9 @@ VALUES
     ('WS4', '결근', 'ABSENT', '결근', NULL, 4, 1, 1, NOW(), NOW(), false),
     ('WS5', '휴가', 'VACATION', '휴가', NULL, 5, 1, 1, NOW(), NOW(), false),
     ('WS6', '외근', 'OUT_ON_BUSINESS', '외근', NULL , 6 , 1, 1, NOW(), NOW(), false ),
-    ('WS7', '퇴근', 'CLOCK_OUT', '퇴근', NULL , 6 , 1, 1, NOW(), NOW(), false );
-
+    ('WS7', '퇴근', 'CLOCK_OUT', '퇴근', NULL , 6 , 1, 1, NOW(), NOW(), false ),
+    ('WS8', '오전 반차', 'MORNING_HALF', '오전 반차', NULL,8, 1, 1, NOW(), NOW(), false),
+    ( 'WS9', '오후 반차', 'AFTERNOON_HALF', '오후 반차',NULL ,9, 1, 1, NOW(), NOW(), false);
 
 /*
 * =============================================
@@ -684,8 +688,18 @@ INSERT INTO tbl_common_code
 (code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
 VALUES
     ('AT0', '결재 양식', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
-    ('AT1', '휴가 신청서', '휴가 신청서', 'VACATION', '/forms/vacation', 1, 1, 1, NOW(), NOW(), false),
-    ('AT2', '출장 계획서', '출장 계획서', 'BUSINESS_TRIP', '/forms/biztrip', 2, 1, 1, NOW(), NOW(), false);
+    ('AT1', '휴가 신청서', '휴가 신청서', 'VACATION', 'LeaveTemplate', 1, 1, 1, NOW(), NOW(), false),
+    ('AT2', '출장 계획서', '출장 계획서', 'BUSINESS_TRIP', 'BusinessTripTemplate', 2, 1, 1, NOW(), NOW(), false);
+
+INSERT INTO tbl_common_code
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at,
+ is_disabled)
+VALUES ('VT0', '휴가 종류', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+       ('VT1', '연차', 'ANNUAL', '연차', NULL, 1, 1, 1, NOW(), NOW(), false),
+       ('VT2', '오전반차', 'MORNING_HALF', '오전 반차', NULL, 2, 1, 1, NOW(), NOW(), false),
+       ('VT3', '오후반차', 'AFTERNOON_HALF', '오후 반차', NULL, 3, 1, 1, NOW(), NOW(), false);
+
+
 
 
 /*
@@ -863,21 +877,21 @@ VALUES
       "id": "worklog-all",
       "title": "전체업무일지",
       "type": "item",
-      "url": "/worklog/list",
+      "url": "/worklog/list/all",
       "target": false
     }', 'MN19', NULL, 1, 1, 1, NOW(), NOW(), false),
     ('MN21', '부서업무일지', '{
       "id": "worklog-department",
       "title": "부서업무일지",
       "type": "item",
-      "url": "/worklog/list?type=department",
+      "url": "/worklog/list/department",
       "target": false
     }', 'MN19', NULL, 2, 1, 1, NOW(), NOW(), false),
     ('MN22', '나의업무일지', '{
       "id": "worklog-personal",
       "title": "나의업무일지",
       "type": "item",
-      "url": "/worklog/list?type=personal",
+      "url": "/worklog/list/personal",
       "target": false
     }', 'MN19', NULL, 3, 1, 1, NOW(), NOW(), false),
 
@@ -921,8 +935,8 @@ VALUES
       "id": "approval-detail",
       "title": "결재 상세",
       "type": "route",
-      "url": "/approval/detail",
-      "componentPath": null
+      "url": "/approval/detail/:docId",
+      "componentPath": "features/approval/pages/ApprovalDetailPage"
     }', NULL, NULL, 2, 1, 1, NOW(), NOW(), false),
     ('RO3', '결재 목록', '{
       "id": "approval-list",
@@ -938,9 +952,9 @@ VALUES
       "url": "/mail/list/:type",
       "componentPath": "features/mail/pages/MailListPage"
     }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
-    ('RO6', '메일 재작성', '{
+    ('RO6', '메일 신규작성/재작성', '{
       "id": "mail-rewrite",
-      "title": "메일 작성",
+      "title": "메일 신규작성/재작성",
       "type": "route",
       "url": "/mail/write/:mailId?",
       "componentPath": "features/mail/pages/MailWritePage"
@@ -951,6 +965,27 @@ VALUES
       "type": "route",
       "url": "/mail/detail/:mailId",
       "componentPath": "features/mail/pages/MailDetailPage"
+    }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('RO8', '업무일지 목록', '{
+      "id": "worklog-list",
+      "title": "업무일지 목록",
+      "type": "route",
+      "url": "/worklog/list/:type",
+      "componentPath": "features/worklog/pages/WorkLogListPage"
+    }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('RO9', '업무일지 작성/수정', '{
+      "id": "worklog-write",
+      "title": "업무일지 작성",
+      "type": "route",
+      "url": "/worklog/write/:worklogId?",
+      "componentPath": "features/worklog/pages/WorkLogWritePage"
+    }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('RO10', '업무일지 상세', '{
+      "id": "worklog-detail",
+      "title": "업무일지 상세",
+      "type": "route",
+      "url": "/worklog/detail/:worklogId",
+      "componentPath": "features/worklog/pages/WorkLogDetailPage"
     }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
     ('RO11', '게시글 작성', '{
       "id": "post-write",

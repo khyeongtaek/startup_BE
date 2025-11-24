@@ -40,9 +40,19 @@ public class ScheduleParticipantResponseDTO {
         return ScheduleParticipantResponseDTO.builder()
                 .participantId(scheduleParticipant.getParticipantId())
                 .scheduleId(scheduleParticipant.getSchedule().getScheduleId())
-                .participantEmployeeId(scheduleParticipant.getParticipant().getEmployeeId())
-                .participantName(scheduleParticipant.getParticipant().getName())
-                .participantStatusName(scheduleParticipant.getParticipantStatus().getCodeDescription())
+                // 삭제된 직원일 경우 employeeId = null
+                .participantEmployeeId(
+                        scheduleParticipant.getParticipant() != null
+                                ? scheduleParticipant.getParticipant().getEmployeeId()
+                                : null
+                )
+                // 삭제된 직원일 경우 이름 = "정보 없음"
+                .participantName(
+                        scheduleParticipant.getParticipant() != null
+                                ? scheduleParticipant.getParticipant().getName()
+                                : "정보 없음"
+                )
+                .participantStatusName(scheduleParticipant.getParticipantStatus().getValue2())
                 .createdAt(scheduleParticipant.getCreatedAt())
                 .updatedAt(scheduleParticipant.getUpdatedAt())
                 .build();

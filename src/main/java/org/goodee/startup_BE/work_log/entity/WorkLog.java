@@ -5,6 +5,8 @@ import lombok.Getter;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.hibernate.annotations.Comment;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
@@ -22,8 +24,9 @@ public class WorkLog {
     private Long workLogId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
+    @JoinColumn(name = "employee_id")
     @Comment("작성자(직원) ID")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Employee employee;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -64,13 +67,13 @@ public class WorkLog {
     @PrePersist
     protected void onPrePersist() {
         if(isDeleted == null) isDeleted = false;
-//        if(createdAt == null) createdAt = LocalDateTime.now();
-//        updatedAt = LocalDateTime.now();
+        if(createdAt == null) createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
     protected void onPreUpdate() {
-//        updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
     protected WorkLog() {}

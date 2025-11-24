@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -94,7 +95,7 @@ public class ChatRoomApiController {
     public ResponseEntity<Void> updateLastRead(
             Authentication authentication,
             @PathVariable Long roomId,
-            @RequestParam("lastMessageId") Long lastMessageId
+            @RequestParam(value = "lastMessageId", required = false) Long lastMessageId
     ) {
         String username = authentication.getName();
         chatService.updateLastReadMessageId(username, roomId, lastMessageId);
@@ -127,5 +128,19 @@ public class ChatRoomApiController {
         );
 
         return ResponseEntity.ok(roomDetails);
+    }
+
+    // 파일 첨부 메시지 전용 API
+    @Operation(summary = "파일 첨부 메시지 전송 (HTTP)")
+    @PostMapping("/rooms/{roomId}/send-with-files")
+    public ResponseEntity<Void> sendMessageWithFiles(
+            Authentication authentication,
+            @PathVariable Long roomId,
+            @RequestParam(value = "content", required = false) String content,
+            @RequestParam(value = "files", required = false) List<MultipartFile> files
+    ) {
+        String username = authentication.getName();
+        chatService.sendMessageWithFiles(username, roomId, content, files);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 }

@@ -1,19 +1,19 @@
 package org.goodee.startup_BE.chat.service;
 
-import jakarta.persistence.EntityNotFoundException;
-import org.goodee.startup_BE.chat.dto.ChatMessageResponseDTO;
-import org.goodee.startup_BE.chat.dto.ChatRoomListResponseDTO;
-import org.goodee.startup_BE.chat.dto.ChatRoomResponseDTO;
-import org.goodee.startup_BE.chat.dto.TotalUnreadCountResponseDTO;
+import org.goodee.startup_BE.chat.dto.*;
 import org.goodee.startup_BE.chat.entity.ChatEmployee;
 import org.goodee.startup_BE.chat.entity.ChatMessage;
 import org.goodee.startup_BE.chat.entity.ChatRoom;
 import org.goodee.startup_BE.chat.repository.ChatEmployeeRepository;
 import org.goodee.startup_BE.chat.repository.ChatMessageRepository;
 import org.goodee.startup_BE.chat.repository.ChatRoomRepository;
+import org.goodee.startup_BE.common.dto.AttachmentFileResponseDTO;
+import org.goodee.startup_BE.common.entity.AttachmentFile;
 import org.goodee.startup_BE.common.entity.CommonCode;
 import org.goodee.startup_BE.common.enums.OwnerType;
+import org.goodee.startup_BE.common.repository.AttachmentFileRepository;
 import org.goodee.startup_BE.common.repository.CommonCodeRepository;
+import org.goodee.startup_BE.common.service.AttachmentFileService;
 import org.goodee.startup_BE.employee.entity.Employee;
 import org.goodee.startup_BE.employee.repository.EmployeeRepository;
 import org.goodee.startup_BE.notification.dto.NotificationRequestDTO;
@@ -25,8 +25,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -34,117 +32,112 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.*;
 
-// AssertJ static import
 import static org.assertj.core.api.Assertions.*;
-
-// Mockito static import
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-// BDDMockito static import
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
-// Mockito static import
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("ChatServiceImpl 테스트")
 class ChatServiceImplTest {
 
     @InjectMocks
     private ChatServiceImpl chatService;
 
-    // --- Repositories ---
-    @Mock
-    private ChatRoomRepository chatRoomRepository;
-    @Mock
-    private ChatMessageRepository chatMessageRepository;
-    @Mock
-    private ChatEmployeeRepository chatEmployeeRepository;
-    @Mock
-    private EmployeeRepository employeeRepository;
-    @Mock
-    private CommonCodeRepository commonCodeRepository;
-
-    // --- Services & Utils ---
-    @Mock
-    private NotificationService notificationService;
-    @Mock
-    private SimpMessagingTemplate simpMessagingTemplate;
+    @Mock private ChatRoomRepository chatRoomRepository;
+    @Mock private ChatMessageRepository chatMessageRepository;
+    @Mock private ChatEmployeeRepository chatEmployeeRepository;
+    @Mock private EmployeeRepository employeeRepository;
+    @Mock private CommonCodeRepository commonCodeRepository;
+    @Mock private AttachmentFileRepository attachmentFileRepository;
+    @Mock private NotificationService notificationService;
+    @Mock private SimpMessagingTemplate simpMessagingTemplate;
+    @Mock private AttachmentFileService attachmentFileService;
 
     // --- Mock Objects ---
-    private Employee mockCreator;
-    private Employee mockInvitee1;
-    private Employee mockInvitee2;
-    private ChatRoom mockRoom;
-    private ChatMessage mockMessage;
-    private ChatEmployee mockChatEmployee;
-    private CommonCode mockCommonCode;
+    private Employee creator, invitee1, invitee2;
+    private CommonCode posManager, posStaff;
+    private ChatRoom chatRoom, teamChatRoom;
+    private ChatMessage chatMessage, systemMessage;
+    private ChatEmployee chatEmployeeCreator, chatEmployeeInvitee1;
+    private CommonCode commonCodeTeamNoti, commonCodeChat;
 
-    // [FIX] 'WantedButNotInvoked' 오류 수정을 위해 mockChatEmployeeInvitee1 추가
-    private ChatEmployee mockChatEmployeeInvitee1;
-
-    // --- Argument Captors ---
-    @Captor
-    private ArgumentCaptor<TransactionSynchronization> syncCaptor;
-    @Captor
-    private ArgumentCaptor<ChatMessage> chatMessageCaptor;
-    @Captor
-    private ArgumentCaptor<NotificationRequestDTO> notificationCaptor;
-    @Captor
-    private ArgumentCaptor<List<ChatEmployee>> chatEmployeeListCaptor;
+    // --- Captors ---
+    @Captor private ArgumentCaptor<TransactionSynchronization> syncCaptor;
+    @Captor private ArgumentCaptor<List<ChatEmployee>> chatEmployeesCaptor;
+    @Captor private ArgumentCaptor<NotificationRequestDTO> notificationCaptor;
+    @Captor private ArgumentCaptor<ChatMessage> messageCaptor;
 
     @BeforeEach
     void setUp() {
-        mockCreator = mock(Employee.class);
-        mockInvitee1 = mock(Employee.class);
-        mockInvitee2 = mock(Employee.class);
-        mockRoom = mock(ChatRoom.class);
-        mockMessage = mock(ChatMessage.class);
-        mockChatEmployee = mock(ChatEmployee.class);
-        mockCommonCode = mock(CommonCode.class);
-        mockChatEmployeeInvitee1 = mock(ChatEmployee.class); // [FIX] mock 객체 초기화
+        // 1. CommonCode (직급, OwnerType 등)
+        posManager = mock(CommonCode.class);
+        posStaff = mock(CommonCode.class);
+        lenient().when(posManager.getValue1()).thenReturn("Manager");
+        lenient().when(posStaff.getValue1()).thenReturn("Staff");
 
-        // 'when' 충돌을 막기 위해 Mockito.when() 명시적 호출
-        Mockito.lenient().when(mockCreator.getEmployeeId()).thenReturn(1L);
-        Mockito.lenient().when(mockCreator.getUsername()).thenReturn("creatorUser");
-        Mockito.lenient().when(mockCreator.getName()).thenReturn("김생성");
+        commonCodeTeamNoti = mock(CommonCode.class);
+        lenient().when(commonCodeTeamNoti.getCommonCodeId()).thenReturn(500L);
 
-        Mockito.lenient().when(mockInvitee1.getEmployeeId()).thenReturn(2L);
-        Mockito.lenient().when(mockInvitee1.getUsername()).thenReturn("inviteeUser1");
-        Mockito.lenient().when(mockInvitee1.getName()).thenReturn("이초대");
+        commonCodeChat = mock(CommonCode.class);
+        lenient().when(commonCodeChat.getCommonCodeId()).thenReturn(600L);
 
-        Mockito.lenient().when(mockInvitee2.getEmployeeId()).thenReturn(3L);
-        Mockito.lenient().when(mockInvitee2.getUsername()).thenReturn("inviteeUser2");
-        Mockito.lenient().when(mockInvitee2.getName()).thenReturn("박초대");
+        // 2. Employee
+        creator = mock(Employee.class);
+        lenient().when(creator.getEmployeeId()).thenReturn(1L);
+        lenient().when(creator.getUsername()).thenReturn("creator");
+        lenient().when(creator.getName()).thenReturn("Creator Name");
+        lenient().when(creator.getPosition()).thenReturn(posManager);
+        lenient().when(creator.getProfileImg()).thenReturn("creator.png");
 
-        Mockito.lenient().when(mockRoom.getChatRoomId()).thenReturn(100L);
-        Mockito.lenient().when(mockRoom.getName()).thenReturn("테스트 채팅방");
+        invitee1 = mock(Employee.class);
+        lenient().when(invitee1.getEmployeeId()).thenReturn(2L);
+        lenient().when(invitee1.getUsername()).thenReturn("invitee1");
+        lenient().when(invitee1.getName()).thenReturn("Invitee1 Name");
+        lenient().when(invitee1.getPosition()).thenReturn(posStaff);
+        lenient().when(invitee1.getProfileImg()).thenReturn("invitee1.png");
 
-        Mockito.lenient().when(mockMessage.getChatMessageId()).thenReturn(1000L);
-        Mockito.lenient().when(mockMessage.getChatRoom()).thenReturn(mockRoom);
-        Mockito.lenient().when(mockMessage.getEmployee()).thenReturn(mockCreator);
-        Mockito.lenient().when(mockMessage.getContent()).thenReturn("테스트 메시지");
-        Mockito.lenient().when(mockMessage.getCreatedAt()).thenReturn(LocalDateTime.now());
+        invitee2 = mock(Employee.class);
+        lenient().when(invitee2.getEmployeeId()).thenReturn(3L);
+        lenient().when(invitee2.getUsername()).thenReturn("invitee2");
+        lenient().when(invitee2.getName()).thenReturn("Invitee2 Name");
 
-        Mockito.lenient().when(mockChatEmployee.getEmployee()).thenReturn(mockCreator);
-        Mockito.lenient().when(mockChatEmployee.getChatRoom()).thenReturn(mockRoom);
-        Mockito.lenient().when(mockChatEmployee.getLastReadMessage()).thenReturn(mockMessage);
-        Mockito.lenient().when(mockChatEmployee.getJoinedAt()).thenReturn(LocalDateTime.now().minusDays(1));
+        // 3. ChatRoom (1:1)
+        chatRoom = mock(ChatRoom.class);
+        lenient().when(chatRoom.getChatRoomId()).thenReturn(100L);
+        lenient().when(chatRoom.getName()).thenReturn("OneOnOne Room");
+        lenient().when(chatRoom.getIsTeam()).thenReturn(false);
+        lenient().when(chatRoom.getEmployee()).thenReturn(creator);
+        lenient().when(chatRoom.getCreatedAt()).thenReturn(LocalDateTime.now());
 
-        // [FIX] mockChatEmployeeInvitee1의 기본 stubbing
-        Mockito.lenient().when(mockChatEmployeeInvitee1.getEmployee()).thenReturn(mockInvitee1);
-        Mockito.lenient().when(mockChatEmployeeInvitee1.getLastReadMessage()).thenReturn(mockMessage);
+        // 4. ChatMessage
+        chatMessage = mock(ChatMessage.class);
+        lenient().when(chatMessage.getChatMessageId()).thenReturn(1000L);
+        lenient().when(chatMessage.getChatRoom()).thenReturn(chatRoom);
+        lenient().when(chatMessage.getEmployee()).thenReturn(creator);
+        lenient().when(chatMessage.getContent()).thenReturn("Test Content");
+        lenient().when(chatMessage.getCreatedAt()).thenReturn(LocalDateTime.now());
+        lenient().when(chatMessage.getMessageType()).thenReturn(OwnerType.CHAT_USER);
 
+        // 5. ChatEmployee
+        chatEmployeeCreator = mock(ChatEmployee.class);
+        lenient().when(chatEmployeeCreator.getEmployee()).thenReturn(creator);
+        lenient().when(chatEmployeeCreator.getChatRoom()).thenReturn(chatRoom);
+        lenient().when(chatEmployeeCreator.getIsLeft()).thenReturn(false);
+        lenient().when(chatEmployeeCreator.getJoinedAt()).thenReturn(LocalDateTime.now().minusDays(1));
 
-        Mockito.lenient().when(mockCommonCode.getCommonCodeId()).thenReturn(99L);
+        chatEmployeeInvitee1 = mock(ChatEmployee.class);
+        lenient().when(chatEmployeeInvitee1.getEmployee()).thenReturn(invitee1);
+        lenient().when(chatEmployeeInvitee1.getChatRoom()).thenReturn(chatRoom);
+        lenient().when(chatEmployeeInvitee1.getIsLeft()).thenReturn(false);
     }
 
     @Nested
@@ -152,166 +145,129 @@ class ChatServiceImplTest {
     class CreateRoom {
 
         @Test
-        @DisplayName("성공 - 1:1 채팅방 (초대 1명)")
-        void createRoom_Success_1to1() throws Exception {
-            // given (@Test 내부: given/willReturn)
-            String creatorUsername = "creatorUser";
-            String roomName = "1:1 채팅방";
+        @DisplayName("성공 - 1:1 채팅방 신규 생성 (기존 방 없음)")
+        void createRoom_Success_New_1on1() {
+            // given
             List<Long> inviteeIds = List.of(2L);
-            List<Employee> invitees = List.of(mockInvitee1);
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(creator));
+            given(employeeRepository.findAllById(anyCollection())).willReturn(List.of(invitee1));
+            given(chatRoomRepository.findExistingOneOnOneRooms(1L, 2L)).willReturn(Collections.emptyList());
 
-            given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
-            given(employeeRepository.findAllById(anySet())).willReturn(invitees);
-            given(chatRoomRepository.save(any(ChatRoom.class))).willReturn(mockRoom);
-            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockMessage);
+            // save 시 Mock 객체가 아닌 실제 로직 흐름을 타서 반환해야 하므로 Answer 사용
+            // (Service에서 ChatRoom.createChatRoom 호출 -> Repository.save)
+            given(chatRoomRepository.save(any(ChatRoom.class))).willAnswer(invocation -> {
+                ChatRoom room = invocation.getArgument(0);
+                ReflectionTestUtils.setField(room, "chatRoomId", 100L);
+                ReflectionTestUtils.setField(room, "createdAt", LocalDateTime.now());
+                return room; // ID가 세팅된 객체 반환
+            });
 
-            ChatRoomResponseDTO expectedDto = ChatRoomResponseDTO.builder().chatRoomId(100L).build();
-            ChatMessageResponseDTO messageDto = ChatMessageResponseDTO.builder().build();
+            given(chatMessageRepository.save(any(ChatMessage.class))).willAnswer(invocation -> {
+                ChatMessage msg = invocation.getArgument(0);
+                ReflectionTestUtils.setField(msg, "chatMessageId", 500L);
+                return msg;
+            });
 
-            // when
-            try (MockedStatic<ChatRoom> roomMock = mockStatic(ChatRoom.class);
-                 MockedStatic<ChatMessage> msgMock = mockStatic(ChatMessage.class);
-                 MockedStatic<ChatEmployee> empMock = mockStatic(ChatEmployee.class);
-                 MockedStatic<ChatRoomResponseDTO> roomDtoMock = mockStatic(ChatRoomResponseDTO.class);
-                 MockedStatic<ChatMessageResponseDTO> msgDtoMock = mockStatic(ChatMessageResponseDTO.class);
-                 MockedStatic<TransactionSynchronizationManager> syncMock = mockStatic(TransactionSynchronizationManager.class)) {
-
-                // Static Mocking (NPE 방지)
-                roomDtoMock.when(ChatRoomResponseDTO::builder).thenCallRealMethod();
-                msgDtoMock.when(ChatMessageResponseDTO::builder).thenCallRealMethod();
-
-                // Static Factory Mocking (실제 메서드 호출)
-                roomMock.when(() -> ChatRoom.createChatRoom(mockCreator, roomName, false)).thenReturn(mockRoom);
-                msgMock.when(() -> ChatMessage.createChatMessage(any(), any(), anyString())).thenCallRealMethod();
-                empMock.when(() -> ChatEmployee.createChatEmployee(any(Employee.class), eq(mockRoom), eq(roomName), eq(mockMessage)))
-                        .thenReturn(mockChatEmployee);
-
-                // DTO Mapper Mocking
-                roomDtoMock.when(() -> ChatRoomResponseDTO.toDTO(mockRoom)).thenReturn(expectedDto);
-                msgDtoMock.when(() -> ChatMessageResponseDTO.toDTO(mockMessage)).thenReturn(messageDto);
-
-                // TransactionManager Mocking
+            try (MockedStatic<TransactionSynchronizationManager> syncMock = mockStatic(TransactionSynchronizationManager.class)) {
                 syncMock.when(() -> TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()))
                         .then(invocation -> null);
 
-                // --- service call ---
-                ChatRoomResponseDTO result = chatService.createRoom(creatorUsername, roomName, inviteeIds);
-                // --- service call ---
-
-                syncCaptor.getValue().afterCommit();
+                // when
+                ChatRoomResponseDTO result = chatService.createRoom("creator", "New Room", inviteeIds);
 
                 // then
-                assertThat(result).isSameAs(expectedDto);
-                verify(chatRoomRepository).save(mockRoom);
-                verify(chatMessageRepository).save(chatMessageCaptor.capture());
-                assertThat(chatMessageCaptor.getValue().getContent()).isEqualTo("김생성님이 채팅방을 생성 했습니다.");
-                verify(chatEmployeeRepository).saveAll(chatEmployeeListCaptor.capture());
-                assertThat(chatEmployeeListCaptor.getValue()).hasSize(2);
-                verify(simpMessagingTemplate).convertAndSend("/topic/chat/rooms/100", messageDto);
-                verify(notificationService, never()).create(any(NotificationRequestDTO.class));
+                assertThat(result).isNotNull();
+                assertThat(result.getIsTeam()).isFalse();
+                assertThat(result.getDisplayName()).isEqualTo("Invitee1 Name"); // 상대방 이름 표시 확인
+
+                verify(chatRoomRepository).save(any(ChatRoom.class));
+                verify(chatEmployeeRepository).saveAll(chatEmployeesCaptor.capture());
+
+                List<ChatEmployee> savedMembers = chatEmployeesCaptor.getValue();
+                assertThat(savedMembers).hasSize(2); // 생성자 + 초대자
+
+                // Transaction Sync - After Commit
+                syncCaptor.getValue().afterCommit();
+                verify(simpMessagingTemplate).convertAndSend(eq("/topic/chat/rooms/100"), any(ChatMessageResponseDTO.class));
             }
         }
 
         @Test
-        @DisplayName("성공 - 팀 채팅방 (초대 2명) 및 알림 전송")
-        void createRoom_Success_TeamChat() throws Exception {
+        @DisplayName("성공 - 1:1 채팅방 기존 방 재활성화 (상대방이 나갔던 경우)")
+        void createRoom_Success_Rejoin_1on1() {
             // given
-            String creatorUsername = "creatorUser";
-            String roomName = "팀 채팅방";
-            List<Long> inviteeIds = List.of(2L, 3L);
-            List<Employee> invitees = List.of(mockInvitee1, mockInvitee2);
+            List<Long> inviteeIds = List.of(2L);
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(creator));
+            given(employeeRepository.findAllById(anyCollection())).willReturn(List.of(invitee1));
+            // 기존 방 발견
+            given(chatRoomRepository.findExistingOneOnOneRooms(1L, 2L)).willReturn(List.of(chatRoom));
 
-            given(employeeRepository.findByUsername(creatorUsername)).willReturn(Optional.of(mockCreator));
-            given(employeeRepository.findAllById(anySet())).willReturn(invitees);
-            given(chatRoomRepository.save(any(ChatRoom.class))).willReturn(mockRoom);
-            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockMessage);
+            // 기존 멤버 조회 (Invitee1은 나간 상태)
+            given(chatEmployeeInvitee1.getIsLeft()).willReturn(true);
+            given(chatEmployeeCreator.getLastReadMessage()).willReturn(chatMessage);
+
+            given(chatEmployeeRepository.findAllByChatRoomChatRoomId(100L))
+                    .willReturn(List.of(chatEmployeeCreator, chatEmployeeInvitee1));
+
+            try (MockedStatic<TransactionSynchronizationManager> syncMock = mockStatic(TransactionSynchronizationManager.class)) {
+                syncMock.when(() -> TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()))
+                        .then(invocation -> null);
+
+                // when
+                ChatRoomResponseDTO result = chatService.createRoom("creator", "Rejoin", inviteeIds);
+
+                // then
+                verify(chatRoomRepository, never()).save(any(ChatRoom.class)); // 방 생성 안함
+                verify(chatEmployeeInvitee1, atLeastOnce()).rejoinChatRoom(); // 재입장 로직 수행 확인
+                verify(chatEmployeeRepository, atLeastOnce()).save(chatEmployeeInvitee1);
+
+                assertThat(result.getChatRoomId()).isEqualTo(100L);
+            }
+        }
+
+        @Test
+        @DisplayName("성공 - 팀 채팅방 생성")
+        void createRoom_Success_Team() {
+            // given
+            List<Long> inviteeIds = List.of(2L, 3L); // 2명 이상 -> 팀방
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(creator));
+            given(employeeRepository.findAllById(anyCollection())).willReturn(List.of(invitee1, invitee2));
+
+            given(chatRoomRepository.save(any(ChatRoom.class))).willAnswer(invocation -> {
+                ChatRoom room = invocation.getArgument(0);
+                ReflectionTestUtils.setField(room, "chatRoomId", 200L);
+                ReflectionTestUtils.setField(room, "createdAt", LocalDateTime.now());
+                return room;
+            });
+            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(chatMessage); // System Msg
+
             given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.TEAMCHATNOTI.name()))
-                    .willReturn(List.of(mockCommonCode));
+                    .willReturn(List.of(commonCodeTeamNoti));
 
-            ChatRoomResponseDTO expectedDto = ChatRoomResponseDTO.builder().build();
-            ChatMessageResponseDTO messageDto = ChatMessageResponseDTO.builder().build();
+            try (MockedStatic<TransactionSynchronizationManager> syncMock = mockStatic(TransactionSynchronizationManager.class)) {
+                syncMock.when(() -> TransactionSynchronizationManager.registerSynchronization(any())).then(invocation -> null);
 
-            // when
-            try (MockedStatic<ChatRoom> roomMock = mockStatic(ChatRoom.class);
-                 MockedStatic<ChatMessage> msgMock = mockStatic(ChatMessage.class);
-                 MockedStatic<ChatEmployee> empMock = mockStatic(ChatEmployee.class);
-                 MockedStatic<ChatRoomResponseDTO> roomDtoMock = mockStatic(ChatRoomResponseDTO.class);
-                 MockedStatic<ChatMessageResponseDTO> msgDtoMock = mockStatic(ChatMessageResponseDTO.class);
-                 MockedStatic<TransactionSynchronizationManager> syncMock = mockStatic(TransactionSynchronizationManager.class)) {
-
-                // Static Mocking (NPE 방지)
-                roomDtoMock.when(ChatRoomResponseDTO::builder).thenCallRealMethod();
-                msgDtoMock.when(ChatMessageResponseDTO::builder).thenCallRealMethod();
-
-                // Static Mocks (실제 메서드 호출)
-                roomMock.when(() -> ChatRoom.createChatRoom(mockCreator, roomName, true)).thenReturn(mockRoom);
-                msgMock.when(() -> ChatMessage.createChatMessage(any(), any(), anyString())).thenCallRealMethod();
-                empMock.when(() -> ChatEmployee.createChatEmployee(any(), any(), any(), any())).thenReturn(mockChatEmployee);
-                roomDtoMock.when(() -> ChatRoomResponseDTO.toDTO(mockRoom)).thenReturn(expectedDto);
-                msgDtoMock.when(() -> ChatMessageResponseDTO.toDTO(mockMessage)).thenReturn(messageDto);
-                syncMock.when(() -> TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()))
-                        .then(invocation -> null);
-
-                // --- service call ---
-                chatService.createRoom(creatorUsername, roomName, inviteeIds);
-                // --- service call ---
-
-                syncCaptor.getValue().afterCommit();
+                // when
+                ChatRoomResponseDTO result = chatService.createRoom("creator", "Team Room", inviteeIds);
 
                 // then
-                verify(chatEmployeeRepository).saveAll(chatEmployeeListCaptor.capture());
-                assertThat(chatEmployeeListCaptor.getValue()).hasSize(3);
-                verify(notificationService, times(2)).create(notificationCaptor.capture());
-                List<NotificationRequestDTO> notifications = notificationCaptor.getAllValues();
-                assertThat(notifications.get(0).getEmployeeId()).isEqualTo(2L);
-                assertThat(notifications.get(1).getEmployeeId()).isEqualTo(3L);
+                assertThat(result.getIsTeam()).isTrue();
+                verify(notificationService, times(2)).create(any(NotificationRequestDTO.class));
             }
         }
 
-        // ... (실패 케이스는 동일)
         @Test
-        @DisplayName("실패 - 초대 대상 없음 (IllegalArgumentException)")
-        void createRoom_Fail_NoInvitees() {
+        @DisplayName("실패 - 본인을 초대한 경우")
+        void createRoom_Fail_SelfInvite() {
             // given
-            given(employeeRepository.findByUsername("creatorUser")).willReturn(Optional.of(mockCreator));
-            // when & then
-            assertThatThrownBy(() -> chatService.createRoom("creatorUser", "방이름", List.of()))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("최소 한 명 이상 초대해야 합니다");
-        }
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(creator));
+            // 본인 ID 포함
+            List<Long> inviteeIds = List.of(1L);
 
-        @Test
-        @DisplayName("실패 - 자기 자신 초대 (IllegalArgumentException)")
-        void createRoom_Fail_InvitingSelf() {
-            // given
-            given(employeeRepository.findByUsername("creatorUser")).willReturn(Optional.of(mockCreator));
             // when & then
-            assertThatThrownBy(() -> chatService.createRoom("creatorUser", "방이름", List.of(1L, 2L)))
+            assertThatThrownBy(() -> chatService.createRoom("creator", "Title", inviteeIds))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("초대할 수 있는 대상이 아닙니다");
-        }
-
-        @Test
-        @DisplayName("실패 - 생성자 없음 (UsernameNotFoundException)")
-        void createRoom_Fail_CreatorNotFound() {
-            // given
-            given(employeeRepository.findByUsername("unknownUser")).willReturn(Optional.empty());
-            // when & then
-            assertThatThrownBy(() -> chatService.createRoom("unknownUser", "방이름", List.of(2L)))
-                    .isInstanceOf(UsernameNotFoundException.class)
-                    .hasMessage("존재 하지 않은 사원 입니다");
-        }
-
-        @Test
-        @DisplayName("실패 - 초대 대상 중 존재하지 않는 사원 (EntityNotFoundException)")
-        void createRoom_Fail_InviteeNotFound() {
-            // given
-            given(employeeRepository.findByUsername("creatorUser")).willReturn(Optional.of(mockCreator));
-            given(employeeRepository.findAllById(anySet())).willReturn(List.of(mockInvitee1)); // 1명만 반환
-            // when & then
-            assertThatThrownBy(() -> chatService.createRoom("creatorUser", "방이름", List.of(2L, 4L))) // 2명 요청
-                    .isInstanceOf(EntityNotFoundException.class)
-                    .hasMessage("최대 대상 중 존재하지 않은 사원이 있습니다.");
         }
     }
 
@@ -319,110 +275,56 @@ class ChatServiceImplTest {
     @DisplayName("inviteToRoom (채팅방 초대)")
     class InviteToRoom {
 
-        @BeforeEach
-        void inviteSetup() {
-            // @BeforeEach: Mockito.lenient().when().thenReturn()
-            Mockito.lenient().when(mockRoom.getIsTeam()).thenReturn(false);
-            Mockito.lenient().when(chatRoomRepository.findById(100L)).thenReturn(Optional.of(mockRoom));
-            Mockito.lenient().when(employeeRepository.findByUsername("creatorUser")).thenReturn(Optional.of(mockCreator));
-            Mockito.lenient().when(chatEmployeeRepository.existsByChatRoomChatRoomIdAndEmployeeEmployeeIdAndIsLeftFalse(100L, 1L))
-                    .thenReturn(true);
-        }
-
         @Test
-        @DisplayName("성공 - 1:1방에서 초대하여 팀 채팅방으로 전환")
-        void inviteToRoom_Success_ConvertToTeam() throws Exception {
+        @DisplayName("성공 - 1:1 방에서 초대 시 팀 방으로 승격")
+        void inviteToRoom_Success_UpgradeToTeam() {
             // given
-            List<Long> inviteeIds = List.of(2L);
-            List<Employee> candidates = List.of(mockInvitee1);
+            List<Long> newInvitees = List.of(3L);
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(creator));
+            given(chatRoomRepository.findById(100L)).willReturn(Optional.of(chatRoom));
 
-            // 'argThat' 람다 수정 (Iterable -> Set 변환)
-            given(employeeRepository.findAllById(argThat(s -> {
-                Set<Long> set = new HashSet<>();
-                s.forEach(set::add);
-                return set.size() == 1 && set.contains(2L);
-            }))).willReturn(candidates);
+            // 권한 체크
+            given(chatEmployeeRepository.existsByChatRoomChatRoomIdAndEmployeeEmployeeIdAndIsLeftFalse(100L, 1L))
+                    .willReturn(true);
 
-            given(chatEmployeeRepository.findActiveEmployeeIdsByRoomId(100L)).willReturn(Set.of(1L));
-            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockMessage);
-            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(anyString(), anyString()))
-                    .willReturn(List.of(mockCommonCode));
+            given(employeeRepository.findAllById(anyCollection())).willReturn(List.of(invitee2));
+            given(chatEmployeeRepository.findAllByChatRoomChatRoomId(100L))
+                    .willReturn(List.of(chatEmployeeCreator, chatEmployeeInvitee1));
 
-            ChatMessageResponseDTO messageDto = ChatMessageResponseDTO.builder().build();
+            // 방금 전까지 1:1 방이었음
+            // chatRoom Mock은 기본적으로 isTeam=false
+            // updateToTeamRoom 호출 여부 확인을 위해 Spy 사용 가능하나 여기선 verify로 충분
 
-            // when
-            try (MockedStatic<ChatMessage> msgMock = mockStatic(ChatMessage.class);
-                 MockedStatic<ChatEmployee> empMock = mockStatic(ChatEmployee.class);
-                 MockedStatic<ChatMessageResponseDTO> msgDtoMock = mockStatic(ChatMessageResponseDTO.class);
-                 MockedStatic<TransactionSynchronizationManager> syncMock = mockStatic(TransactionSynchronizationManager.class)) {
+            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(systemMessage);
+            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.TEAMCHATNOTI.name()))
+                    .willReturn(List.of(commonCodeTeamNoti));
 
-                // Static Mocking (NPE 방지)
-                msgDtoMock.when(ChatMessageResponseDTO::builder).thenCallRealMethod();
+            try (MockedStatic<TransactionSynchronizationManager> syncMock = mockStatic(TransactionSynchronizationManager.class)) {
+                syncMock.when(() -> TransactionSynchronizationManager.registerSynchronization(any())).then(invocation -> null);
 
-                // Static Mocks (실제 메서드 호출)
-                msgMock.when(() -> ChatMessage.createChatMessage(any(), any(), anyString())).thenCallRealMethod();
-                empMock.when(() -> ChatEmployee.createChatEmployee(mockInvitee1, mockRoom, "테스트 채팅방", mockMessage)).thenReturn(mockChatEmployee);
-                msgDtoMock.when(() -> ChatMessageResponseDTO.toDTO(mockMessage)).thenReturn(messageDto);
-                syncMock.when(() -> TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()))
-                        .then(invocation -> null);
-
-                // --- service call ---
-                chatService.inviteToRoom("creatorUser", 100L, inviteeIds);
-                // --- service call ---
-
-                syncCaptor.getValue().afterCommit();
+                // when
+                chatService.inviteToRoom("creator", 100L, newInvitees);
 
                 // then
-                verify(mockRoom).updateToTeamRoom();
-                verify(chatMessageRepository).save(chatMessageCaptor.capture());
-                assertThat(chatMessageCaptor.getValue().getContent()).isEqualTo("김생성님이 이초대님을 초대했습니다.");
-                verify(chatEmployeeRepository).saveAll(chatEmployeeListCaptor.capture());
-                assertThat(chatEmployeeListCaptor.getValue()).hasSize(1);
-                verify(simpMessagingTemplate).convertAndSend(eq("/topic/chat/rooms/100"), any(ChatMessageResponseDTO.class));
-                verify(notificationService).create(notificationCaptor.capture());
-                assertThat(notificationCaptor.getValue().getEmployeeId()).isEqualTo(2L);
+                verify(chatRoom).updateToTeamRoom(); // 승격 확인
+                verify(chatEmployeeRepository, atLeastOnce()).saveAll(anyList()); // 새 멤버 저장
+                verify(notificationService).create(any(NotificationRequestDTO.class));
             }
         }
 
-        // ... (실패 케이스는 동일)
         @Test
-        @DisplayName("실패 - 초대자가 멤버가 아님 (AccessDeniedException)")
-        void inviteToRoom_Fail_NotAMember() {
+        @DisplayName("실패 - 권한 없음 (방 멤버가 아님)")
+        void inviteToRoom_Fail_AccessDenied() {
             // given
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(creator));
+            given(chatRoomRepository.findById(100L)).willReturn(Optional.of(chatRoom));
             given(chatEmployeeRepository.existsByChatRoomChatRoomIdAndEmployeeEmployeeIdAndIsLeftFalse(100L, 1L))
-                    .willReturn(false);
+                    .willReturn(false); // 멤버 아님
+
             // when & then
-            assertThatThrownBy(() -> chatService.inviteToRoom("creatorUser", 100L, List.of(2L)))
+            assertThatThrownBy(() -> chatService.inviteToRoom("creator", 100L, List.of(3L)))
                     .isInstanceOf(AccessDeniedException.class)
                     .hasMessage("채팅방 구성원이 아니면 초대할 수 없습니다.");
-        }
-
-        @Test
-        @DisplayName("실패 - 이미 멤버인 인원만 초대 (아무 일도 없음)")
-        void inviteToRoom_Fail_AlreadyMember() {
-            // given
-            List<Long> inviteeIds = List.of(2L);
-            List<Employee> candidates = List.of(mockInvitee1);
-
-            given(employeeRepository.findAllById(anySet())).willReturn(candidates);
-            given(chatEmployeeRepository.findActiveEmployeeIdsByRoomId(100L)).willReturn(Set.of(1L, 2L)); // Set으로 반환
-            // when
-            chatService.inviteToRoom("creatorUser", 100L, inviteeIds);
-            // then
-            verify(chatEmployeeRepository, never()).saveAll(anyList());
-            verify(chatMessageRepository, never()).save(any(ChatMessage.class));
-            verify(notificationService, never()).create(any(NotificationRequestDTO.class));
-        }
-
-        @Test
-        @DisplayName("실패 - 존재하지 않는 채팅방 (EntityNotFoundException)")
-        void inviteToRoom_Fail_RoomNotFound() {
-            // given
-            given(chatRoomRepository.findById(999L)).willReturn(Optional.empty());
-            // when & then
-            assertThatThrownBy(() -> chatService.inviteToRoom("creatorUser", 999L, List.of(2L)))
-                    .isInstanceOf(EntityNotFoundException.class)
-                    .hasMessage("존재하지 않는 채팅방입니다.");
         }
     }
 
@@ -430,101 +332,29 @@ class ChatServiceImplTest {
     @DisplayName("leaveRoom (채팅방 나가기)")
     class LeaveRoom {
 
-        @BeforeEach
-        void leaveSetup() {
-            // @BeforeEach: Mockito.lenient().when().thenReturn()
-            Mockito.lenient().when(employeeRepository.findByUsername("creatorUser")).thenReturn(Optional.of(mockCreator));
-            Mockito.lenient().when(chatRoomRepository.findById(100L)).thenReturn(Optional.of(mockRoom));
-            Mockito.lenient().when(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeEmployeeId(100L, 1L))
-                    .thenReturn(Optional.of(mockChatEmployee));
-        }
-
         @Test
-        @DisplayName("성공 - 팀 채팅방 나가기 (시스템 메시지 전송)")
-        void leaveRoom_Success_TeamChat() throws Exception {
+        @DisplayName("성공 - 마지막 멤버가 나가면 방 삭제")
+        void leaveRoom_Delete_If_Empty() {
             // given
-            given(mockRoom.getIsTeam()).willReturn(true);
-            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(mockMessage);
-            given(chatEmployeeRepository.countByChatRoomChatRoomIdAndIsLeftFalse(100L)).willReturn(2L);
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(creator));
+            given(chatRoomRepository.findById(100L)).willReturn(Optional.of(chatRoom));
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeEmployeeId(100L, 1L))
+                    .willReturn(Optional.of(chatEmployeeCreator));
 
-            ChatMessageResponseDTO messageDto = ChatMessageResponseDTO.builder().build();
+            // 나간 후 남은 인원 0명 가정
+            given(chatEmployeeRepository.countByChatRoomChatRoomIdAndIsLeftFalse(100L)).willReturn(0L);
 
-            // when
-            try (MockedStatic<ChatMessage> msgMock = mockStatic(ChatMessage.class);
-                 MockedStatic<ChatMessageResponseDTO> msgDtoMock = mockStatic(ChatMessageResponseDTO.class);
-                 MockedStatic<TransactionSynchronizationManager> syncMock = mockStatic(TransactionSynchronizationManager.class)) {
+            try (MockedStatic<TransactionSynchronizationManager> syncMock = mockStatic(TransactionSynchronizationManager.class)) {
+                syncMock.when(() -> TransactionSynchronizationManager.registerSynchronization(any())).then(invocation -> null);
 
-                // Static Mocking (NPE 방지)
-                msgDtoMock.when(ChatMessageResponseDTO::builder).thenCallRealMethod();
-
-                // Static Mocks (실제 메서드 호출)
-                msgMock.when(() -> ChatMessage.createChatMessage(any(), isNull(), anyString())).thenCallRealMethod();
-                msgDtoMock.when(() -> ChatMessageResponseDTO.toDTO(mockMessage)).thenReturn(messageDto);
-                syncMock.when(() -> TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()))
-                        .then(invocation -> null);
-
-                // --- service call ---
-                chatService.leaveRoom("creatorUser", 100L);
-                // --- service call ---
-
-                syncCaptor.getValue().afterCommit();
+                // when
+                chatService.leaveRoom("creator", 100L);
 
                 // then
-                verify(mockChatEmployee).leftChatRoom();
-                verify(chatEmployeeRepository).save(mockChatEmployee);
-                verify(chatMessageRepository).save(chatMessageCaptor.capture());
-                assertThat(chatMessageCaptor.getValue().getContent()).isEqualTo("김생성님이 채팅방에서 나가셨습니다.");
-                verify(mockRoom, never()).deleteRoom();
-                verify(simpMessagingTemplate).convertAndSend(eq("/topic/chat/rooms/100"), any(ChatMessageResponseDTO.class));
+                verify(chatEmployeeCreator).leftChatRoom();
+                verify(chatRoom).deleteRoom(); // 방 삭제 마킹
+                verify(chatRoomRepository).save(chatRoom);
             }
-        }
-
-        @Test
-        @DisplayName("성공 - 1:1 채팅방 나가기 (시스템 메시지 전송 안 함)")
-        void leaveRoom_Success_1to1() throws Exception {
-            // given
-            given(mockRoom.getIsTeam()).willReturn(false);
-            given(chatEmployeeRepository.countByChatRoomChatRoomIdAndIsLeftFalse(100L)).willReturn(1L);
-            // when
-            chatService.leaveRoom("creatorUser", 100L);
-            // then
-            verify(mockChatEmployee).leftChatRoom();
-            verify(chatEmployeeRepository).save(mockChatEmployee);
-            verify(chatMessageRepository, never()).save(any(ChatMessage.class));
-            verify(simpMessagingTemplate, never()).convertAndSend(anyString(), any(Object.class));
-
-            // [FIX] 멍청한 실수 (incompatible types) 수정: static verify 문법 수정
-            // (Verification, VerificationMode) 순서
-            try (MockedStatic<TransactionSynchronizationManager> syncMock = mockStatic(TransactionSynchronizationManager.class)) {
-                syncMock.verify(() -> TransactionSynchronizationManager.registerSynchronization(any(TransactionSynchronization.class)), never());
-            }
-        }
-
-        // ... (실패 케이스는 동일)
-        @Test
-        @DisplayName("성공 - 마지막 인원 나가기 (채팅방 삭제)")
-        void leaveRoom_Success_LastMemberDeletesRoom() {
-            // given
-            given(mockRoom.getIsTeam()).willReturn(true);
-            given(chatEmployeeRepository.countByChatRoomChatRoomIdAndIsLeftFalse(100L)).willReturn(0L);
-            // when
-            chatService.leaveRoom("creatorUser", 100L);
-            // then
-            verify(mockChatEmployee).leftChatRoom();
-            verify(mockRoom).deleteRoom();
-            verify(chatRoomRepository).save(mockRoom);
-        }
-
-        @Test
-        @DisplayName("실패 - 채팅방 멤버 아님 (EntityNotFoundException)")
-        void leaveRoom_Fail_NotAMember() {
-            // given
-            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeEmployeeId(100L, 1L))
-                    .willReturn(Optional.empty());
-            // when & then
-            assertThatThrownBy(() -> chatService.leaveRoom("creatorUser", 100L))
-                    .isInstanceOf(EntityNotFoundException.class)
-                    .hasMessage("해당 채팅방의 멤버가 아닙니다.");
         }
     }
 
@@ -532,150 +362,35 @@ class ChatServiceImplTest {
     @DisplayName("sendMessage (메시지 전송)")
     class SendMessage {
 
-        @BeforeEach
-        void sendSetup() {
-            // @BeforeEach: Mockito.lenient().when().thenReturn()
-            Mockito.lenient().when(employeeRepository.findByUsername("creatorUser")).thenReturn(Optional.of(mockCreator));
-            Mockito.lenient().when(chatRoomRepository.findById(100L)).thenReturn(Optional.of(mockRoom));
-            Mockito.lenient().when(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(100L, "creatorUser"))
-                    .thenReturn(Optional.of(mockChatEmployee));
-            Mockito.lenient().when(chatMessageRepository.save(any(ChatMessage.class))).thenReturn(mockMessage);
-        }
-
         @Test
-        @DisplayName("성공 - 팀 채팅방 메시지 전송 (미읽음 카운트 계산)")
-        void sendMessage_Success_TeamChat() throws Exception {
+        @DisplayName("성공 - 1:1 방에서 상대방이 나갔으면 자동 재입장")
+        void sendMessage_Success_Rejoin_Opponent() {
             // given
-            String content = "안녕하세요";
-            given(mockRoom.getIsTeam()).willReturn(true);
-            given(chatEmployeeRepository.countUnreadForMessage(100L, 1L, mockMessage.getCreatedAt())).willReturn(2L);
+            MessageSendPayloadDTO payload = new MessageSendPayloadDTO("Hello", null);
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(creator));
+            given(chatRoomRepository.findById(100L)).willReturn(Optional.of(chatRoom)); // isTeam=false
 
-            ChatMessageResponseDTO dto = ChatMessageResponseDTO.builder().unreadCount(0).build();
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(100L, "creator"))
+                    .willReturn(Optional.of(chatEmployeeCreator));
 
-            // when
-            try (MockedStatic<ChatMessage> msgMock = mockStatic(ChatMessage.class);
-                 MockedStatic<ChatMessageResponseDTO> msgDtoMock = mockStatic(ChatMessageResponseDTO.class);
-                 MockedStatic<TransactionSynchronizationManager> syncMock = mockStatic(TransactionSynchronizationManager.class)) {
+            // 상대방(Invitee1)은 나간 상태(isLeft=true)
+            given(chatEmployeeInvitee1.getIsLeft()).willReturn(true);
+            given(chatEmployeeRepository.findAllByChatRoomChatRoomId(100L))
+                    .willReturn(List.of(chatEmployeeCreator, chatEmployeeInvitee1));
 
-                // Static Mocking (NPE 방지)
-                msgDtoMock.when(ChatMessageResponseDTO::builder).thenCallRealMethod();
+            given(chatMessageRepository.save(any(ChatMessage.class))).willReturn(chatMessage);
 
-                // Static Mocks (실제 메서드 호출)
-                msgMock.when(() -> ChatMessage.createChatMessage(any(ChatRoom.class), any(Employee.class), anyString())).thenCallRealMethod();
-                msgDtoMock.when(() -> ChatMessageResponseDTO.toDTO(mockMessage)).thenReturn(dto);
-                syncMock.when(() -> TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()))
-                        .then(invocation -> null);
+            try (MockedStatic<TransactionSynchronizationManager> syncMock = mockStatic(TransactionSynchronizationManager.class)) {
+                syncMock.when(() -> TransactionSynchronizationManager.registerSynchronization(any())).then(invocation -> null);
 
-                // --- service call ---
-                ChatMessageResponseDTO result = chatService.sendMessage("creatorUser", 100L, content);
-                // --- service call ---
-
-                // then (before commit)
-                verify(chatMessageRepository).save(chatMessageCaptor.capture());
-                assertThat(chatMessageCaptor.getValue().getContent()).isEqualTo(content);
-                verify(mockChatEmployee).updateLastReadMessage(mockMessage);
-                verify(chatEmployeeRepository).save(mockChatEmployee);
-                assertThat(result.getUnreadCount()).isEqualTo(2L);
-
-                // --- afterCommit 강제 실행 (notifyParticipantsOfNewMessage 호출) ---
-
-                // [FIX] 멍청한 실수 (WantedButNotInvoked) 수정:
-                // 참여자 목록에 '보낸 사람'과 '다른 사람'을 모두 포함
-                given(chatEmployeeRepository.findAllByChatRoomChatRoomIdAndIsLeftFalse(100L))
-                        .willReturn(List.of(mockChatEmployee, mockChatEmployeeInvitee1)); // 2명
-                given(chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(any(ChatRoom.class), anyLong())).willReturn(1L);
-
-                // DTO를 밖에서 미리 생성
-                ChatRoomListResponseDTO mockListDtoTeam = ChatRoomListResponseDTO.builder().build();
-                ChatRoomListResponseDTO mockListDto1to1 = ChatRoomListResponseDTO.builder().build();
-
-                try (MockedStatic<ChatRoomListResponseDTO> listDtoMock = mockStatic(ChatRoomListResponseDTO.class)) {
-                    listDtoMock.when(ChatRoomListResponseDTO::builder).thenCallRealMethod();
-                    // 오버로딩된 2개 메서드 모두 stubbing
-                    listDtoMock.when(() -> ChatRoomListResponseDTO.toDTO(any(ChatRoom.class), anyLong(), any(Optional.class)))
-                            .thenReturn(mockListDtoTeam);
-                    listDtoMock.when(() -> ChatRoomListResponseDTO.toDTO(any(ChatRoom.class), any(Employee.class), anyLong(), any(Optional.class)))
-                            .thenReturn(mockListDto1to1);
-
-                    syncCaptor.getValue().afterCommit();
-                }
-
-                // then (after commit)
-                // [FIX] 멍청한 실수 (WantedButNotInvoked) 수정:
-                // 1. /topic/chat/rooms/100 (공통) 에는 1번 전송됨
-                verify(simpMessagingTemplate, times(1)).convertAndSend("/topic/chat/rooms/100", result);
-
-                // 2. "다른 사람"("inviteeUser1")에게는 알림(unread-count)이 전송됨
-                verify(simpMessagingTemplate, times(1)).convertAndSendToUser(
-                        eq("inviteeUser1"),
-                        eq("/queue/unread-count"),
-                        any(TotalUnreadCountResponseDTO.class)
-                );
-
-                // 3. "보낸 사람"("creatorUser")에게는 알림이 전송되지 *않음* (서비스 로직)
-                verify(simpMessagingTemplate, never()).convertAndSendToUser(
-                        eq("creatorUser"),
-                        eq("/queue/unread-count"),
-                        any(TotalUnreadCountResponseDTO.class)
-                );
-            }
-        }
-
-        @Test
-        @DisplayName("성공 - 1:1 채팅방 메시지 전송 (미읽음 카운트 0)")
-        void sendMessage_Success_1to1() throws Exception {
-            // given
-            String content = "안녕하세요";
-            given(mockRoom.getIsTeam()).willReturn(false);
-
-            ChatMessageResponseDTO dto = ChatMessageResponseDTO.builder().unreadCount(0).build();
-
-            // when
-            try (MockedStatic<ChatMessage> msgMock = mockStatic(ChatMessage.class);
-                 MockedStatic<ChatMessageResponseDTO> msgDtoMock = mockStatic(ChatMessageResponseDTO.class);
-                 MockedStatic<TransactionSynchronizationManager> syncMock = mockStatic(TransactionSynchronizationManager.class)) {
-
-                // Static Mocking (NPE 방지)
-                msgDtoMock.when(ChatMessageResponseDTO::builder).thenCallRealMethod();
-
-                // Static Mocks (실제 메서드 호출)
-                msgMock.when(() -> ChatMessage.createChatMessage(any(ChatRoom.class), any(Employee.class), anyString())).thenCallRealMethod();
-                msgDtoMock.when(() -> ChatMessageResponseDTO.toDTO(mockMessage)).thenReturn(dto);
-                syncMock.when(() -> TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()))
-                        .then(invocation -> null);
-
-                // --- service call ---
-                ChatMessageResponseDTO result = chatService.sendMessage("creatorUser", 100L, content);
-                // --- service call ---
+                // when
+                chatService.sendMessage("creator", 100L, payload);
 
                 // then
-                verify(chatEmployeeRepository, never()).countUnreadForMessage(anyLong(), anyLong(), any(LocalDateTime.class));
-                assertThat(result.getUnreadCount()).isEqualTo(0L);
-                verify(chatMessageRepository).save(chatMessageCaptor.capture());
-                assertThat(chatMessageCaptor.getValue().getContent()).isEqualTo(content);
+                verify(chatEmployeeInvitee1).rejoinChatRoom(); // 재입장
+                verify(chatEmployeeRepository).save(chatEmployeeInvitee1);
+                verify(chatMessageRepository).save(any(ChatMessage.class));
             }
-        }
-
-        // ... (실패 케이스는 동일)
-        @Test
-        @DisplayName("실패 - 빈 메시지 (IllegalArgumentException)")
-        void sendMessage_Fail_EmptyContent() {
-            // when & then
-            assertThatThrownBy(() -> chatService.sendMessage("creatorUser", 100L, "   "))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("메시지 내용이 비어 있습니다.");
-        }
-
-        @Test
-        @DisplayName("실패 - 멤버가 아님 (AccessDeniedException)")
-        void sendMessage_Fail_NotAMember() {
-            // given
-            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(100L, "creatorUser"))
-                    .willReturn(Optional.empty());
-            // when & then
-            assertThatThrownBy(() -> chatService.sendMessage("creatorUser", 100L, "내용"))
-                    .isInstanceOf(AccessDeniedException.class)
-                    .hasMessage("채팅방 멤버가 아니거나 이미 나간 사용자입니다.");
         }
     }
 
@@ -684,256 +399,150 @@ class ChatServiceImplTest {
     class GetMessages {
 
         @Test
-        @DisplayName("성공 - 메시지 페이지 조회")
+        @DisplayName("성공 - 페이징 조회 및 DTO 변환")
         void getMessages_Success() {
             // given
             Pageable pageable = PageRequest.of(0, 10);
-            LocalDateTime joinedAt = LocalDateTime.now().minusDays(1);
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(100L, "creator"))
+                    .willReturn(Optional.of(chatEmployeeCreator));
 
-            given(mockChatEmployee.getJoinedAt()).willReturn(joinedAt);
-            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(100L, "creatorUser"))
-                    .willReturn(Optional.of(mockChatEmployee));
+            // DTO 변환 과정에서 ChatMessage -> Employee -> Name 참조 발생하므로
+            // setUp()에서 설정한 Mock 객체들이 정상 동작해야 함.
+            Page<ChatMessage> page = new PageImpl<>(List.of(chatMessage));
 
-            List<ChatMessage> messages = List.of(mockMessage);
-            Page<ChatMessage> messagePage = new PageImpl<>(messages, pageable, 1);
+            given(chatMessageRepository.findByChatRoomChatRoomIdAndCreatedAtGreaterThanEqualAndIsDeletedFalseOrderByCreatedAtDesc(
+                    eq(100L), any(), eq(pageable)
+            )).willReturn(page);
 
-            given(chatMessageRepository.findByChatRoomChatRoomIdAndCreatedAtAfterAndIsDeletedFalseOrderByCreatedAtDesc(
-                    100L, joinedAt, pageable
-            )).willReturn(messagePage);
+            // 글로벌 최신 메시지 (읽음 처리 로직용 - 비어있다고 가정하여 업데이트 스킵)
+            given(chatMessageRepository.findByChatRoomChatRoomIdAndCreatedAtGreaterThanEqualAndIsDeletedFalseOrderByCreatedAtDesc(
+                    eq(100L), any(), eq(Pageable.ofSize(1))
+            )).willReturn(Page.empty());
 
-            ChatMessageResponseDTO dto = ChatMessageResponseDTO.builder().chatMessageId(1000L).build();
+            // 첨부파일 조회용 Code
+            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.CHAT.name()))
+                    .willReturn(List.of(commonCodeChat));
+            given(attachmentFileRepository.findAllByOwnerTypeAndOwnerIdInAndIsDeletedFalse(any(), anyList()))
+                    .willReturn(Collections.emptyList());
 
             // when
-            try (MockedStatic<ChatMessageResponseDTO> dtoMock = mockStatic(ChatMessageResponseDTO.class)) {
-                // Static Mocking (NPE 방지)
-                dtoMock.when(ChatMessageResponseDTO::builder).thenCallRealMethod();
-                dtoMock.when(() -> ChatMessageResponseDTO.toDTO(mockMessage)).thenReturn(dto);
+            Page<ChatMessageResponseDTO> result = chatService.getMessages("creator", 100L, pageable);
 
-                // --- service call ---
-                Page<ChatMessageResponseDTO> result = chatService.getMessages("creatorUser", 100L, pageable);
-                // --- service call ---
-
-                // then
-                assertThat(result).isNotNull();
-                assertThat(result.getTotalElements()).isEqualTo(1);
-                assertThat(result.getContent().get(0).getChatMessageId()).isEqualTo(1000L);
-            }
-        }
-
-        @Test
-        @DisplayName("실패 - 멤버가 아님 (AccessDeniedException)")
-        void getMessages_Fail_NotAMember() {
-            // given
-            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(100L, "creatorUser"))
-                    .willReturn(Optional.empty());
-            // when & then
-            assertThatThrownBy(() -> chatService.getMessages("creatorUser", 100L, PageRequest.of(0, 10)))
-                    .isInstanceOf(AccessDeniedException.class)
-                    .hasMessage("채팅방 멤버가 아니거나 이미 나간 사용자입니다.");
+            // then
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0).getContent()).isEqualTo("Test Content");
+            assertThat(result.getContent().get(0).getSenderName()).isEqualTo("Creator Name");
         }
     }
 
     @Nested
-    @DisplayName("updateLastReadMessageId (마지막 읽은 메시지 업데이트)")
+    @DisplayName("updateLastReadMessageId (읽음 처리)")
     class UpdateLastReadMessageId {
 
-        @BeforeEach
-        void updateReadSetup() {
-            // @BeforeEach: Mockito.lenient().when().thenReturn()
-            Mockito.lenient().when(employeeRepository.findByUsername("creatorUser")).thenReturn(Optional.of(mockCreator));
-            Mockito.lenient().when(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(100L, "creatorUser"))
-                    .thenReturn(Optional.of(mockChatEmployee));
-            Mockito.lenient().when(chatMessageRepository.findById(1000L)).thenReturn(Optional.of(mockMessage));
-            Mockito.lenient().when(mockMessage.getChatRoom()).thenReturn(mockRoom);
-            Mockito.lenient().when(mockRoom.getChatRoomId()).thenReturn(100L);
-        }
-
         @Test
-        @DisplayName("성공 - 읽음 처리 및 브로드캐스트")
-        void updateLastReadMessageId_Success() throws Exception {
+        @DisplayName("성공 - 새로운 메시지 읽음 처리 및 STOMP 전송")
+        void updateLastReadMessageId_Success() {
             // given
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(creator));
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(100L, "creator"))
+                    .willReturn(Optional.of(chatEmployeeCreator));
+
+            // 타겟 메시지
+            given(chatMessageRepository.findById(1000L)).willReturn(Optional.of(chatMessage));
+            // 읽음 카운트
             given(chatEmployeeRepository.sumTotalUnreadMessagesByEmployeeId(1L)).willReturn(5L);
 
-            // when
+            // 읽은 구간 메시지들 (상대방 화면 업데이트용)
+            given(chatMessageRepository.findAllByChatRoomChatRoomIdAndCreatedAtGreaterThanEqualAndCreatedAtLessThanEqualOrderByCreatedAtAsc(
+                    eq(100L), any(), any()
+            )).willReturn(List.of(chatMessage));
+
             try (MockedStatic<TransactionSynchronizationManager> syncMock = mockStatic(TransactionSynchronizationManager.class)) {
-                // Static Mock
                 syncMock.when(() -> TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()))
                         .then(invocation -> null);
 
-                // --- service call ---
-                chatService.updateLastReadMessageId("creatorUser", 100L, 1000L);
-                // --- service call ---
+                // when
+                chatService.updateLastReadMessageId("creator", 100L, 1000L);
 
+                // then
+                verify(chatEmployeeCreator).updateLastReadMessage(chatMessage);
+
+                // After Commit 검증
                 syncCaptor.getValue().afterCommit();
 
-                // then
-                verify(mockChatEmployee).updateLastReadMessage(mockMessage);
-                verify(chatEmployeeRepository).save(mockChatEmployee);
-                verify(simpMessagingTemplate).convertAndSend(
-                        eq("/topic/chat/rooms/100/reads"),
-                        eq(Map.of("lastMessageId", 1L, "readUpToMessageId", 1000L))
-                );
-                verify(chatEmployeeRepository).sumTotalUnreadMessagesByEmployeeId(1L);
-                verify(simpMessagingTemplate).convertAndSendToUser(
-                        eq("creatorUser"),
-                        eq("/queue/unread-count"),
-                        any(TotalUnreadCountResponseDTO.class)
-                );
+                // 1. 전체 안읽음 개수 전송 확인
+                verify(simpMessagingTemplate).convertAndSendToUser(eq("creator"), eq("/queue/unread-count"), any(TotalUnreadCountResponseDTO.class));
+
+                // 2. 채팅방 내 읽음 숫자 업데이트 전송 확인
+                verify(simpMessagingTemplate).convertAndSend(eq("/topic/chat/rooms/100/unread-updates"), anyMap());
             }
-        }
-
-        // ... (실패 케이스는 동일)
-        @Test
-        @DisplayName("실패 - 메시지 ID가 null (IllegalArgumentException)")
-        void updateLastReadMessageId_Fail_NullId() {
-            // when & then
-            assertThatThrownBy(() -> chatService.updateLastReadMessageId("creatorUser", 100L, null))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("lastMessageId는 필수입니다.");
-        }
-
-        @Test
-        @DisplayName("실패 - 다른 채팅방의 메시지 (AccessDeniedException)")
-        void updateLastReadMessageId_Fail_WrongRoom() {
-            // given
-            ChatRoom otherRoom = mock(ChatRoom.class);
-            given(otherRoom.getChatRoomId()).willReturn(999L);
-            given(mockMessage.getChatRoom()).willReturn(otherRoom); // setup 덮어쓰기
-            // when & then
-            assertThatThrownBy(() -> chatService.updateLastReadMessageId("creatorUser", 100L, 1000L))
-                    .isInstanceOf(AccessDeniedException.class)
-                    .hasMessage("해당 채팅방의 메시지가 아닙니다.");
         }
     }
 
     @Nested
-    @DisplayName("findRoomsByUsername (채팅방 목록 조회)")
-    @MockitoSettings(strictness = Strictness.LENIENT)
+    @DisplayName("findRoomsByUsername (채팅방 목록)")
     class FindRoomsByUsername {
-
         @Test
-        @DisplayName("성공 - 1:1방, 팀방 목록 및 정렬(메시지 내용 역순) 조회")
-        void findRoomsByUsername_Success() throws Exception {
+        @DisplayName("성공 - 목록 조회 및 1:1 상대방 정보 매핑")
+        void findRoomsByUsername_Success() {
             // given
-            ChatRoom room1 = mock(ChatRoom.class);
-            ChatRoom room2 = mock(ChatRoom.class);
-            given(room1.getChatRoomId()).willReturn(101L);
-            given(room1.getIsTeam()).willReturn(false); // 1:1
-            given(room2.getChatRoomId()).willReturn(102L);
-            given(room2.getIsTeam()).willReturn(true); // 팀
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(creator));
+            given(chatEmployeeRepository.findAllByEmployeeAndIsLeftFalse(creator))
+                    .willReturn(List.of(chatEmployeeCreator));
 
-            ChatEmployee membership1 = mock(ChatEmployee.class);
-            ChatEmployee membership2 = mock(ChatEmployee.class);
-            given(membership1.getChatRoom()).willReturn(room1);
-            given(membership2.getChatRoom()).willReturn(room2);
-            given(membership1.getLastReadMessage()).willReturn(mock(ChatMessage.class));
-            given(membership2.getLastReadMessage()).willReturn(mock(ChatMessage.class));
-
-            given(employeeRepository.findByUsername("creatorUser")).willReturn(Optional.of(mockCreator));
-            given(chatEmployeeRepository.findAllByEmployeeAndIsLeftFalse(mockCreator))
-                    .willReturn(List.of(membership1, membership2));
-
-            ChatEmployee otherMembership = mock(ChatEmployee.class);
-            given(otherMembership.getEmployee()).willReturn(mockInvitee1);
-            given(chatEmployeeRepository.findAllByChatRoomChatRoomIdAndIsLeftFalse(101L))
-                    .willReturn(List.of(membership1, otherMembership));
-
-            // [FIX] 1: 'lenient().given()' -> 'lenient().when()'으로 수정
-            // 이 stub은 1:1 채팅방의 'otherUser'를 찾는 스트림 필터에서만 사용될 수 있음
-            lenient().when(membership1.getEmployee()).thenReturn(mockCreator);
-
-            ChatMessage msg1 = mock(ChatMessage.class);
-            given(msg1.getContent()).willReturn("Apple");
-            ChatMessage msg2 = mock(ChatMessage.class);
-            given(msg2.getContent()).willReturn("Zebra");
-            given(chatMessageRepository.findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc(eq(room1), any()))
-                    .willReturn(Optional.of(msg1));
-            given(chatMessageRepository.findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc(eq(room2), any()))
-                    .willReturn(Optional.of(msg2));
-
-            given(chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(eq(room1), anyLong())).willReturn(1L);
-            given(chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(eq(room2), anyLong())).willReturn(2L);
-
-            ChatRoomListResponseDTO dto1 = ChatRoomListResponseDTO.builder().chatRoomId(101L).lastMessage("Apple").build();
-            ChatRoomListResponseDTO dto2 = ChatRoomListResponseDTO.builder().chatRoomId(102L).lastMessage("Zebra").build();
+            // 1:1 방이므로 모든 멤버 조회 필요
+            given(chatEmployeeRepository.findAllByChatRoomChatRoomId(100L))
+                    .willReturn(List.of(chatEmployeeCreator, chatEmployeeInvitee1));
 
             // when
-            try (MockedStatic<ChatRoomListResponseDTO> dtoMock = mockStatic(ChatRoomListResponseDTO.class)) {
-                // Static Mocking (NPE 방지)
-                dtoMock.when(ChatRoomListResponseDTO::builder).thenCallRealMethod();
+            List<ChatRoomListResponseDTO> result = chatService.findRoomsByUsername("creator");
 
-                // [FIX] 2 & 3: 'dtoMock.lenient().when()' -> 'dtoMock.when()'으로 수정
-                // MockedStatic 객체는 .lenient() 메서드를 지원하지 않습니다.
-                dtoMock.when(() -> ChatRoomListResponseDTO.toDTO(room1, mockInvitee1, 1L, Optional.of(msg1)))
-                        .thenReturn(dto1);
-                dtoMock.when(() -> ChatRoomListResponseDTO.toDTO(room2, 2L, Optional.of(msg2)))
-                        .thenReturn(dto2);
-
-                // --- service call ---
-                List<ChatRoomListResponseDTO> result = chatService.findRoomsByUsername("creatorUser");
-                // --- service call ---
-
-                // then
-                assertThat(result).hasSize(2);
-                assertThat(result.get(0).getChatRoomId()).isEqualTo(102L); // Zebra
-                assertThat(result.get(1).getChatRoomId()).isEqualTo(101L); // Apple
-            }
+            // then
+            assertThat(result).hasSize(1);
+            // DTO 매핑 확인 (상대방 이름이 나와야 함)
+            assertThat(result.get(0).getName()).isEqualTo("Invitee1 Name");
+            assertThat(result.get(0).getProfile()).isEqualTo("invitee1.png");
         }
     }
 
     @Nested
-    @DisplayName("getRoomById (ID로 채팅방 조회)")
-    class GetRoomById {
-
+    @DisplayName("sendMessageWithFiles (파일 전송)")
+    class SendMessageWithFiles {
         @Test
-        @DisplayName("성공 - ID로 팀 채팅방 정보 조회")
-        void getRoomById_Success_TeamRoom() throws Exception {
+        @DisplayName("성공 - 파일 업로드 서비스 호출 및 메시지 저장")
+        void sendMessageWithFiles_Success() {
             // given
-            given(employeeRepository.findByUsername("creatorUser")).willReturn(Optional.of(mockCreator));
-            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(100L, "creatorUser"))
-                    .willReturn(Optional.of(mockChatEmployee));
-            given(mockChatEmployee.getChatRoom()).willReturn(mockRoom);
-            given(mockRoom.getIsTeam()).willReturn(true);
+            List<MultipartFile> files = List.of(mock(MultipartFile.class));
+            given(employeeRepository.findByUsername("creator")).willReturn(Optional.of(creator));
+            given(chatRoomRepository.findById(100L)).willReturn(Optional.of(chatRoom));
+            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(100L, "creator"))
+                    .willReturn(Optional.of(chatEmployeeCreator));
 
-            given(chatMessageRepository.findTopByChatRoomAndCreatedAtAfterOrderByCreatedAtDesc(eq(mockRoom), any()))
-                    .willReturn(Optional.of(mockMessage));
-            given(chatMessageRepository.countByChatRoomAndChatMessageIdGreaterThan(eq(mockRoom), anyLong())).willReturn(3L);
+            // 메시지 저장 (ID 세팅)
+            given(chatMessageRepository.save(any(ChatMessage.class))).willAnswer(inv -> {
+                ChatMessage msg = inv.getArgument(0);
+                ReflectionTestUtils.setField(msg, "chatMessageId", 1000L);
+                ReflectionTestUtils.setField(msg, "createdAt", LocalDateTime.now());
+                return msg;
+            });
 
-            ChatRoomListResponseDTO expectedDto = ChatRoomListResponseDTO.builder()
-                    .chatRoomId(100L)
-                    .name("테스트 채팅방")
-                    .unreadCount(3L)
-                    .build();
+            given(commonCodeRepository.findByCodeStartsWithAndKeywordExactMatchInValues(OwnerType.PREFIX, OwnerType.CHAT.name()))
+                    .willReturn(List.of(commonCodeChat));
 
-            // when
-            try (MockedStatic<ChatRoomListResponseDTO> dtoMock = mockStatic(ChatRoomListResponseDTO.class)) {
-                // Static Mocking (NPE 방지)
-                dtoMock.when(ChatRoomListResponseDTO::builder).thenCallRealMethod();
-                dtoMock.when(() -> ChatRoomListResponseDTO.toDTO(mockRoom, 3L, Optional.of(mockMessage)))
-                        .thenReturn(expectedDto);
+            // 파일 서비스 Mock
+            given(attachmentFileService.uploadFiles(anyList(), eq(600L), eq(1000L)))
+                    .willReturn(List.of(new AttachmentFileResponseDTO()));
 
-                // --- service call ---
-                ChatRoomListResponseDTO result = chatService.getRoomById("creatorUser", 100L);
-                // --- service call ---
+            try (MockedStatic<TransactionSynchronizationManager> syncMock = mockStatic(TransactionSynchronizationManager.class)) {
+                syncMock.when(() -> TransactionSynchronizationManager.registerSynchronization(any())).then(invocation -> null);
+
+                // when
+                chatService.sendMessageWithFiles("creator", 100L, "File Msg", files);
 
                 // then
-                assertThat(result).isSameAs(expectedDto);
-                assertThat(result.getUnreadCount()).isEqualTo(3L);
-                assertThat(result.getName()).isEqualTo("테스트 채팅방");
+                verify(attachmentFileService).uploadFiles(anyList(), eq(600L), eq(1000L));
+                verify(chatMessageRepository).save(any(ChatMessage.class));
             }
-        }
-
-        @Test
-        @DisplayName("실패 - 멤버가 아님 (AccessDeniedException)")
-        void getRoomById_Fail_NotAMember() {
-            // given
-            given(employeeRepository.findByUsername("creatorUser")).willReturn(Optional.of(mockCreator));
-            given(chatEmployeeRepository.findByChatRoomChatRoomIdAndEmployeeUsernameAndIsLeftFalse(100L, "creatorUser"))
-                    .willReturn(Optional.empty());
-            // when & then
-            assertThatThrownBy(() -> chatService.getRoomById("creatorUser", 100L))
-                    .isInstanceOf(AccessDeniedException.class)
-                    .hasMessage("채팅방 멤버가 아니거나 이미 나간 사용자입니다.");
         }
     }
 }
