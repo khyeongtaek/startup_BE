@@ -336,7 +336,7 @@ INSERT INTO tbl_employee (
 VALUES
     -- 1. 관리자 (R&D 본부 - 백엔드개발팀)
     (
-        1, 'admin', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '관리자', 'admin@startup.com', '010-0000-0001', '2024-01-01',
+        1, 'admin', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '김민수', 'kimminsu@startup.com', '010-0000-0001', '2024-01-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'), -- 재직중
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP7'), -- 백엔드개발팀
@@ -356,7 +356,7 @@ INSERT INTO tbl_employee (
 VALUES
     -- 2. 대표이사 (C-Level - 대표이사)
     (
-        2, 'ceo', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '대표이사', 'ceo@startup.com', '010-1111-1111', '2024-01-01',
+        2, 'ceo', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '이서연', 'leeseoyeon@startup.com', '010-1111-1111', '2024-01-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'), -- 재직중
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP16'), -- 대표이사(부서)
@@ -366,7 +366,7 @@ VALUES
     ),
     -- 3. 인사팀
     (
-        3, 'hr_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '인사과장', 'hr@startup.com', '010-2222-2222', '2024-02-01',
+        3, 'hr_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '박지훈', 'parkjihoon@startup.com', '010-2222-2222', '2024-02-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP3'), -- 인사팀
@@ -375,7 +375,7 @@ VALUES
         NOW(), NOW(), 1, 1
     ),
     (
-        4, 'hr_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '인사사원', 'hr_staff@startup.com', '010-2222-2223', '2024-03-01',
+        4, 'hr_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '최유진', 'choiyujin@startup.com', '010-2222-2223', '2024-03-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP3'), -- 인사팀
@@ -385,7 +385,7 @@ VALUES
     ),
     -- 4. 재무회계팀
     (
-        5, 'finance_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '재무차장', 'finance@startup.com', '010-3333-3333', '2024-02-01',
+        5, 'finance_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '정우진', 'jungwoojin@startup.com', '010-3333-3333', '2024-02-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP4'), -- 재무회계팀
@@ -394,7 +394,7 @@ VALUES
         NOW(), NOW(), 1, 1
     ),
     (
-        6, 'finance_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '재무주임', 'finance_staff@startup.com', '010-3333-3334', '2024-03-01',
+        6, 'finance_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '한지민', 'hanjimin@startup.com', '010-3333-3334', '2024-03-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP4'), -- 재무회계팀
@@ -404,7 +404,7 @@ VALUES
     ),
     -- 5. 총무팀
     (
-        7, 'ga_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '총무대리', 'ga@startup.com', '010-4444-4444', '2024-02-01',
+        7, 'ga_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '윤도현', 'yoondohyeon@startup.com', '010-4444-4444', '2024-02-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP5'), -- 총무팀
@@ -413,7 +413,7 @@ VALUES
         NOW(), NOW(), 1, 1
     ),
     (
-        8, 'ga_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '총무사원', 'ga_staff@startup.com', '010-4444-4445', '2024-03-01',
+        8, 'ga_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '장예린', 'jangyerin@startup.com', '010-4444-4445', '2024-03-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP5'), -- 총무팀
@@ -423,7 +423,7 @@ VALUES
     ),
     -- 6. 백엔드개발팀 (admin 외 추가)
     (
-        9, 'backend_dev1', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '백엔드대리', 'backend1@startup.com', '010-5555-5551', '2024-02-01',
+        9, 'backend_dev1', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '오승현', 'oseunghyun@startup.com', '010-5555-5551', '2024-02-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP7'), -- 백엔드개발팀
@@ -432,7 +432,7 @@ VALUES
         NOW(), NOW(), 1, 1
     ),
     (
-        10, 'backend_dev2', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '백엔드사원', 'backend2@startup.com', '010-5555-5552', '2024-03-01',
+        10, 'backend_dev2', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '조민지', 'chominji@startup.com', '010-5555-5552', '2024-03-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP7'), -- 백엔드개발팀
@@ -442,7 +442,7 @@ VALUES
     ),
     -- 7. 프론트엔드개발팀
     (
-        11, 'frontend_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '프론트과장', 'frontend1@startup.com', '010-6666-6661', '2024-02-01',
+        11, 'frontend_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '배태훈', 'baetaehun@startup.com', '010-6666-6661', '2024-02-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP8'), -- 프론트엔드개발팀
@@ -451,7 +451,7 @@ VALUES
         NOW(), NOW(), 1, 1
     ),
     (
-        12, 'frontend_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '프론트사원', 'frontend2@startup.com', '010-6666-6662', '2024-03-01',
+        12, 'frontend_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '강지호', 'kangjiho@startup.com', '010-6666-6662', '2024-03-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP8'), -- 프론트엔드개발팀
@@ -461,7 +461,7 @@ VALUES
     ),
     -- 8. UI/UX 디자인팀
     (
-        13, 'designer_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '디자인대리', 'design1@startup.com', '010-7777-7771', '2024-02-01',
+        13, 'designer_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '신예은', 'shinyeeun@startup.com', '010-7777-7771', '2024-02-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP9'), -- UI/UX 디자인팀
@@ -470,7 +470,7 @@ VALUES
         NOW(), NOW(), 1, 1
     ),
     (
-        14, 'designer_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '디자인주임', 'design2@startup.com', '010-7777-7772', '2024-03-01',
+        14, 'designer_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '임도윤', 'limdoyoon@startup.com', '010-7777-7772', '2024-03-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP9'), -- UI/UX 디자인팀
@@ -480,7 +480,7 @@ VALUES
     ),
     -- 9. QA팀
     (
-        15, 'qa_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '품질대리', 'qa1@startup.com', '010-8888-8881', '2024-02-01',
+        15, 'qa_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '서지훈', 'seojihun@startup.com', '010-8888-8881', '2024-02-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP10'), -- QA팀
@@ -489,7 +489,7 @@ VALUES
         NOW(), NOW(), 1, 1
     ),
     (
-        16, 'qa_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '품질사원', 'qa2@startup.com', '010-8888-8882', '2024-03-01',
+        16, 'qa_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '권나연', 'kwonnayeon@startup.com', '010-8888-8882', '2024-03-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP10'), -- QA팀
@@ -499,7 +499,7 @@ VALUES
     ),
     -- 10. 영업1팀
     (
-        17, 'sales1_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '영업1팀장', 'sales1@startup.com', '010-9999-9991', '2024-02-01',
+        17, 'sales1_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '문시후', 'moonsihoo@startup.com', '010-9999-9991', '2024-02-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP12'), -- 영업1팀
@@ -508,7 +508,7 @@ VALUES
         NOW(), NOW(), 1, 1
     ),
     (
-        18, 'sales1_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '영업1팀원', 'sales1_staff@startup.com', '010-9999-9992', '2024-03-01',
+        18, 'sales1_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '하윤서', 'hayunseo@startup.com', '010-9999-9992', '2024-03-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP12'), -- 영업1팀
@@ -518,7 +518,7 @@ VALUES
     ),
     -- 11. 영업2팀
     (
-        19, 'sales2_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '영업2팀장', 'sales2@startup.com', '010-1010-1011', '2024-02-01',
+        19, 'sales2_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '양준호', 'yangjunho@startup.com', '010-1010-1011', '2024-02-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP13'), -- 영업2팀
@@ -527,7 +527,7 @@ VALUES
         NOW(), NOW(), 1, 1
     ),
     (
-        20, 'sales2_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '영업2팀원', 'sales2_staff@startup.com', '010-1010-1012', '2024-03-01',
+        20, 'sales2_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '홍가은', 'hongkaeun@startup.com', '010-1010-1012', '2024-03-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP13'), -- 영업2팀
@@ -537,7 +537,7 @@ VALUES
     ),
     -- 12. 마케팅팀
     (
-        21, 'marketing_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '마케팅대리', 'mkt1@startup.com', '010-1212-1211', '2024-02-01',
+        21, 'marketing_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '유민재', 'yoominjae@startup.com', '010-1212-1211', '2024-02-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP14'), -- 마케팅팀
@@ -546,7 +546,7 @@ VALUES
         NOW(), NOW(), 1, 1
     ),
     (
-        22, 'marketing_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '마케팅사원', 'mkt2@startup.com', '010-1212-1212', '2024-03-01',
+        22, 'marketing_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '노수진', 'nosujin@startup.com', '010-1212-1212', '2024-03-01',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP14'), -- 마케팅팀
@@ -558,7 +558,7 @@ VALUES
     -- "모든 부서" 요청을 만족하기 위해 상위 부서에도 인원 배정 --
     -- 13. C-Level (상위)
     (
-        23, 'clevel_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '경영이사', 'clevel@startup.com', '010-1313-1313', '2024-01-15',
+        23, 'clevel_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '백동현', 'baekdonghyun@startup.com', '010-1313-1313', '2024-01-15',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP15'), -- C-Level
@@ -567,7 +567,7 @@ VALUES
         NOW(), NOW(), 1, 1
     ),
     (
-        24, 'clevel_staff2', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '전략기획', 'strategy@startup.com', '010-1313-1314', '2024-01-20',
+        24, 'clevel_staff2', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '남서윤', 'namseoyoon@startup.com', '010-1313-1314', '2024-01-20',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP15'), -- C-Level
@@ -577,7 +577,7 @@ VALUES
     ),
     -- 14. 사업본부 (상위)
     (
-        25, 'biz_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '사업본부장', 'biz@startup.com', '010-1414-1414', '2024-01-15',
+        25, 'biz_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '곽준영', 'kwakjunyoung@startup.com', '010-1414-1414', '2024-01-15',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP11'), -- 사업본부
@@ -586,7 +586,7 @@ VALUES
         NOW(), NOW(), 1, 1
     ),
     (
-        26, 'biz_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '사업기획', 'biz_staff@startup.com', '010-1414-1415', '2024-02-15',
+        26, 'biz_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '표지우', 'pyojiwoo@startup.com', '010-1414-1415', '2024-02-15',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP11'), -- 사업본부
@@ -596,7 +596,7 @@ VALUES
     ),
     -- 15. R&D 본부 (상위)
     (
-        27, 'rnd_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', 'R&D본부장', 'rnd@startup.com', '010-1515-1515', '2024-01-15',
+        27, 'rnd_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '설민혁', 'seolminhyuk@startup.com', '010-1515-1515', '2024-01-15',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP6'), -- R&D 본부
@@ -605,7 +605,7 @@ VALUES
         NOW(), NOW(), 1, 1
     ),
     (
-        28, 'rnd_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', 'R&D기획', 'rnd_staff@startup.com', '010-1515-1516', '2024-02-15',
+        28, 'rnd_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '주예린', 'jooyerin@startup.com', '010-1515-1516', '2024-02-15',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP6'), -- R&D 본부
@@ -615,7 +615,7 @@ VALUES
     ),
     -- 16. 경영지원본부 (상위)
     (
-        29, 'mgmt_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '경영지원본부장', 'mgmt@startup.com', '010-1616-1616', '2024-01-15',
+        29, 'mgmt_manager', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '라준서', 'rajunseo@startup.com', '010-1616-1616', '2024-01-15',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP2'), -- 경영지원본부
@@ -624,7 +624,7 @@ VALUES
         NOW(), NOW(), 1, 1
     ),
     (
-        30, 'mgmt_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '경영지원', 'mgmt_staff@startup.com', '010-1616-1617', '2024-02-15',
+        30, 'mgmt_staff', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '도하늘', 'dohaneul@startup.com', '010-1616-1617', '2024-02-15',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP2'), -- 경영지원본부
@@ -634,7 +634,7 @@ VALUES
     ),
     -- 17. 스타트업 (최상위)
     (
-        31, 'root_staff1', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '감사', 'audit@startup.com', '010-1717-1717', '2024-01-10',
+        31, 'root_staff1', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '추지민', 'chujimin@startup.com', '010-1717-1717', '2024-01-10',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP1'), -- 스타트업
@@ -643,7 +643,7 @@ VALUES
         NOW(), NOW(), 1, 1
     ),
     (
-        32, 'root_staff2', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '법무', 'legal@startup.com', '010-1717-1718', '2024-01-10',
+        32, 'root_staff2', '$2a$10$GetZyZUrGR48sFt7WUL5yOLrp2r6pkVYqaGkv8TDowbflcqbku10K', '위서진', 'wiseojin@startup.com', '010-1717-1718', '2024-01-10',
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'ES1'),
         null, true,
         (SELECT common_code_id FROM tbl_common_code WHERE code = 'DP1'), -- 스타트업
