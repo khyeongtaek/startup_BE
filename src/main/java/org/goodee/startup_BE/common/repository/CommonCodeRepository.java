@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CommonCodeRepository extends JpaRepository<CommonCode, Long> {
@@ -55,4 +56,7 @@ public interface CommonCodeRepository extends JpaRepository<CommonCode, Long> {
             "WHERE c.code LIKE '__0' " + // 'DP0', 'ES0' 등 2글자 접두사 + 0 인 코드
             "ORDER BY SUBSTRING(c.code, 1, 2) ASC")
     List<CommonCodeResponseDTO> findDistinctCodePrefixes();
+
+    // 게시판전용 find
+    Optional<CommonCode> findByCode(String code);
 }

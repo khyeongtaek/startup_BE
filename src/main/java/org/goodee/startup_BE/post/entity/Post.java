@@ -59,6 +59,9 @@ public class Post {
     @Builder.Default
     private Boolean alert = false;
 
+    @Column(name = "view_count", nullable = false)
+    @Builder.Default // Lombok @Builder 사용 시 기본값을 유지하기 위함.
+    private Long viewCount = 0L;
 
 
     public static Post create(CommonCode commonCode, Employee employee, String title, String content, Boolean isNotification, Boolean alert) {

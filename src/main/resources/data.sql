@@ -256,7 +256,28 @@ VALUES
     ('OT6', '일정 초대', 'SCHEDULEINVITE', '', '', 0, 1, 1, NOW(), NOW(), false),
     ('OT7', '채팅 메시지', 'CHAT', '', '', 0, 1, 1, NOW(), NOW(), false),
     ('OT8', '시스템 메시지', 'CHAT_SYSTEM', '', '', 0, 1, 1, NOW(), NOW(), false),
-    ('OT9', '사용자 메시지', 'CHAT_USER', '', '', 0, 1, 1, NOW(), NOW(), false);
+    ('OT9', '사용자 메시지', 'CHAT_USER', '', '', 0, 1, 1, NOW(), NOW(), false),
+    ('OT10', '게시판', 'POST', '', '', 0, 1, 1, NOW(), NOW(), false);
+
+/*
+* =============================================
+* Schedule Color (일정 색상)
+* code: CL + 번호 (Color)
+* value1: 색상 코드 (영문)
+* value2: HEX 코드
+* =============================================
+*/
+
+INSERT INTO tbl_common_code
+(code, code_description, value1, value2, value3, sort_order, creator_id, updater_id, created_at, updated_at, is_disabled)
+VALUES
+    ('CL0', '색상 코드', NULL, NULL, NULL, 0, 1, 1, NOW(), NOW(), false),
+    ('CL1', '파란색', 'BLUE', '#3498db', NULL, 1, 1, 1, NOW(), NOW(), false),
+    ('CL2', '빨간색', 'RED', '#e74c3c', NULL, 2, 1, 1, NOW(), NOW(), false),
+    ('CL3', '초록색', 'GREEN', '#27ae60', NULL, 3, 1, 1, NOW(), NOW(), false),
+    ('CL4', '노란색', 'YELLOW', '#f1c40f', NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('CL5', '회색', 'GRAY', '#7f8c8d', NULL, 5, 1, 1, NOW(), NOW(), false);
+
 
 
 /*
@@ -965,8 +986,28 @@ VALUES
       "type": "route",
       "url": "/worklog/detail/:worklogId",
       "componentPath": "features/worklog/pages/WorkLogDetailPage"
+    }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('RO11', '게시글 작성', '{
+      "id": "post-write",
+      "title": "게시글 작성",
+      "type": "route",
+      "url": "/post/write",
+      "componentPath": "features/post/pages/PostWritePage"
+    }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('RO12', '게시글 목록', '{
+      "id": "post-list",
+      "title": "게시글 목록",
+      "type": "route",
+      "url": "/post/list/:category",
+      "componentPath": "features/post/pages/PostListPage"
+    }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false),
+    ('RO13', '게시글 상세', '{
+      "id": "post-detail",
+      "title": "게시글 상세",
+      "type": "route",
+      "url": "/post/detail/:postId",
+      "componentPath": "features/post/pages/PostDetailPage"
     }', NULL, NULL, 4, 1, 1, NOW(), NOW(), false);
-
 
 
 

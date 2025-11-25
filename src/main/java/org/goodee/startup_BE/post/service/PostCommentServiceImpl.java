@@ -62,11 +62,15 @@ public class PostCommentServiceImpl implements PostCommentService {
 
     // 댓글 삭제
     @Override
-    public boolean deleteComment(Long commentId) {
+    public boolean deleteComment(Long commentId, Long employeeId) {
         PostComment postComment = postCommentRepository.findById(commentId)
                 .orElseThrow(() -> new NoSuchElementException("댓글을 찾을 수 없습니다."));
         if (postComment.getIsDeleted()) {
             throw new IllegalStateException("이미 삭제된 댓글입니다.");
+        }
+
+        if (!postComment.getEmployee().getEmployeeId().equals(employeeId)) {
+            throw new IllegalArgumentException(("댓글 삭제 권한이 없습니다."));
         }
         postComment.delete();
 
@@ -82,7 +86,7 @@ public class PostCommentServiceImpl implements PostCommentService {
             .orElseThrow(() -> new NoSuchElementException("게시글을 찾을 수 없습니다."));
 
     // 삭제되지 않은 댓글만 조회.
-    Page<PostComment> commentList = postCommentRepository.findByPost_PostIdAndIsDeletedFalseOrderByCreatedAtAsc(postId, pageable);
+    Page<PostComment> commentList = postCommentRepository.findByPost_PostIdAndIsDeletedFalseOrderByCreatedAtDesc(postId, pageable);
 
     return commentList.map(PostCommentResponseDTO::toDTO);
 

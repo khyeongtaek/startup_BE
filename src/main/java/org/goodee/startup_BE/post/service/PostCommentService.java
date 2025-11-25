@@ -14,7 +14,7 @@ public interface PostCommentService {
     PostCommentResponseDTO updateComment(Long commentId, Long employeeId, PostCommentRequestDTO postCommentRequestDTO);
 
     // 댓글 삭제
-    boolean deleteComment(Long commentId);
+    boolean deleteComment(Long commentId, Long employeeId);
 
     // 특정 게시글의 댓글 조회
     Page<PostCommentResponseDTO> getCommentsByPostId(Long postId, Pageable pageable);

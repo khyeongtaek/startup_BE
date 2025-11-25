@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PostViewLogRepository extends JpaRepository<PostViewLog, Long> {
@@ -15,4 +16,6 @@ public interface PostViewLogRepository extends JpaRepository<PostViewLog, Long> 
     // 사용자가 해당 게시글을 조회한 적이 있는지 확인
     boolean existsByPost_PostIdAndEmployee_EmployeeId(Long postId, Long employeeId);
 
+    // 같은 사용자가 해당 게시글을 조회한 기록을 가져오기
+    Optional<PostViewLog> findByPost_PostIdAndEmployee_EmployeeId(Long postId, Long employeeId);
 }
